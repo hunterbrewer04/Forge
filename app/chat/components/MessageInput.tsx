@@ -202,7 +202,6 @@ export default function MessageInput({ conversationId, senderId }: MessageInputP
         accept="image/*,video/*"
         onChange={handleFileSelect}
         className="hidden"
-        capture="environment"
       />
 
       <div className="flex gap-2">

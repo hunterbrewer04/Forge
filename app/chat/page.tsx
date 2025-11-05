@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import ConversationList from './components/ConversationList'
+import ClientConversationList from './components/ClientConversationList'
 import ChatWindow from './components/ChatWindow'
 import Link from 'next/link'
 
@@ -278,7 +279,7 @@ export default function ChatPage() {
             ← Home
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Forge Chat</h1>
+            <h1 className="text-xl font-bold text-gray-900">Chat</h1>
             <p className="text-xs text-gray-500">{profile.full_name || 'User'}</p>
           </div>
         </div>
@@ -327,8 +328,15 @@ export default function ChatPage() {
           </>
         ) : isClient ? (
           <>
-            {/* Client view: Just Chat Window */}
-            <div className="flex-1 flex flex-col w-full">
+            {/* Client view: Sidebar + Chat Window */}
+            <div className="w-full sm:w-80 flex-shrink-0">
+              <ClientConversationList
+                currentUserId={user.id}
+                selectedConversationId={selectedConversationId}
+                onSelectConversation={setSelectedConversationId}
+              />
+            </div>
+            <div className="flex-1 flex flex-col">
               {error ? (
                 <div className="flex-1 flex items-center justify-center bg-gray-50">
                   <div className="text-center max-w-md px-6">
