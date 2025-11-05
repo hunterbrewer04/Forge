@@ -84,7 +84,7 @@ export default function ChatWindow({
           media_url,
           media_type,
           created_at,
-          sender:sender_id (
+          profiles!messages_sender_id_fkey (
             full_name
           )
         `)
@@ -106,7 +106,7 @@ export default function ChatWindow({
         media_url: msg.media_url,
         media_type: msg.media_type,
         created_at: msg.created_at,
-        sender_name: msg.sender?.full_name || 'Unknown',
+        sender_name: msg.profiles?.full_name || 'Unknown',
       })) || []
 
       // Process messages to generate signed URLs for media

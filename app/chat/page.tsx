@@ -98,7 +98,7 @@ export default function ChatPage() {
           id,
           client_id,
           trainer_id,
-          trainer:trainer_id (
+          profiles!conversations_trainer_id_fkey (
             full_name
           )
         `)
@@ -124,7 +124,7 @@ export default function ChatPage() {
           client_id: data.client_id,
           trainer_id: data.trainer_id,
           client_name: profile.full_name,
-          trainer_name: (data.trainer as any)?.full_name || 'Your Trainer',
+          trainer_name: (data.profiles as any)?.full_name || 'Your Trainer',
         }
         setConversationInfo(convInfo)
         setSelectedConversationId(data.id)
@@ -160,7 +160,7 @@ export default function ChatPage() {
           id,
           client_id,
           trainer_id,
-          client:client_id (
+          profiles!conversations_client_id_fkey (
             full_name
           )
         `)
@@ -180,7 +180,7 @@ export default function ChatPage() {
           id: data.id,
           client_id: data.client_id,
           trainer_id: data.trainer_id,
-          client_name: (data.client as any)?.full_name || 'Client',
+          client_name: (data.profiles as any)?.full_name || 'Client',
           trainer_name: profile.full_name,
         }
         setConversationInfo(convInfo)

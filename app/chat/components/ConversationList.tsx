@@ -34,7 +34,7 @@ export default function ConversationList({
           id,
           client_id,
           trainer_id,
-          client:client_id (
+          profiles!conversations_client_id_fkey (
             full_name
           )
         `)
@@ -52,7 +52,7 @@ export default function ConversationList({
         id: conv.id,
         client_id: conv.client_id,
         trainer_id: conv.trainer_id,
-        client_name: conv.client?.full_name || 'Unknown Client',
+        client_name: conv.profiles?.full_name || 'Unknown Client',
       })) || []
 
       setConversations(conversationsWithNames)
