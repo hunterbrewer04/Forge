@@ -84,7 +84,7 @@ export default function ChatWindow({
           media_url,
           media_type,
           created_at,
-          profiles!messages_sender_id_fkey (
+          sender:sender_id (
             full_name
           )
         `)
@@ -106,7 +106,7 @@ export default function ChatWindow({
         media_url: msg.media_url,
         media_type: msg.media_type,
         created_at: msg.created_at,
-        sender_name: msg.profiles?.full_name || 'Unknown',
+        sender_name: msg.sender?.full_name || 'Unknown',
       })) || []
 
       // Process messages to generate signed URLs for media
@@ -135,7 +135,7 @@ export default function ChatWindow({
         },
         async (payload) => {
           // Fetch the sender's name for the new message
-          const { data: profileData } = await supabase
+          const { data: senderProfile } = await supabase
             .from('profiles')
             .select('full_name')
             .eq('id', payload.new.sender_id)
@@ -149,7 +149,7 @@ export default function ChatWindow({
             media_url: payload.new.media_url,
             media_type: payload.new.media_type,
             created_at: payload.new.created_at,
-            sender_name: profileData?.full_name || 'Unknown',
+            sender_name: senderProfile?.full_name || 'Unknown',
           }
 
           // Process media to generate signed URL if needed

@@ -97,7 +97,7 @@ export default function ChatPage() {
           id,
           client_id,
           trainer_id,
-          trainer:profiles!conversations_trainer_id_fkey (
+          trainer:trainer_id (
             full_name
           )
         `)
@@ -159,7 +159,7 @@ export default function ChatPage() {
           id,
           client_id,
           trainer_id,
-          client:profiles!conversations_client_id_fkey (
+          client:client_id (
             full_name
           )
         `)
