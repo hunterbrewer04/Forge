@@ -59,7 +59,7 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Protected routes that require authentication
-  const protectedRoutes = ['/chat']
+  const protectedRoutes = ['/chat', '/home']
   const isProtectedRoute = protectedRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
@@ -69,9 +69,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // If authenticated and accessing login/signup, redirect to chat
+  // If authenticated and accessing login/signup, redirect to home
   if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/chat', request.url))
+    return NextResponse.redirect(new URL('/home', request.url))
   }
 
   return response

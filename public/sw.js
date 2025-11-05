@@ -1,6 +1,7 @@
-const CACHE_NAME = 'forge-pwa-v1';
+const CACHE_NAME = 'forge-pwa-v2';
 const urlsToCache = [
   '/',
+  '/home',
   '/chat',
   '/login',
   '/signup',

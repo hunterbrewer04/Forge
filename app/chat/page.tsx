@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import ConversationList from './components/ConversationList'
 import ChatWindow from './components/ChatWindow'
-import InstallPrompt from '@/components/InstallPrompt'
+import Link from 'next/link'
 
 interface ConversationInfo {
   id: string
@@ -270,9 +270,17 @@ export default function ChatPage() {
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Top header */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Forge Chat</h1>
-          <p className="text-xs text-gray-500">{profile.full_name || 'User'}</p>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/home"
+            className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            ← Home
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Forge Chat</h1>
+            <p className="text-xs text-gray-500">{profile.full_name || 'User'}</p>
+          </div>
         </div>
         <button
           onClick={handleSignOut}
@@ -368,9 +376,6 @@ export default function ChatPage() {
           </div>
         )}
       </div>
-
-      {/* PWA Install Prompt */}
-      <InstallPrompt />
     </div>
   )
 }

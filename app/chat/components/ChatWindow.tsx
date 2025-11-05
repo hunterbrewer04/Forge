@@ -212,11 +212,9 @@ export default function ChatWindow({
                       : 'bg-white text-gray-900 border border-gray-200'
                   }`}
                 >
-                  {!isCurrentUser && (
-                    <div className="text-xs font-semibold mb-1 text-gray-600">
-                      {message.sender_name}
-                    </div>
-                  )}
+                  <div className={`text-xs font-semibold mb-1 ${isCurrentUser ? 'text-blue-700' : 'text-gray-600'}`}>
+                    {isCurrentUser ? 'You' : message.sender_name}
+                  </div>
 
                   {/* Render image */}
                   {message.media_type === 'image' && message.signedUrl && (
