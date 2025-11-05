@@ -8,9 +8,12 @@ interface Message {
   id: string
   conversation_id: string
   sender_id: string
-  content: string
+  content: string | null
+  media_url: string | null
+  media_type: string | null
   created_at: string
   sender_name: string | null
+  signedUrl?: string | null // For secure, authenticated media access
 }
 
 interface ChatWindowProps {
@@ -34,6 +37,34 @@ export default function ChatWindow({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Generate secure signed URL for media files
+  const generateSignedUrl = async (filePath: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('chat-media')
+        .createSignedUrl(filePath, 3600) // 1 hour expiration
+
+      if (error) {
+        console.error('Error generating signed URL:', error)
+        return null
+      }
+
+      return data.signedUrl
+    } catch (err) {
+      console.error('Unexpected error generating signed URL:', err)
+      return null
+    }
+  }
+
+  // Process message to add signed URL for media
+  const processMessageMedia = async (message: Message): Promise<Message> => {
+    if (message.media_url && message.media_type) {
+      const signedUrl = await generateSignedUrl(message.media_url)
+      return { ...message, signedUrl }
+    }
+    return message
+  }
+
   useEffect(() => {
     scrollToBottom()
   }, [messages])
@@ -50,6 +81,8 @@ export default function ChatWindow({
           conversation_id,
           sender_id,
           content,
+          media_url,
+          media_type,
           created_at,
           profiles!messages_sender_id_fkey (
             full_name
@@ -70,11 +103,18 @@ export default function ChatWindow({
         conversation_id: msg.conversation_id,
         sender_id: msg.sender_id,
         content: msg.content,
+        media_url: msg.media_url,
+        media_type: msg.media_type,
         created_at: msg.created_at,
         sender_name: msg.profiles?.full_name || 'Unknown',
       })) || []
 
-      setMessages(messagesWithNames)
+      // Process messages to generate signed URLs for media
+      const messagesWithSignedUrls = await Promise.all(
+        messagesWithNames.map(msg => processMessageMedia(msg))
+      )
+
+      setMessages(messagesWithSignedUrls)
       setLoading(false)
     }
 
@@ -106,11 +146,16 @@ export default function ChatWindow({
             conversation_id: payload.new.conversation_id,
             sender_id: payload.new.sender_id,
             content: payload.new.content,
+            media_url: payload.new.media_url,
+            media_type: payload.new.media_type,
             created_at: payload.new.created_at,
             sender_name: profileData?.full_name || 'Unknown',
           }
 
-          setMessages((prev) => [...prev, newMessage])
+          // Process media to generate signed URL if needed
+          const processedMessage = await processMessageMedia(newMessage)
+
+          setMessages((prev) => [...prev, processedMessage])
         }
       )
       .subscribe()
@@ -172,7 +217,46 @@ export default function ChatWindow({
                       {message.sender_name}
                     </div>
                   )}
-                  <div className="break-words">{message.content}</div>
+
+                  {/* Render image */}
+                  {message.media_type === 'image' && message.signedUrl && (
+                    <div className="mb-2">
+                      <img
+                        src={message.signedUrl}
+                        alt="Shared image"
+                        className="max-w-full max-h-96 rounded-lg cursor-pointer"
+                        onClick={() => window.open(message.signedUrl!, '_blank')}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                          const errorDiv = document.createElement('div')
+                          errorDiv.className = 'text-red-500 text-sm'
+                          errorDiv.textContent = 'Failed to load image'
+                          target.parentNode?.appendChild(errorDiv)
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Render video */}
+                  {message.media_type === 'video' && message.signedUrl && (
+                    <div className="mb-2">
+                      <video
+                        src={message.signedUrl}
+                        controls
+                        preload="metadata"
+                        className="max-w-full max-h-96 rounded-lg"
+                      >
+                        Your browser does not support video playback.
+                      </video>
+                    </div>
+                  )}
+
+                  {/* Render text content */}
+                  {message.content && (
+                    <div className="break-words">{message.content}</div>
+                  )}
+
                   <div
                     className={`text-xs mt-1 ${
                       isCurrentUser ? 'text-gray-600' : 'text-gray-500'

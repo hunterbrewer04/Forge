@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import ConversationList from './components/ConversationList'
 import ChatWindow from './components/ChatWindow'
+import InstallPrompt from '@/components/InstallPrompt'
 
 interface ConversationInfo {
   id: string
@@ -258,7 +259,7 @@ export default function ChatPage() {
   }
 
   // Redirect to login if no user (shouldn't reach here, but safety check)
-  if (!user) {
+  if (!user || !profile) {
     return null
   }
 
@@ -367,6 +368,9 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   )
 }

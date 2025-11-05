@@ -1,0 +1,12 @@
+{
+  "name": "Forge Trainer",
+  "short_name": "Forge",
+  "description": "Real-time messaging app for gym trainers and clients",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": []
+}
