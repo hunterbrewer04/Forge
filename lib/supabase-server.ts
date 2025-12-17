@@ -1,12 +1,24 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { env } from './env-validation'
 
+/**
+ * Creates a Supabase client for use in server-side components and API routes.
+ *
+ * This client uses the anonymous key and respects Row Level Security (RLS).
+ * It automatically manages auth sessions via cookies.
+ *
+ * IMPORTANT: This client is scoped to the authenticated user via RLS.
+ * For admin operations that need to bypass RLS, use lib/supabase-admin.ts instead.
+ *
+ * @returns Supabase client for server-side use with user auth context
+ */
 export async function createClient() {
   const cookieStore = await cookies()
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.supabaseUrl(),
+    env.supabaseAnonKey(),
     {
       cookies: {
         get(name: string) {

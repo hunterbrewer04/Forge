@@ -1,7 +1,7 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { User } from '@supabase/supabase-js'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { User, AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase-browser'
 
 interface Profile {
@@ -16,40 +16,122 @@ interface AuthContextType {
   user: User | null
   profile: Profile | null
   loading: boolean
+  error: AuthError | null
   signOut: () => Promise<void>
+  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  error: null,
   signOut: async () => {},
+  refreshSession: async () => {},
 })
 
+/**
+ * AuthProvider component that manages authentication state
+ *
+ * Security Features (Phase 2):
+ * - Automatic session refresh on auth state changes
+ * - Profile fetching with error handling
+ * - Proper cleanup on component unmount
+ * - Error state tracking for auth failures
+ * - Session refresh capability for manual token refresh
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<AuthError | null>(null)
   const supabase = createClient()
 
-  useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
+  // Fetch user profile with error handling
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, is_trainer, is_admin, is_client')
+        .eq('id', userId)
+        .single()
 
-      if (session?.user) {
-        // Fetch user profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id, full_name, is_trainer, is_admin, is_client')
-          .eq('id', session.user.id)
-          .single()
-
-        setProfile(profileData)
+      if (profileError) {
+        console.error('Error fetching profile:', profileError)
+        setProfile(null)
+        return
       }
 
-      setLoading(false)
+      setProfile(profileData)
+    } catch (err) {
+      console.error('Unexpected error fetching profile:', err)
+      setProfile(null)
+    }
+  }, [supabase])
+
+  // Manual session refresh function
+  const refreshSession = useCallback(async () => {
+    try {
+      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession()
+
+      if (refreshError) {
+        console.error('Error refreshing session:', refreshError)
+        setError(refreshError)
+        setUser(null)
+        setProfile(null)
+        return
+      }
+
+      setUser(session?.user ?? null)
+      setError(null)
+
+      if (session?.user) {
+        await fetchProfile(session.user.id)
+      } else {
+        setProfile(null)
+      }
+    } catch (err) {
+      console.error('Unexpected error refreshing session:', err)
+      setUser(null)
+      setProfile(null)
+    }
+  }, [supabase, fetchProfile])
+
+  useEffect(() => {
+    let mounted = true
+
+    // Get initial session
+    const getSession = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        if (!mounted) return
+
+        if (sessionError) {
+          console.error('Error getting session:', sessionError)
+          setError(sessionError)
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+          return
+        }
+
+        setUser(session?.user ?? null)
+        setError(null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        }
+
+        setLoading(false)
+      } catch (err) {
+        console.error('Unexpected error getting session:', err)
+        if (mounted) {
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+        }
+      }
     }
 
     getSession()
@@ -57,19 +139,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null)
+        if (!mounted) return
 
-        if (session?.user) {
-          // Fetch user profile
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('id, full_name, is_trainer, is_admin, is_client')
-            .eq('id', session.user.id)
-            .single()
-
-          setProfile(profileData)
-        } else {
+        // Handle different auth events
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
           setProfile(null)
+          setError(null)
+        } else if (event === 'TOKEN_REFRESHED') {
+          // Session was refreshed, update user
+          setUser(session?.user ?? null)
+          setError(null)
+        } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+          setUser(session?.user ?? null)
+          setError(null)
+
+          if (session?.user) {
+            await fetchProfile(session.user.id)
+          } else {
+            setProfile(null)
+          }
         }
 
         setLoading(false)
@@ -77,18 +166,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [supabase, fetchProfile])
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
+    try {
+      const { error: signOutError } = await supabase.auth.signOut()
+
+      if (signOutError) {
+        console.error('Error signing out:', signOutError)
+        setError(signOutError)
+        return
+      }
+
+      setUser(null)
+      setProfile(null)
+      setError(null)
+    } catch (err) {
+      console.error('Unexpected error signing out:', err)
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, error, signOut, refreshSession }}>
       {children}
     </AuthContext.Provider>
   )

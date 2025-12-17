@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
 
@@ -11,7 +11,11 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Get return_to URL from query parameters (set by proxy.ts)
+  const returnTo = searchParams.get('return_to') || '/home'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,7 +30,8 @@ export default function LoginPage() {
 
       if (signInError) throw signInError
 
-      router.push('/chat')
+      // Redirect to the intended destination after successful login
+      router.push(returnTo)
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to login')

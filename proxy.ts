@@ -1,6 +1,16 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { env } from '@/lib/env-validation'
 
+/**
+ * Next.js 16 proxy for authentication and session management
+ *
+ * Security Features:
+ * - Automatic session refresh on each request
+ * - Protected route enforcement with redirects
+ * - Return URL preservation for post-login navigation
+ * - Prevents authenticated users from accessing auth pages
+ */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -8,9 +18,10 @@ export async function proxy(request: NextRequest) {
     },
   })
 
+  // Use validated environment variables from Phase 1
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.supabaseUrl(),
+    env.supabaseAnonKey(),
     {
       cookies: {
         get(name: string) {
@@ -54,24 +65,40 @@ export async function proxy(request: NextRequest) {
     }
   )
 
+  // Get user and refresh session if needed
+  // This ensures the session is always fresh and handles token refresh automatically
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
 
   // Protected routes that require authentication
   const protectedRoutes = ['/chat', '/home']
+  const authRoutes = ['/login', '/signup']
+
   const isProtectedRoute = protectedRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
+  const isAuthRoute = authRoutes.some(route =>
+    request.nextUrl.pathname === route
+  )
 
   // If accessing a protected route without authentication, redirect to login
-  if (isProtectedRoute && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (isProtectedRoute && (!user || authError)) {
+    // Preserve the intended destination for post-login redirect
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('return_to', request.nextUrl.pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   // If authenticated and accessing login/signup, redirect to home
-  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/home', request.url))
+  if (user && !authError && isAuthRoute) {
+    // Check if there's a return_to parameter
+    const returnTo = request.nextUrl.searchParams.get('return_to')
+    const redirectUrl = returnTo && returnTo.startsWith('/')
+      ? new URL(returnTo, request.url)
+      : new URL('/home', request.url)
+    return NextResponse.redirect(redirectUrl)
   }
 
   return response
