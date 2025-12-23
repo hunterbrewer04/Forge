@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import '@/lib/types/navigator.d.ts'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -19,8 +20,9 @@ export default function InstallPrompt() {
     setIsIOS(iOS)
 
     // Check if already installed (standalone mode)
+    // navigator.standalone is an iOS Safari-specific property
     const standalone = window.matchMedia('(display-mode: standalone)').matches ||
-                      (window.navigator as any).standalone === true
+                      window.navigator.standalone === true
     setIsInStandaloneMode(standalone)
 
     if (standalone) {

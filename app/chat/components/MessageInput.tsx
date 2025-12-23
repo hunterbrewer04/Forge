@@ -2,13 +2,22 @@
 
 import { useState, FormEvent, useRef, ChangeEvent } from 'react'
 import { createClient } from '@/lib/supabase-browser'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface MessageInputProps {
   conversationId: string
-  senderId: string
+  // senderId prop is kept for backwards compatibility but we use authenticated user
+  senderId?: string
 }
 
-export default function MessageInput({ conversationId, senderId }: MessageInputProps) {
+/**
+ * MessageInput Component
+ *
+ * Security: Uses authenticated user ID from AuthContext instead of client-provided
+ * senderId prop. This prevents message spoofing even if RLS is misconfigured.
+ */
+export default function MessageInput({ conversationId }: MessageInputProps) {
+  const { user } = useAuth()
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -77,40 +86,43 @@ export default function MessageInput({ conversationId, senderId }: MessageInputP
     setUploadError(null)
 
     try {
-      // Determine media type
-      const mediaType = file.type.startsWith('image/') ? 'image' : 'video'
-
-      // Generate unique filename
-      const timestamp = Date.now()
-      const fileExtension = file.name.split('.').pop()
-      const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}.${fileExtension}`
-      const filePath = `${conversationId}/${fileName}`
-
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('chat-media')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`)
+      // Security: Verify user is authenticated before uploading
+      if (!user?.id) {
+        throw new Error('You must be logged in to upload files')
       }
 
-      setUploadProgress(100)
+      setUploadProgress(25)
 
-      // Store the file path (not a public URL) for secure, authenticated access
-      // The frontend will generate signed URLs on-demand when displaying media
+      // Use server-side API for secure file validation (magic bytes, size, type)
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('conversationId', conversationId)
 
-      // Insert message with media (store file path, not URL)
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      setUploadProgress(75)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
+      }
+
+      const { filePath, mediaType } = await response.json()
+
+      setUploadProgress(90)
+
+      // Insert message with media reference
+      // Server already validated the file and uploaded it securely
       const { error: insertError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: senderId,
+          sender_id: user.id, // Use authenticated user ID
           content: null,
-          media_url: filePath, // Store path, not public URL
+          media_url: filePath,
           media_type: mediaType,
           created_at: new Date().toISOString(),
         })
@@ -118,6 +130,8 @@ export default function MessageInput({ conversationId, senderId }: MessageInputP
       if (insertError) {
         throw new Error(`Failed to save message: ${insertError.message}`)
       }
+
+      setUploadProgress(100)
 
       // Reset state
       setSelectedFile(null)
@@ -141,11 +155,17 @@ export default function MessageInput({ conversationId, senderId }: MessageInputP
     setSending(true)
 
     try {
+      // Security: Verify user is authenticated before sending
+      if (!user?.id) {
+        alert('You must be logged in to send messages')
+        return
+      }
+
       const { error } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: senderId,
+          sender_id: user.id, // Use authenticated user ID, not client-provided
           content: message.trim(),
           created_at: new Date().toISOString(),
         })

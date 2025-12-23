@@ -28,10 +28,10 @@ export {
 // Request Validation
 export {
   validateRequestBody,
-  validateQueryParams,
-  sanitizeString,
-  isValidUUID,
-  CommonSchemas,
+  validateQueryParams, // @future - For API routes with query parameters
+  sanitizeString,      // @future - For user input sanitization
+  isValidUUID,         // @future - For UUID validation in routes
+  CommonSchemas,       // @future - Reusable Zod schemas for common types
   ExampleSchemas,
 } from './validation'
 

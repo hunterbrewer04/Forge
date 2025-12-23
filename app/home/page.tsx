@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
+import type { ProfileJoin } from '@/lib/types/database'
 
 interface Stats {
   unreadCount: number
@@ -62,10 +63,11 @@ export default function HomePage() {
           .single()
 
         if (!error && conversation) {
+          const trainer = conversation.trainer as ProfileJoin | null
           setStats({
             unreadCount: 0, // You can implement unread count logic later
             totalConversations: 1,
-            trainerName: (conversation.trainer as any)?.full_name || 'Your Trainer',
+            trainerName: trainer?.full_name || 'Your Trainer',
           })
         }
       }

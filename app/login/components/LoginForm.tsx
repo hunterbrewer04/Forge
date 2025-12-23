@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
@@ -33,8 +34,8 @@ export default function LoginForm() {
       // Redirect to the intended destination after successful login
       router.push(returnTo)
       router.refresh()
-    } catch (err: any) {
-      setError(err.message || 'Failed to login')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }

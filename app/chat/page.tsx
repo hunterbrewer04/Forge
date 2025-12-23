@@ -3,11 +3,12 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import ConversationList from './components/ConversationList'
 import ClientConversationList from './components/ClientConversationList'
 import ChatWindow from './components/ChatWindow'
 import Link from 'next/link'
+import { logger } from '@/lib/utils/logger'
+import { fetchClientConversation, fetchConversationById } from '@/lib/services/conversations'
 
 interface ConversationInfo {
   id: string
@@ -25,16 +26,15 @@ export default function ChatPage() {
   const [loadingConversation, setLoadingConversation] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingTimeout, setLoadingTimeout] = useState(false)
-  const supabase = createClient()
 
   // Debug logging on mount
   useEffect(() => {
-    console.log('[ChatPage] Component mounted')
+    logger.debug('[ChatPage] Component mounted')
   }, [])
 
   // Debug logging for auth state
   useEffect(() => {
-    console.log('[ChatPage] Auth state:', {
+    logger.debug('[ChatPage] Auth state:', {
       loading,
       hasUser: !!user,
       hasProfile: !!profile,
@@ -46,15 +46,15 @@ export default function ChatPage() {
   // Loading timeout - if stuck loading for more than 5 seconds, show error
   useEffect(() => {
     if (loading) {
-      console.log('[ChatPage] Setting loading timeout')
+      logger.debug('[ChatPage] Setting loading timeout')
       const timeout = setTimeout(() => {
-        console.log('[ChatPage] Loading timeout reached!')
+        logger.debug('[ChatPage] Loading timeout reached!')
         setLoadingTimeout(true)
         setError('Authentication is taking too long. Please refresh the page or try logging in again.')
       }, 5000)
 
       return () => {
-        console.log('[ChatPage] Clearing loading timeout')
+        logger.debug('[ChatPage] Clearing loading timeout')
         clearTimeout(timeout)
       }
     } else {
@@ -69,134 +69,97 @@ export default function ChatPage() {
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    console.log('[ChatPage] Checking auth for redirect:', { loading, hasUser: !!user, hasProfile: !!profile })
+    logger.debug('[ChatPage] Checking auth for redirect:', { loading, hasUser: !!user, hasProfile: !!profile })
     if (!loading && !user) {
-      console.log('[ChatPage] No user found, redirecting to login')
+      logger.debug('[ChatPage] No user found, redirecting to login')
       setError('No user found. Redirecting to login...')
       router.push('/login')
     } else if (!loading && user && !profile) {
-      console.log('[ChatPage] User exists but no profile found')
+      logger.debug('[ChatPage] User exists but no profile found')
       setError('Profile not found. Please contact support.')
     }
   }, [user, profile, loading, router])
 
   // For clients, automatically fetch their conversation with their trainer
   useEffect(() => {
-    const fetchClientConversation = async () => {
-      console.log('[ChatPage] Fetching client conversation for:', user?.id)
-      if (!profile || !profile.is_client || profile.is_trainer) {
-        console.log('[ChatPage] Skipping client conversation fetch - not a client-only user')
+    const loadClientConversation = async () => {
+      logger.debug('[ChatPage] Fetching client conversation for:', user?.id)
+      if (!profile || !profile.is_client || profile.is_trainer || !user?.id) {
+        logger.debug('[ChatPage] Skipping client conversation fetch - not a client-only user')
         return
       }
 
       setLoadingConversation(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          client_id,
-          trainer_id,
-          profiles!conversations_trainer_id_fkey (
-            full_name
-          )
-        `)
-        .eq('client_id', user?.id)
-        .single()
-
-      if (error) {
-        console.error('[ChatPage] Error fetching client conversation:', error)
-        if (error.code === 'PGRST116') {
-          // No rows returned
-          setError('No conversation found. Please contact support to set up your trainer.')
-        } else {
-          setError(`Failed to load conversation: ${error.message}`)
-        }
-        setLoadingConversation(false)
-        return
-      }
-
-      if (data) {
-        console.log('[ChatPage] Client conversation loaded:', data.id)
+      try {
+        const data = await fetchClientConversation(user.id)
+        logger.debug('[ChatPage] Client conversation loaded:', data.id)
         const convInfo: ConversationInfo = {
           id: data.id,
           client_id: data.client_id,
           trainer_id: data.trainer_id,
           client_name: profile.full_name,
-          trainer_name: (data.profiles as any)?.full_name || 'Your Trainer',
+          trainer_name: data.profiles?.full_name || 'Your Trainer',
         }
         setConversationInfo(convInfo)
         setSelectedConversationId(data.id)
-      } else {
-        console.log('[ChatPage] No conversation data returned')
-        setError('No conversation found. Please contact support.')
+      } catch (err) {
+        logger.error('[ChatPage] Error fetching client conversation:', err)
+        const error = err as { code?: string; message?: string }
+        if (error.code === 'PGRST116') {
+          setError('No conversation found. Please contact support to set up your trainer.')
+        } else {
+          setError(`Failed to load conversation: ${error.message || 'Unknown error'}`)
+        }
+      } finally {
+        setLoadingConversation(false)
       }
-
-      setLoadingConversation(false)
     }
 
     if (profile && profile.is_client && !profile.is_trainer) {
-      console.log('[ChatPage] Profile is client-only, fetching conversation')
-      fetchClientConversation()
+      logger.debug('[ChatPage] Profile is client-only, fetching conversation')
+      loadClientConversation()
     }
-  }, [profile, user?.id, supabase])
+  }, [profile, user?.id])
 
   // Fetch conversation info when a conversation is selected (for trainers)
   useEffect(() => {
-    const fetchConversationInfo = async () => {
-      console.log('[ChatPage] Fetching conversation info for trainer:', selectedConversationId)
+    const loadConversationInfo = async () => {
+      logger.debug('[ChatPage] Fetching conversation info for trainer:', selectedConversationId)
       if (!selectedConversationId || !profile?.is_trainer) {
-        console.log('[ChatPage] Skipping trainer conversation fetch')
+        logger.debug('[ChatPage] Skipping trainer conversation fetch')
         return
       }
 
       setLoadingConversation(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          client_id,
-          trainer_id,
-          profiles!conversations_client_id_fkey (
-            full_name
-          )
-        `)
-        .eq('id', selectedConversationId)
-        .single()
-
-      if (error) {
-        console.error('[ChatPage] Error fetching conversation info:', error)
-        setError(`Failed to load conversation: ${error.message}`)
-        setLoadingConversation(false)
-        return
-      }
-
-      if (data) {
-        console.log('[ChatPage] Trainer conversation loaded:', data.id)
+      try {
+        const data = await fetchConversationById(selectedConversationId, true)
+        logger.debug('[ChatPage] Trainer conversation loaded:', data.id)
         const convInfo: ConversationInfo = {
           id: data.id,
           client_id: data.client_id,
           trainer_id: data.trainer_id,
-          client_name: (data.profiles as any)?.full_name || 'Client',
+          client_name: data.profiles?.full_name || 'Client',
           trainer_name: profile.full_name,
         }
         setConversationInfo(convInfo)
-      } else {
-        console.log('[ChatPage] No conversation data returned')
-        setError('Conversation not found.')
+      } catch (err) {
+        logger.error('[ChatPage] Error fetching conversation info:', err)
+        const error = err as { message?: string }
+        setError(`Failed to load conversation: ${error.message || 'Unknown error'}`)
+      } finally {
+        setLoadingConversation(false)
       }
-
-      setLoadingConversation(false)
     }
 
     if (selectedConversationId && profile?.is_trainer) {
-      console.log('[ChatPage] Selected conversation changed, fetching info')
-      fetchConversationInfo()
+      logger.debug('[ChatPage] Selected conversation changed, fetching info')
+      loadConversationInfo()
     }
-  }, [selectedConversationId, profile, supabase])
+  }, [selectedConversationId, profile])
 
   // Show loading state or timeout error
   if (loading || loadingTimeout) {

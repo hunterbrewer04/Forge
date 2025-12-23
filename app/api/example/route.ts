@@ -107,29 +107,6 @@ export async function POST(request: NextRequest) {
     // - Use createAdminClient() from @/lib/supabase-admin only when necessary
     // - Never trust client-provided user IDs - always use auth.uid() or the validated user.id
 
-    // Example of safe database operation:
-    /*
-    const supabase = createServerClient()
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        sender_id: user.id, // Use validated user ID
-        content: message,
-        priority: priority,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Database error:', error)
-      return createApiError(
-        'Failed to create message',
-        500,
-        'DATABASE_ERROR'
-      )
-    }
-    */
-
     const data = {
       success: true,
       message: 'Data processed successfully',
@@ -146,39 +123,3 @@ export async function POST(request: NextRequest) {
     return handleUnexpectedError(error, 'POST /api/example')
   }
 }
-
-/**
- * Example of an admin-only endpoint
- *
- * Uncomment and modify as needed
- */
-/*
-export async function DELETE(request: NextRequest) {
-  try {
-    // 1. Validate authentication AND role
-    const authResult = await validateRole(request, 'admin')
-    if (authResult instanceof NextResponse) {
-      return authResult
-    }
-    const user = authResult
-
-    // 2. Strict rate limit for admin operations
-    const rateLimitResult = await checkRateLimit(
-      request,
-      RateLimitPresets.STRICT,
-      user.id
-    )
-    if (rateLimitResult) {
-      return rateLimitResult
-    }
-
-    // 3. Process admin operation
-    // Use createAdminClient() for operations that require bypassing RLS
-    // Be VERY careful with admin operations!
-
-    return NextResponse.json({ success: true }, { status: 200 })
-  } catch (error) {
-    return handleUnexpectedError(error, 'DELETE /api/example')
-  }
-}
-*/

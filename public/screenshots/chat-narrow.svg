@@ -1,0 +1,31 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1080" height="1920" fill="#f3f4f6"/>
+
+  <!-- Status bar -->
+  <rect width="1080" height="88" fill="#3b82f6"/>
+  <text x="540" y="56" font-family="Arial, sans-serif" font-size="32" fill="white" text-anchor="middle">Forge</text>
+
+  <!-- Header -->
+  <rect y="88" width="1080" height="120" fill="#3b82f6"/>
+  <text x="540" y="160" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="white" text-anchor="middle">Chat with Trainer</text>
+
+  <!-- Chat messages -->
+  <rect x="60" y="280" width="500" height="120" rx="20" fill="white"/>
+  <text x="90" y="350" font-family="Arial, sans-serif" font-size="28" fill="#374151">Hey, how was your workout?</text>
+
+  <rect x="520" y="440" width="500" height="120" rx="20" fill="#3b82f6"/>
+  <text x="550" y="510" font-family="Arial, sans-serif" font-size="28" fill="white">Great! Hit a new PR today!</text>
+
+  <rect x="60" y="600" width="600" height="120" rx="20" fill="white"/>
+  <text x="90" y="670" font-family="Arial, sans-serif" font-size="28" fill="#374151">Awesome! Keep up the great work!</text>
+
+  <rect x="420" y="760" width="600" height="120" rx="20" fill="#3b82f6"/>
+  <text x="450" y="830" font-family="Arial, sans-serif" font-size="28" fill="white">Thanks coach!</text>
+
+  <!-- Input area -->
+  <rect y="1720" width="1080" height="200" fill="white"/>
+  <rect x="40" y="1760" width="880" height="100" rx="50" fill="#e5e7eb"/>
+  <text x="100" y="1825" font-family="Arial, sans-serif" font-size="28" fill="#9ca3af">Type a message...</text>
+  <circle cx="980" cy="1810" r="40" fill="#3b82f6"/>
+</svg>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
+import { fetchTrainerConversations } from '@/lib/services/conversations'
+import { logger } from '@/lib/utils/logger'
 
 interface Conversation {
   id: string
@@ -23,49 +24,36 @@ export default function ConversationList({
 }: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
-    const fetchConversations = async () => {
-      // Fetch conversations where current user is the trainer
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          client_id,
-          trainer_id,
-          profiles!conversations_client_id_fkey (
-            full_name
-          )
-        `)
-        .eq('trainer_id', currentUserId)
-        .order('created_at', { ascending: false })
+    const loadConversations = async () => {
+      try {
+        // Fetch conversations where current user is the trainer
+        const data = await fetchTrainerConversations(currentUserId)
 
-      if (error) {
-        console.error('Error fetching conversations:', error)
+        // Transform the data to include client_name
+        const conversationsWithNames: Conversation[] = data.map((conv) => ({
+          id: conv.id,
+          client_id: conv.client_id,
+          trainer_id: conv.trainer_id,
+          client_name: conv.profiles?.full_name || 'Unknown Client',
+        }))
+
+        setConversations(conversationsWithNames)
+
+        // Auto-select first conversation if none selected
+        if (!selectedConversationId && conversationsWithNames.length > 0) {
+          onSelectConversation(conversationsWithNames[0].id)
+        }
+      } catch (err) {
+        logger.error('Error fetching conversations:', err)
+      } finally {
         setLoading(false)
-        return
-      }
-
-      // Transform the data to include client_name
-      const conversationsWithNames = data?.map((conv: any) => ({
-        id: conv.id,
-        client_id: conv.client_id,
-        trainer_id: conv.trainer_id,
-        client_name: conv.profiles?.full_name || 'Unknown Client',
-      })) || []
-
-      setConversations(conversationsWithNames)
-      setLoading(false)
-
-      // Auto-select first conversation if none selected
-      if (!selectedConversationId && conversationsWithNames.length > 0) {
-        onSelectConversation(conversationsWithNames[0].id)
       }
     }
 
-    fetchConversations()
-  }, [currentUserId, supabase, selectedConversationId, onSelectConversation])
+    loadConversations()
+  }, [currentUserId, selectedConversationId, onSelectConversation])
 
   if (loading) {
     return (

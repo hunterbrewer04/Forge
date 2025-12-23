@@ -1,0 +1,9 @@
+<svg width="640" height="1136" viewBox="0 0 640 1136" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="1136" fill="#3b82f6"/>
+  <g transform="translate(320, 520)">
+    <rect x="-80" y="-80" width="160" height="160" rx="32" fill="white"/>
+    <text x="0" y="30" font-family="Arial, sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="#3b82f6">F</text>
+    <circle cx="0" cy="50" r="8" fill="#3b82f6"/>
+  </g>
+  <text x="320" y="720" font-family="Arial, sans-serif" font-size="32" font-weight="600" text-anchor="middle" fill="white">Forge Trainer</text>
+</svg>

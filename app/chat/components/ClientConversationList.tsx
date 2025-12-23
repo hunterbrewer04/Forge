@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
+import { fetchClientConversation } from '@/lib/services/conversations'
+import { logger } from '@/lib/utils/logger'
 
 interface Conversation {
   id: string
@@ -23,36 +24,18 @@ export default function ClientConversationList({
 }: ClientConversationListProps) {
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
-    const fetchConversation = async () => {
-      // Fetch conversation where current user is the client
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          client_id,
-          trainer_id,
-          profiles!conversations_trainer_id_fkey (
-            full_name
-          )
-        `)
-        .eq('client_id', currentUserId)
-        .single()
+    const loadConversation = async () => {
+      try {
+        // Fetch conversation where current user is the client
+        const data = await fetchClientConversation(currentUserId)
 
-      if (error) {
-        console.error('Error fetching conversation:', error)
-        setLoading(false)
-        return
-      }
-
-      if (data) {
         const conv: Conversation = {
           id: data.id,
           client_id: data.client_id,
           trainer_id: data.trainer_id,
-          trainer_name: (data.profiles as any)?.full_name || 'Your Trainer',
+          trainer_name: data.profiles?.full_name || 'Your Trainer',
         }
         setConversation(conv)
 
@@ -60,13 +43,15 @@ export default function ClientConversationList({
         if (!selectedConversationId) {
           onSelectConversation(conv.id)
         }
+      } catch (err) {
+        logger.error('Error fetching conversation:', err)
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
-    fetchConversation()
-  }, [currentUserId, supabase, selectedConversationId, onSelectConversation])
+    loadConversation()
+  }, [currentUserId, selectedConversationId, onSelectConversation])
 
   if (loading) {
     return (

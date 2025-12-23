@@ -1,22 +1,82 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
+import { getErrorMessage } from '@/lib/utils/errors'
+
+// Password validation requirements
+interface PasswordRequirement {
+  label: string
+  test: (password: string) => boolean
+}
+
+const PASSWORD_REQUIREMENTS: PasswordRequirement[] = [
+  { label: 'At least 8 characters', test: (p) => p.length >= 8 },
+  { label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter', test: (p) => /[a-z]/.test(p) },
+  { label: 'One number', test: (p) => /[0-9]/.test(p) },
+]
+
+function validatePassword(password: string): string | null {
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters'
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter'
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter'
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Password must contain at least one number'
+  }
+  return null
+}
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  // Calculate password strength and requirements status
+  const passwordStatus = useMemo(() => {
+    const results = PASSWORD_REQUIREMENTS.map((req) => ({
+      ...req,
+      met: req.test(password),
+    }))
+    const allMet = results.every((r) => r.met)
+    const metCount = results.filter((r) => r.met).length
+    return { requirements: results, allMet, metCount }
+  }, [password])
+
+  // Check if passwords match
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    // Validate password strength
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      setError(passwordError)
+      return
+    }
+
+    // Validate password confirmation
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -38,8 +98,8 @@ export default function SignupPage() {
         router.push('/chat')
         router.refresh()
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign up')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -108,16 +168,95 @@ export default function SignupPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="relative block w-full rounded-lg border-0 py-3 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                onFocus={() => setShowPasswordRequirements(true)}
+                onBlur={() => setShowPasswordRequirements(false)}
+                className={`relative block w-full rounded-lg border-0 py-3 px-4 text-gray-900 ring-1 ring-inset placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
+                  password.length > 0
+                    ? passwordStatus.allMet
+                      ? 'ring-green-500 focus:ring-green-600'
+                      : 'ring-amber-500 focus:ring-amber-600'
+                    : 'ring-gray-300 focus:ring-blue-600'
+                }`}
                 placeholder="Password"
               />
+              {/* Password requirements indicator */}
+              {(showPasswordRequirements || password.length > 0) && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs font-medium text-gray-700 mb-2">
+                    Password requirements:
+                  </p>
+                  <ul className="space-y-1">
+                    {passwordStatus.requirements.map((req) => (
+                      <li
+                        key={req.label}
+                        className={`text-xs flex items-center gap-2 ${
+                          req.met ? 'text-green-600' : 'text-gray-500'
+                        }`}
+                      >
+                        <span className="flex-shrink-0">
+                          {req.met ? (
+                            <svg
+                              className="w-4 h-4"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              className="w-4 h-4"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <circle cx="10" cy="10" r="3" />
+                            </svg>
+                          )}
+                        </span>
+                        {req.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="confirm-password" className="sr-only">
+                Confirm password
+              </label>
+              <input
+                id="confirm-password"
+                name="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`relative block w-full rounded-lg border-0 py-3 px-4 text-gray-900 ring-1 ring-inset placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
+                  confirmPassword.length > 0
+                    ? passwordsMatch
+                      ? 'ring-green-500 focus:ring-green-600'
+                      : 'ring-red-500 focus:ring-red-600'
+                    : 'ring-gray-300 focus:ring-blue-600'
+                }`}
+                placeholder="Confirm password"
+              />
+              {confirmPassword.length > 0 && !passwordsMatch && (
+                <p className="mt-1 text-xs text-red-600">
+                  Passwords do not match
+                </p>
+              )}
             </div>
           </div>
 
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !passwordStatus.allMet || !passwordsMatch}
               className="group relative flex w-full justify-center rounded-lg bg-blue-600 py-3 px-4 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Sign up'}

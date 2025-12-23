@@ -3,6 +3,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import MessageInput from './MessageInput'
+import { fetchMessages, fetchSenderProfile } from '@/lib/services/messages'
+import { processMessageMedia, processMessagesMedia } from '@/lib/services/storage'
+import { logger } from '@/lib/utils/logger'
 
 interface Message {
   id: string
@@ -37,30 +40,11 @@ export default function ChatWindow({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Generate secure signed URL for media files
-  const generateSignedUrl = async (filePath: string): Promise<string | null> => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('chat-media')
-        .createSignedUrl(filePath, 3600) // 1 hour expiration
-
-      if (error) {
-        console.error('Error generating signed URL:', error)
-        return null
-      }
-
-      return data.signedUrl
-    } catch (err) {
-      console.error('Unexpected error generating signed URL:', err)
-      return null
-    }
-  }
-
-  // Process message to add signed URL for media
-  const processMessageMedia = async (message: Message): Promise<Message> => {
+  // Process message to add signed URL for media (uses storage service)
+  const processMessage = async (message: Message): Promise<Message> => {
     if (message.media_url && message.media_type) {
-      const signedUrl = await generateSignedUrl(message.media_url)
-      return { ...message, signedUrl }
+      const processed = await processMessageMedia(message)
+      return processed as Message
     }
     return message
   }
@@ -71,55 +55,39 @@ export default function ChatWindow({
 
   // Fetch initial messages
   useEffect(() => {
-    const fetchMessages = async () => {
+    const loadMessages = async () => {
       setLoading(true)
 
-      const { data, error } = await supabase
-        .from('messages')
-        .select(`
-          id,
-          conversation_id,
-          sender_id,
-          content,
-          media_url,
-          media_type,
-          created_at,
-          profiles!messages_sender_id_fkey (
-            full_name
-          )
-        `)
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
+      try {
+        const data = await fetchMessages(conversationId)
 
-      if (error) {
-        console.error('Error fetching messages:', error)
+        // Transform the data to include sender_name
+        const messagesWithNames: Message[] = data.map((msg) => ({
+          id: msg.id,
+          conversation_id: msg.conversation_id,
+          sender_id: msg.sender_id,
+          content: msg.content,
+          media_url: msg.media_url,
+          media_type: msg.media_type,
+          created_at: msg.created_at,
+          sender_name: msg.profiles?.full_name || 'Unknown',
+        }))
+
+        // Process messages to generate signed URLs for media
+        const messagesWithSignedUrls = await Promise.all(
+          messagesWithNames.map(msg => processMessage(msg))
+        )
+
+        setMessages(messagesWithSignedUrls)
+      } catch (err) {
+        logger.error('Error fetching messages:', err)
+      } finally {
         setLoading(false)
-        return
       }
-
-      // Transform the data to include sender_name
-      const messagesWithNames = data?.map((msg: any) => ({
-        id: msg.id,
-        conversation_id: msg.conversation_id,
-        sender_id: msg.sender_id,
-        content: msg.content,
-        media_url: msg.media_url,
-        media_type: msg.media_type,
-        created_at: msg.created_at,
-        sender_name: msg.profiles?.full_name || 'Unknown',
-      })) || []
-
-      // Process messages to generate signed URLs for media
-      const messagesWithSignedUrls = await Promise.all(
-        messagesWithNames.map(msg => processMessageMedia(msg))
-      )
-
-      setMessages(messagesWithSignedUrls)
-      setLoading(false)
     }
 
-    fetchMessages()
-  }, [conversationId, supabase])
+    loadMessages()
+  }, [conversationId])
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -134,12 +102,14 @@ export default function ChatWindow({
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
-          // Fetch the sender's name for the new message
-          const { data: senderProfile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', payload.new.sender_id)
-            .single()
+          // Fetch the sender's name for the new message using service
+          let senderName = 'Unknown'
+          try {
+            const senderProfile = await fetchSenderProfile(payload.new.sender_id)
+            senderName = senderProfile?.full_name || 'Unknown'
+          } catch {
+            logger.error('Failed to fetch sender profile')
+          }
 
           const newMessage: Message = {
             id: payload.new.id,
@@ -149,11 +119,11 @@ export default function ChatWindow({
             media_url: payload.new.media_url,
             media_type: payload.new.media_type,
             created_at: payload.new.created_at,
-            sender_name: senderProfile?.full_name || 'Unknown',
+            sender_name: senderName,
           }
 
           // Process media to generate signed URL if needed
-          const processedMessage = await processMessageMedia(newMessage)
+          const processedMessage = await processMessage(newMessage)
 
           setMessages((prev) => [...prev, processedMessage])
         }
@@ -270,8 +240,8 @@ export default function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message input */}
-      <MessageInput conversationId={conversationId} senderId={currentUserId} />
+      {/* Message input - uses AuthContext for user ID (security improvement) */}
+      <MessageInput conversationId={conversationId} />
     </div>
   )
 }

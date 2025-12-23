@@ -40,6 +40,18 @@ const ENV_VARS: EnvVarConfig[] = [
     description: 'Supabase service role key (server-side only, bypasses RLS)',
     clientSide: false,
   },
+  {
+    name: 'UPSTASH_REDIS_REST_URL',
+    required: false, // Optional - falls back to in-memory rate limiting
+    description: 'Upstash Redis REST URL for distributed rate limiting',
+    clientSide: false,
+  },
+  {
+    name: 'UPSTASH_REDIS_REST_TOKEN',
+    required: false, // Optional - falls back to in-memory rate limiting
+    description: 'Upstash Redis REST token for authentication',
+    clientSide: false,
+  },
 ]
 
 class EnvironmentValidationError extends Error {
