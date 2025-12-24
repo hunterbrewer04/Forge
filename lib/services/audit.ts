@@ -70,9 +70,9 @@ export interface AuditLogRecord {
 /**
  * Extracts client IP address from request headers
  */
-function getClientIp(): string | null {
+async function getClientIp(): Promise<string | null> {
   try {
-    const headersList = headers()
+    const headersList = await headers()
     const forwarded = headersList.get('x-forwarded-for')
     const realIp = headersList.get('x-real-ip')
     return forwarded?.split(',')[0].trim() || realIp || null
@@ -85,9 +85,9 @@ function getClientIp(): string | null {
 /**
  * Extracts user agent from request headers
  */
-function getUserAgent(): string | null {
+async function getUserAgent(): Promise<string | null> {
   try {
-    const headersList = headers()
+    const headersList = await headers()
     return headersList.get('user-agent')
   } catch {
     return null
@@ -141,8 +141,8 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<boolean> {
   try {
     const supabase = createAdminClient()
 
-    const ipAddress = entry.ipAddress || getClientIp()
-    const userAgent = entry.userAgent || getUserAgent()
+    const ipAddress = entry.ipAddress || await getClientIp()
+    const userAgent = entry.userAgent || await getUserAgent()
     const sanitizedMetadata = sanitizeMetadata(entry.metadata)
 
     const { error } = await supabase.from('audit_logs').insert({
@@ -180,8 +180,8 @@ export async function logAuditEventFromRequest(
 ): Promise<boolean> {
   return logAuditEvent({
     ...entry,
-    ipAddress: getClientIp() || undefined,
-    userAgent: getUserAgent() || undefined,
+    ipAddress: (await getClientIp()) || undefined,
+    userAgent: (await getUserAgent()) || undefined,
   })
 }
 
