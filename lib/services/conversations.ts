@@ -16,7 +16,8 @@ export async function fetchClientConversation(userId: string): Promise<Conversat
       trainer_id,
       profiles!conversations_trainer_id_fkey (
         id,
-        full_name
+        full_name,
+        avatar_url
       )
     `)
     .eq('client_id', userId)
@@ -51,7 +52,8 @@ export async function fetchTrainerConversations(userId: string): Promise<Convers
       trainer_id,
       profiles!conversations_client_id_fkey (
         id,
-        full_name
+        full_name,
+        avatar_url
       )
     `)
     .eq('trainer_id', userId)
@@ -94,7 +96,8 @@ export async function fetchConversationById(
       trainer_id,
       profiles!${foreignKey} (
         id,
-        full_name
+        full_name,
+        avatar_url
       )
     `)
     .eq('id', conversationId)

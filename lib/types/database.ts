@@ -38,6 +38,7 @@ export interface Message {
 export interface ProfileJoin {
   id?: string
   full_name: string | null
+  avatar_url?: string | null
 }
 
 // Conversation with client profile via foreign key
