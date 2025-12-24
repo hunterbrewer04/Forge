@@ -27,7 +27,19 @@ export async function fetchMessages(conversationId: string): Promise<MessageWith
     .order('created_at', { ascending: true })
 
   if (error) throw error
-  return (data || []) as MessageWithSenderProfile[]
+
+  // Normalize each message's profiles field
+  return (data || []).map(msg => {
+    const profilesData = msg.profiles
+    const profiles = Array.isArray(profilesData)
+      ? (profilesData[0] || null)
+      : profilesData
+
+    return {
+      ...msg,
+      profiles
+    }
+  }) as MessageWithSenderProfile[]
 }
 
 /**
