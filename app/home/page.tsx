@@ -63,7 +63,12 @@ export default function HomePage() {
           .single()
 
         if (!error && conversation) {
-          const trainer = conversation.trainer as ProfileJoin | null
+          // Supabase returns object for single FK relations, but TS infers array
+          // Handle both cases defensively
+          const trainerData = conversation.trainer
+          const trainer = Array.isArray(trainerData)
+            ? trainerData[0] as ProfileJoin | undefined
+            : trainerData as ProfileJoin | null
           setStats({
             unreadCount: 0, // You can implement unread count logic later
             totalConversations: 1,
