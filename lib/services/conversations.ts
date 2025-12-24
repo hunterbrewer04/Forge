@@ -23,7 +23,17 @@ export async function fetchClientConversation(userId: string): Promise<Conversat
     .single()
 
   if (error) throw error
-  return data as ConversationWithTrainerProfile
+
+  // Supabase returns object for single FK relations, but TS infers array
+  const profilesData = data.profiles
+  const profiles = Array.isArray(profilesData)
+    ? (profilesData[0] || null)
+    : profilesData
+
+  return {
+    ...data,
+    profiles
+  } as ConversationWithTrainerProfile
 }
 
 /**
@@ -48,7 +58,19 @@ export async function fetchTrainerConversations(userId: string): Promise<Convers
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data || []) as ConversationWithClientProfile[]
+
+  // Normalize each conversation's profiles field
+  return (data || []).map(conv => {
+    const profilesData = conv.profiles
+    const profiles = Array.isArray(profilesData)
+      ? (profilesData[0] || null)
+      : profilesData
+
+    return {
+      ...conv,
+      profiles
+    }
+  }) as ConversationWithClientProfile[]
 }
 
 /**
@@ -79,5 +101,15 @@ export async function fetchConversationById(
     .single()
 
   if (error) throw error
-  return data as ConversationWithClientProfile | ConversationWithTrainerProfile
+
+  // Supabase returns object for single FK relations, but TS infers array
+  const profilesData = data.profiles
+  const profiles = Array.isArray(profilesData)
+    ? (profilesData[0] || null)
+    : profilesData
+
+  return {
+    ...data,
+    profiles
+  } as ConversationWithClientProfile | ConversationWithTrainerProfile
 }
