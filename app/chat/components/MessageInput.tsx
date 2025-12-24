@@ -6,16 +6,15 @@ import { useAuth } from '@/contexts/AuthContext'
 
 interface MessageInputProps {
   conversationId: string
-  // senderId prop is kept for backwards compatibility but we use authenticated user
   senderId?: string
 }
 
-/**
- * MessageInput Component
- *
- * Security: Uses authenticated user ID from AuthContext instead of client-provided
- * senderId prop. This prevents message spoofing even if RLS is misconfigured.
- */
+const QUICK_REPLIES = [
+  'Got it, thanks!',
+  'On my way',
+  'Sounds good',
+]
+
 export default function MessageInput({ conversationId }: MessageInputProps) {
   const { user } = useAuth()
   const [message, setMessage] = useState('')
@@ -25,11 +24,11 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const supabase = createClient()
 
-  // File validation constants
-  const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
-  const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
+  const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+  const MAX_VIDEO_SIZE = 50 * 1024 * 1024
   const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
   const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo']
 
@@ -86,14 +85,12 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
     setUploadError(null)
 
     try {
-      // Security: Verify user is authenticated before uploading
       if (!user?.id) {
         throw new Error('You must be logged in to upload files')
       }
 
       setUploadProgress(25)
 
-      // Use server-side API for secure file validation (magic bytes, size, type)
       const formData = new FormData()
       formData.append('file', file)
       formData.append('conversationId', conversationId)
@@ -114,13 +111,11 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
 
       setUploadProgress(90)
 
-      // Insert message with media reference
-      // Server already validated the file and uploaded it securely
       const { error: insertError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: user.id, // Use authenticated user ID
+          sender_id: user.id,
           content: null,
           media_url: filePath,
           media_type: mediaType,
@@ -133,7 +128,6 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
 
       setUploadProgress(100)
 
-      // Reset state
       setSelectedFile(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
@@ -155,7 +149,6 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
     setSending(true)
 
     try {
-      // Security: Verify user is authenticated before sending
       if (!user?.id) {
         alert('You must be logged in to send messages')
         return
@@ -165,7 +158,7 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: user.id, // Use authenticated user ID, not client-provided
+          sender_id: user.id,
           content: message.trim(),
           created_at: new Date().toISOString(),
         })
@@ -175,6 +168,41 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
         alert('Failed to send message. Please try again.')
       } else {
         setMessage('')
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto'
+        }
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err)
+      alert('Failed to send message. Please try again.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleQuickReply = async (reply: string) => {
+    if (sending) return
+
+    setSending(true)
+
+    try {
+      if (!user?.id) {
+        alert('You must be logged in to send messages')
+        return
+      }
+
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: reply,
+          created_at: new Date().toISOString(),
+        })
+
+      if (error) {
+        console.error('Error sending quick reply:', error)
+        alert('Failed to send message. Please try again.')
       }
     } catch (err) {
       console.error('Unexpected error:', err)
@@ -188,20 +216,27 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
     fileInputRef.current?.click()
   }
 
+  const handleTextareaChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value)
+    // Auto-resize textarea
+    e.target.style.height = 'auto'
+    e.target.style.height = Math.min(e.target.scrollHeight, 96) + 'px'
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="border-t border-gray-200 p-4 bg-white">
+    <div className="flex-none bg-background-dark border-t border-white/10 pb-safe-bottom pt-2">
       {/* Upload progress bar */}
       {uploading && (
-        <div className="mb-3">
+        <div className="px-4 mb-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-stone-400">
               Uploading {selectedFile?.type.startsWith('image/') ? 'photo' : 'video'}...
             </span>
-            <span className="text-sm text-gray-600">{uploadProgress}%</span>
+            <span className="text-sm text-stone-400">{uploadProgress}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-stone-700 rounded-full h-1.5">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary h-1.5 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -210,10 +245,24 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
 
       {/* Error message */}
       {uploadError && (
-        <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{uploadError}</p>
+        <div className="mx-4 mb-3 p-2 bg-red-900/30 border border-red-500/30 rounded-lg">
+          <p className="text-sm text-red-400">{uploadError}</p>
         </div>
       )}
+
+      {/* Quick Replies */}
+      <div className="flex gap-2 overflow-x-auto px-4 pb-3 no-scrollbar">
+        {QUICK_REPLIES.map((reply) => (
+          <button
+            key={reply}
+            onClick={() => handleQuickReply(reply)}
+            disabled={sending || uploading}
+            className="shrink-0 bg-[#2C2C2C] border border-white/5 hover:bg-white/10 text-xs font-medium text-white px-3 py-1.5 rounded-full transition-colors whitespace-nowrap disabled:opacity-50"
+          >
+            {reply}
+          </button>
+        ))}
+      </div>
 
       {/* Hidden file input */}
       <input
@@ -224,50 +273,47 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
         className="hidden"
       />
 
-      <div className="flex gap-2">
-        {/* Upload button */}
+      {/* Input Field */}
+      <form onSubmit={handleSubmit} className="px-4 flex items-end gap-2 pb-4">
+        {/* Attachment button */}
         <button
           type="button"
           onClick={handleUploadButtonClick}
           disabled={sending || uploading}
-          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="p-2.5 rounded-full bg-[#2C2C2C] text-stone-500 hover:text-primary transition-colors shrink-0 mb-0.5 disabled:opacity-50"
           aria-label="Upload photo or video"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"
-            />
-          </svg>
+          <span className="material-symbols-outlined text-[20px]">add</span>
         </button>
 
         {/* Text input */}
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type a message..."
-          disabled={sending || uploading}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-black"
-        />
+        <div className="flex-1 bg-[#2C2C2C] rounded-[1.25rem] min-h-[44px] flex items-center px-4 py-2 border border-transparent focus-within:border-primary/50 transition-colors">
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={handleTextareaChange}
+            placeholder="Type a message..."
+            disabled={sending || uploading}
+            rows={1}
+            className="w-full bg-transparent border-none p-0 text-sm text-white placeholder-stone-500 focus:ring-0 resize-none max-h-24 focus:outline-none disabled:opacity-50"
+          />
+          <button
+            type="button"
+            className="ml-2 text-stone-500 hover:text-white transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
+          </button>
+        </div>
 
         {/* Send button */}
         <button
           type="submit"
           disabled={!message.trim() || sending || uploading}
-          className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="size-11 rounded-full bg-primary hover:bg-orange-600 text-white flex items-center justify-center shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0 mb-0.5 disabled:opacity-50 disabled:bg-stone-600 disabled:shadow-none"
         >
-          {sending ? 'Sending...' : 'Send'}
+          <span className="material-symbols-outlined text-[20px] ml-0.5">send</span>
         </button>
-      </div>
-    </form>
+      </form>
+    </div>
   )
 }

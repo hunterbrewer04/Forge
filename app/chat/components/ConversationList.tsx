@@ -9,18 +9,26 @@ interface Conversation {
   client_id: string
   trainer_id: string
   client_name: string | null
+  avatar_url?: string | null
+  last_message?: string
+  last_message_time?: string
+  unread_count?: number
+  is_online?: boolean
+  is_pinned?: boolean
 }
 
 interface ConversationListProps {
   currentUserId: string
   selectedConversationId: string | null
   onSelectConversation: (conversationId: string) => void
+  searchQuery?: string
 }
 
 export default function ConversationList({
   currentUserId,
   selectedConversationId,
   onSelectConversation,
+  searchQuery = '',
 }: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
@@ -28,22 +36,25 @@ export default function ConversationList({
   useEffect(() => {
     const loadConversations = async () => {
       try {
-        // Fetch conversations where current user is the trainer
         const data = await fetchTrainerConversations(currentUserId)
 
-        // Transform the data to include client_name
-        const conversationsWithNames: Conversation[] = data.map((conv) => ({
+        const conversationsWithNames: Conversation[] = data.map((conv, index) => ({
           id: conv.id,
           client_id: conv.client_id,
           trainer_id: conv.trainer_id,
           client_name: conv.profiles?.full_name || 'Unknown Client',
+          avatar_url: conv.profiles?.avatar_url,
+          last_message: 'Tap to view messages',
+          last_message_time: 'Recently',
+          unread_count: index === 0 ? 1 : 0, // Mock unread for demo
+          is_online: index === 0, // Mock online status
+          is_pinned: index === 0, // First conversation is pinned
         }))
 
         setConversations(conversationsWithNames)
 
-        // Auto-select first conversation if none selected
         if (!selectedConversationId && conversationsWithNames.length > 0) {
-          onSelectConversation(conversationsWithNames[0].id)
+          // Don't auto-select, let user tap
         }
       } catch (err) {
         logger.error('Error fetching conversations:', err)
@@ -53,51 +64,124 @@ export default function ConversationList({
     }
 
     loadConversations()
-  }, [currentUserId, selectedConversationId, onSelectConversation])
+  }, [currentUserId, selectedConversationId])
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const pinnedConversations = filteredConversations.filter(c => c.is_pinned)
+  const recentConversations = filteredConversations.filter(c => !c.is_pinned)
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-white border-r border-gray-200">
-        <div className="text-gray-500 text-sm">Loading conversations...</div>
+      <div className="h-full flex items-center justify-center bg-background-dark">
+        <div className="text-stone-500 text-sm">Loading conversations...</div>
       </div>
     )
   }
 
   if (conversations.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center bg-white border-r border-gray-200 p-4">
-        <div className="text-gray-500 text-sm text-center">
+      <div className="h-full flex items-center justify-center bg-background-dark p-4">
+        <div className="text-stone-500 text-sm text-center">
           No conversations yet
         </div>
       </div>
     )
   }
 
+  const ConversationItem = ({ conversation, isPinned = false }: { conversation: Conversation; isPinned?: boolean }) => (
+    <button
+      onClick={() => onSelectConversation(conversation.id)}
+      className={`group relative flex items-center p-3 w-full text-left transition-all cursor-pointer active:scale-[0.98] ${
+        isPinned
+          ? 'rounded-xl bg-[#262626] hover:bg-[#333] border border-white/5 shadow-sm mb-3'
+          : 'rounded-xl hover:bg-white/5 border-b border-white/5'
+      } ${selectedConversationId === conversation.id ? 'bg-white/10' : ''}`}
+    >
+      {/* Avatar */}
+      <div className="relative shrink-0">
+        <div
+          className={`rounded-full bg-center bg-cover bg-stone-700 flex items-center justify-center ${
+            isPinned ? 'size-14 border-2 border-gold' : 'size-12'
+          }`}
+          style={conversation.avatar_url ? { backgroundImage: `url('${conversation.avatar_url}')` } : undefined}
+        >
+          {!conversation.avatar_url && (
+            <span className="material-symbols-outlined text-stone-400 text-[24px]">person</span>
+          )}
+        </div>
+        {conversation.is_online && (
+          <span className={`absolute bottom-0 right-0 bg-green-500 rounded-full border-2 border-background-dark ${
+            isPinned ? 'size-3.5' : 'size-3'
+          }`} />
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="ml-4 flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-0.5">
+          <h4 className={`font-bold text-white truncate flex items-center gap-1 ${isPinned ? 'text-base' : 'text-base'}`}>
+            {conversation.client_name}
+            {isPinned && (
+              <span className="material-symbols-outlined text-gold text-[14px]" title="Certified">verified</span>
+            )}
+          </h4>
+          <span className={`text-xs font-medium ${conversation.unread_count ? 'text-primary' : 'text-stone-500'}`}>
+            {conversation.last_message_time}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className={`text-sm truncate w-[85%] ${conversation.unread_count ? 'text-white font-medium' : 'text-stone-500'}`}>
+            {conversation.last_message}
+          </p>
+          {conversation.unread_count && conversation.unread_count > 0 && (
+            <span className="size-2.5 rounded-full bg-primary shrink-0 animate-pulse" />
+          )}
+        </div>
+      </div>
+
+      {/* Chevron on hover */}
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="material-symbols-outlined text-stone-500 text-[20px]">chevron_right</span>
+      </div>
+    </button>
+  )
+
   return (
-    <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Conversations</h2>
-      </div>
-      <div className="divide-y divide-gray-200">
-        {conversations.map((conversation) => (
-          <button
-            key={conversation.id}
-            onClick={() => onSelectConversation(conversation.id)}
-            className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-              selectedConversationId === conversation.id
-                ? 'bg-blue-50 border-l-4 border-blue-500'
-                : 'border-l-4 border-transparent'
-            }`}
-          >
-            <div className="font-medium text-gray-900">
-              {conversation.client_name}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Click to open chat
-            </div>
-          </button>
-        ))}
-      </div>
+    <div className="h-full bg-background-dark overflow-y-auto">
+      {/* Pinned Section */}
+      {pinnedConversations.length > 0 && (
+        <div className="px-4 py-4">
+          <h3 className="text-xs font-bold text-gold uppercase tracking-widest mb-3 flex items-center gap-1">
+            <span className="material-symbols-outlined text-[14px]">push_pin</span> Pinned
+          </h3>
+          <div className="space-y-3">
+            {pinnedConversations.map((conversation) => (
+              <ConversationItem key={conversation.id} conversation={conversation} isPinned />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Section */}
+      {recentConversations.length > 0 && (
+        <div className="px-4 pb-20">
+          <h3 className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-3">Recent</h3>
+          <div className="space-y-1">
+            {recentConversations.map((conversation) => (
+              <ConversationItem key={conversation.id} conversation={conversation} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {filteredConversations.length === 0 && searchQuery && (
+        <div className="px-4 py-8 text-center">
+          <p className="text-stone-500 text-sm">No conversations matching &quot;{searchQuery}&quot;</p>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Foundry Sports Performance - Scheduling</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ff6714", // Molten Orange
+                        "secondary": "#D4AF37", // Brass Gold
+                        "background-light": "#F2F2F2", // Ash White
+                        "background-dark": "#1C1C1C", // Charcoal Black
+                        "surface-dark": "#2A2A2A", // Forged Steel Gray variation
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: { "DEFAULT": "0.375rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        /* Custom scrollbar for horizontal scrolling areas */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-gray-900 dark:text-gray-100 flex justify-center">
+<!-- Mobile Container -->
+<div class="w-full max-w-md bg-background-light dark:bg-background-dark min-h-screen flex flex-col shadow-2xl overflow-hidden relative">
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-[#333]">
+<div class="flex items-center justify-between p-4 pb-2">
+<h2 class="text-xl font-bold uppercase tracking-wide dark:text-white">Session Booking</h2>
+<div class="flex gap-4 items-center">
+<button class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 overflow-hidden border border-gray-400 dark:border-gray-600">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChye_lIKh48x9d4R6nXD-8zn--BuSqdtPZ5AWi06xOHuq5QbS8eHyarMo_GSqsYahn__uiNutRGFtcT8M26TQucROR70B2Kqn7eTS118Ca__wbODTUWsiSXBLyB8aPtIhbq_d8YrE0DDiArwRmUgNO3n_8-ef20tRQ6Nh83n-RcrXYSCfB9-TLA-6FMex2p4OFkFm5TOmE3amuNoNjMAeI0eLO4fnHYbTGTGlaEFvxKKnzoq9qy2EcSuIni7mjAbX2C3BYVjksseQ"/>
+</div>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex px-4 gap-6 text-sm font-semibold uppercase tracking-wider">
+<button class="pb-3 border-b-2 border-primary text-primary">Upcoming</button>
+<button class="pb-3 border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">History</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto pb-24 scrollbar-hide">
+<!-- Quick Stats / Next Session Teaser -->
+<div class="px-4 pt-6 pb-2">
+<div class="bg-surface-light dark:bg-surface-dark rounded-lg p-4 shadow-md border-l-4 border-primary flex justify-between items-center">
+<div>
+<p class="text-xs font-bold text-primary uppercase mb-1">Next Up</p>
+<h3 class="text-lg font-bold leading-tight">Heavy Lifting</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Tomorrow, 06:00 AM • Coach Mike</p>
+</div>
+<button class="bg-gray-200 dark:bg-[#3a2e27] text-xs font-bold px-3 py-2 rounded uppercase tracking-wide hover:bg-gray-300 dark:hover:bg-[#4a3b32] transition-colors">
+                        Reschedule
+                    </button>
+</div>
+</div>
+<!-- Calendar Strip -->
+<div class="py-4">
+<div class="flex items-center justify-between px-4 mb-3">
+<h3 class="text-lg font-bold dark:text-white">September 2023</h3>
+<div class="flex gap-2">
+<button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+</div>
+<div class="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide snap-x">
+<!-- Day Item: Active -->
+<button class="flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 bg-primary text-white rounded-lg shadow-lg shadow-primary/20 transform scale-105 transition-transform">
+<span class="text-xs font-medium opacity-80">Tue</span>
+<span class="text-xl font-bold">14</span>
+</button>
+<!-- Day Item -->
+<button class="flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary/50 transition-colors">
+<span class="text-xs font-medium">Wed</span>
+<span class="text-xl font-bold text-gray-900 dark:text-white">15</span>
+</button>
+<!-- Day Item -->
+<button class="flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary/50 transition-colors">
+<span class="text-xs font-medium">Thu</span>
+<span class="text-xl font-bold text-gray-900 dark:text-white">16</span>
+</button>
+<!-- Day Item -->
+<button class="flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary/50 transition-colors">
+<span class="text-xs font-medium">Fri</span>
+<span class="text-xl font-bold text-gray-900 dark:text-white">17</span>
+</button>
+<!-- Day Item -->
+<button class="flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary/50 transition-colors">
+<span class="text-xs font-medium">Sat</span>
+<span class="text-xl font-bold text-gray-900 dark:text-white">18</span>
+</button>
+<!-- Day Item -->
+<button class="flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary/50 transition-colors">
+<span class="text-xs font-medium">Sun</span>
+<span class="text-xl font-bold text-gray-900 dark:text-white">19</span>
+</button>
+</div>
+</div>
+<!-- Filters -->
+<div class="px-4 pb-4 overflow-x-auto scrollbar-hide flex gap-3">
+<button class="flex-shrink-0 px-4 py-2 bg-primary text-white rounded-full text-sm font-bold shadow-md shadow-primary/20">All Sessions</button>
+<button class="flex-shrink-0 px-4 py-2 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-sm font-medium whitespace-nowrap">1-on-1</button>
+<button class="flex-shrink-0 px-4 py-2 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-sm font-medium whitespace-nowrap">Strength</button>
+<button class="flex-shrink-0 px-4 py-2 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-sm font-medium whitespace-nowrap">Conditioning</button>
+</div>
+<!-- Session List -->
+<div class="px-4 space-y-4">
+<!-- Session Card 1 -->
+<div class="group relative bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-800 hover:border-primary/50 transition-all">
+<div class="flex items-start gap-4">
+<div class="flex flex-col items-center gap-1 min-w-[3.5rem]">
+<span class="text-lg font-bold text-gray-900 dark:text-white">06:00</span>
+<span class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">AM</span>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-bold text-gray-900 dark:text-white leading-tight mb-1 group-hover:text-primary transition-colors">Iron Circuit</h4>
+<div class="flex items-center gap-2 mb-3">
+<span class="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px] mr-1">timer</span> 60 min
+                                </span>
+<span class="text-xs font-medium text-primary">5 spots left</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-gray-300 overflow-hidden" data-alt="Coach profile picture">
+<img alt="Coach Mike" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBp1d4cTG0cOQZGv_N3MWhUYa0PGEx3LVySJwWWjxErWjiUGl_C2DnRDfw-OzcI7PW05QDRrBp7e2rQCQT2RbGToWcMym0DiFiVVqdO8dcsLpTw4ualbp9OqcAkdHt-pE_XZpzGa-Wci9SfWa-opPL5PzPBkZ2e7dlIwHMzTo1UgX0CSorj77T0UsHg5QntAD-Rq6HkvFz76eoxWhKHnAhFfzWS2QV2GNp2mPJBEnYLmQMGkKp0ROT8BWjJOfa-udx7J14RfoFBIng"/>
+</div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300">Coach Mike</span>
+</div>
+</div>
+<button class="self-center bg-gray-900 dark:bg-white text-white dark:text-black font-bold p-2 rounded-lg hover:bg-primary dark:hover:bg-primary dark:hover:text-white transition-colors shadow-lg">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+<!-- Session Card 2 (Premium) -->
+<div class="group relative bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-secondary/40 dark:border-secondary/30 bg-gradient-to-r from-transparent to-secondary/5 hover:border-secondary transition-all">
+<div class="absolute top-0 right-0 bg-secondary text-black text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg uppercase tracking-wider">
+                        Premium
+                    </div>
+<div class="flex items-start gap-4">
+<div class="flex flex-col items-center gap-1 min-w-[3.5rem]">
+<span class="text-lg font-bold text-secondary">07:30</span>
+<span class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">AM</span>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-bold text-gray-900 dark:text-white leading-tight mb-1 group-hover:text-secondary transition-colors">1-on-1 Performance</h4>
+<div class="flex items-center gap-2 mb-3">
+<span class="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px] mr-1">timer</span> 45 min
+                                </span>
+<span class="text-xs font-medium text-secondary">Only 1 slot</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-gray-300 overflow-hidden" data-alt="Coach profile picture">
+<img alt="Coach Sarah" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuB_htUYmb-5g8sdhWti2Bvj8F0CFzESZ5p_o-m7ctOYiHLNHN5hhKIwXyztB-Ir7JuaPLCNeDvwwsNDGHD-WSm9tzCxxfze-790YE6IBkzdAx3pnlePCbKNbH4bEXC9H4fhb9c-mK295QBk6UWOCu5NI-TL945aSsiDG7XPYXKeR1yCHjDoXU3tAnOto2w54DNaSqghJg9N22mIQvyRDx1VlIGXrwY-zcvyz01HfUvQMG6M63hKUHqyYKa-_CB3n4SBIpokaS9XI"/>
+</div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300">Coach Sarah</span>
+</div>
+</div>
+<button class="self-center bg-secondary text-black font-bold p-2 rounded-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-secondary/20">
+<span class="material-symbols-outlined">bolt</span>
+</button>
+</div>
+</div>
+<!-- Session Card 3 -->
+<div class="group relative bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-800 hover:border-primary/50 transition-all opacity-70">
+<div class="flex items-start gap-4">
+<div class="flex flex-col items-center gap-1 min-w-[3.5rem]">
+<span class="text-lg font-bold text-gray-500 dark:text-gray-500">09:00</span>
+<span class="text-xs text-gray-400 dark:text-gray-600 uppercase font-bold">AM</span>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-bold text-gray-500 dark:text-gray-400 leading-tight mb-1">Mobility &amp; Flow</h4>
+<div class="flex items-center gap-2 mb-3">
+<span class="flex items-center text-xs font-medium text-gray-400 dark:text-gray-600 bg-gray-100 dark:bg-gray-800/50 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px] mr-1">timer</span> 60 min
+                                </span>
+<span class="text-xs font-medium text-red-500 uppercase">Full</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-gray-300 overflow-hidden grayscale opacity-50" data-alt="Coach profile picture">
+<img alt="Coach Dav" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuARRB38kasB0b00AZ8wZ-5uwjBPc5DwTB0KPiySOEnGqtZE2_64hVt3O72_QqFXgw6ovnCmBDuJofwgt8gxBlwZYnpK2-qveWD2i5eJ836WMeBmfc2fZliYTYzd3ZzQt2-7JAINsT83_9I0kvyz2wg1nNrNrZR3tjxPxO-6qswHJcZ8D7KR0W1xrFOCM4SpvZNmfrwtRoVU-YWEvd7dQLBi1Jozgh3uaW9lUVeRP6KtIIMakvGwXHRt7NGtS4PkGMnTFvfUWmkQ8yk"/>
+</div>
+<span class="text-sm font-medium text-gray-500 dark:text-gray-500">Coach Dav</span>
+</div>
+</div>
+<button class="self-center bg-transparent border border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-600 font-bold p-2 rounded-lg cursor-not-allowed">
+<span class="material-symbols-outlined">lock</span>
+</button>
+</div>
+</div>
+<!-- Session Card 4 -->
+<div class="group relative bg-surface-light dark:bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-800 hover:border-primary/50 transition-all">
+<div class="flex items-start gap-4">
+<div class="flex flex-col items-center gap-1 min-w-[3.5rem]">
+<span class="text-lg font-bold text-gray-900 dark:text-white">05:30</span>
+<span class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">PM</span>
+</div>
+<div class="flex-1">
+<h4 class="text-lg font-bold text-gray-900 dark:text-white leading-tight mb-1 group-hover:text-primary transition-colors">Evening Grind</h4>
+<div class="flex items-center gap-2 mb-3">
+<span class="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px] mr-1">timer</span> 90 min
+                                </span>
+<span class="text-xs font-medium text-primary">8 spots left</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-gray-300 overflow-hidden" data-alt="Coach profile picture">
+<img alt="Coach Alex" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1Bh-Lu4HhCqIc1RQccDlJUnjy2UZ_Yv91chhXf1yTQZItDonmEAMjrtXWpO6Z4P_ELW8tbFw2-fXmp4sDF9Eiq19QfF1zLkSSJvqVlACoi8SUW4CGbCXx2U0OZfWEGdbMSOZ_tVgDv8CM9FPyn2X6ps8oUWgOqs5LtVNai8dIGOzHQP24h3s2JG-v8-BRIqx42cxde0V-WC_NZ4jZ0UvkkIABEf8GC_MGn2B4dZSxyx2X8jjRpULSEbWDMe5hhkX5TFbG8SNNRA0"/>
+</div>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300">Coach Alex</span>
+</div>
+</div>
+<button class="self-center bg-gray-900 dark:bg-white text-white dark:text-black font-bold p-2 rounded-lg hover:bg-primary dark:hover:bg-primary dark:hover:text-white transition-colors shadow-lg">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bottom spacer to prevent content being hidden by nav -->
+<div class="h-24"></div>
+</main>
+<!-- Floating Action Button (Alternative Booking) or Quick Filter -->
+<button class="absolute bottom-24 right-4 w-12 h-12 bg-primary text-white rounded-full shadow-xl flex items-center justify-center hover:scale-110 transition-transform md:hidden z-10">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full max-w-md bg-background-light dark:bg-surface-dark border-t border-gray-200 dark:border-[#333] px-6 py-3 flex justify-between items-center z-40">
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">home</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-2xl fill-current">calendar_month</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Schedule</span>
+</a>
+<!-- Center Button (Prominent) -->
+<div class="relative -top-5">
+<a class="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-primary/40 border-4 border-background-light dark:border-background-dark transform hover:scale-105 transition-transform" href="#">
+<span class="material-symbols-outlined text-2xl">add</span>
+</a>
+</div>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">fitness_center</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Train</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">person</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Profile</span>
+</a>
+</nav>
+<!-- Booking Summary Modal (Simulated Active State) -->
+<!-- In a real app, this would be triggered by clicking a "Book" button. Displaying here as part of the 'Booking Confirmation' requirement -->
+<div class="hidden absolute inset-0 bg-black/60 z-50 flex items-end backdrop-blur-sm">
+<div class="bg-background-light dark:bg-surface-dark w-full rounded-t-2xl p-6 shadow-[0_-4px_20px_rgba(0,0,0,0.5)] animate-slide-up">
+<div class="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-6"></div>
+<h3 class="text-xl font-bold dark:text-white mb-4">Confirm Booking</h3>
+<div class="bg-gray-100 dark:bg-background-dark p-4 rounded-lg mb-6 flex gap-4 items-center">
+<div class="w-16 h-16 bg-gray-300 rounded-lg bg-cover bg-center" data-alt="Session thumbnail preview" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBrwPz65zf1CtJ81y_6l3DTQFG5WWESVhcnTjMX7I_el8bI_5Sz-qzLouhLEcVsSiPHDoJk8y7vEq9HCZjP-YAsvFjle-X-6Zo_eX6uyz9nPREdnMyOjX0mOWv3cAJJ8Eoc4PN58mVn8BJ8h8rrvps9t4M9Awd2DkPO6zFecOxPskcFl2aMtgIKWFGpb-od2XritPpVYGc6O3uCYxyk6K_h3C0mg2loA_TLxqRpqxGUZKY5Rx8jOY_Ov4ZdJ0HL847CZKqKf2OTzwc');"></div>
+<div>
+<h4 class="font-bold dark:text-white text-lg">Iron Circuit</h4>
+<p class="text-sm text-gray-500 dark:text-gray-400">Tue, Sep 14 • 06:00 AM</p>
+<p class="text-xs text-primary font-bold mt-1">Coach Mike</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 py-3.5 rounded-lg border border-gray-300 dark:border-gray-600 font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        Cancel
+                    </button>
+<button class="flex-[2] py-3.5 rounded-lg bg-primary text-white font-bold text-lg shadow-lg shadow-primary/30 hover:bg-orange-600 transition-colors flex items-center justify-center gap-2">
+                        Confirm Session
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

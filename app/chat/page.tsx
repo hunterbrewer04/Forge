@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react'
 import ConversationList from './components/ConversationList'
 import ClientConversationList from './components/ClientConversationList'
 import ChatWindow from './components/ChatWindow'
-import Link from 'next/link'
 import { logger } from '@/lib/utils/logger'
 import { fetchClientConversation, fetchConversationById } from '@/lib/services/conversations'
 
@@ -16,6 +15,7 @@ interface ConversationInfo {
   trainer_id: string
   client_name: string | null
   trainer_name: string | null
+  avatar_url?: string | null
 }
 
 export default function ChatPage() {
@@ -26,13 +26,13 @@ export default function ChatPage() {
   const [loadingConversation, setLoadingConversation] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingTimeout, setLoadingTimeout] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showThread, setShowThread] = useState(false)
 
-  // Debug logging on mount
   useEffect(() => {
     logger.debug('[ChatPage] Component mounted')
   }, [])
 
-  // Debug logging for auth state
   useEffect(() => {
     logger.debug('[ChatPage] Auth state:', {
       loading,
@@ -43,7 +43,6 @@ export default function ChatPage() {
     })
   }, [loading, user, profile])
 
-  // Loading timeout - if stuck loading for more than 5 seconds, show error
   useEffect(() => {
     if (loading) {
       logger.debug('[ChatPage] Setting loading timeout')
@@ -62,12 +61,6 @@ export default function ChatPage() {
     }
   }, [loading])
 
-  const handleSignOut = async () => {
-    await signOut()
-    router.push('/login')
-  }
-
-  // Redirect to login if not authenticated
   useEffect(() => {
     logger.debug('[ChatPage] Checking auth for redirect:', { loading, hasUser: !!user, hasProfile: !!profile })
     if (!loading && !user) {
@@ -80,7 +73,6 @@ export default function ChatPage() {
     }
   }, [user, profile, loading, router])
 
-  // For clients, automatically fetch their conversation with their trainer
   useEffect(() => {
     const loadClientConversation = async () => {
       logger.debug('[ChatPage] Fetching client conversation for:', user?.id)
@@ -101,6 +93,7 @@ export default function ChatPage() {
           trainer_id: data.trainer_id,
           client_name: profile.full_name,
           trainer_name: data.profiles?.full_name || 'Your Trainer',
+          avatar_url: data.profiles?.avatar_url,
         }
         setConversationInfo(convInfo)
         setSelectedConversationId(data.id)
@@ -123,7 +116,6 @@ export default function ChatPage() {
     }
   }, [profile, user?.id])
 
-  // Fetch conversation info when a conversation is selected (for trainers)
   useEffect(() => {
     const loadConversationInfo = async () => {
       logger.debug('[ChatPage] Fetching conversation info for trainer:', selectedConversationId)
@@ -144,6 +136,7 @@ export default function ChatPage() {
           trainer_id: data.trainer_id,
           client_name: data.profiles?.full_name || 'Client',
           trainer_name: profile.full_name,
+          avatar_url: data.profiles?.avatar_url,
         }
         setConversationInfo(convInfo)
       } catch (err) {
@@ -161,25 +154,33 @@ export default function ChatPage() {
     }
   }, [selectedConversationId, profile])
 
-  // Show loading state or timeout error
+  const handleSelectConversation = (conversationId: string) => {
+    setSelectedConversationId(conversationId)
+    setShowThread(true)
+  }
+
+  const handleBackToList = () => {
+    setShowThread(false)
+  }
+
   if (loading || loadingTimeout) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background-dark">
         <div className="text-center max-w-md px-6">
           {loadingTimeout ? (
             <>
-              <div className="text-red-600 text-lg font-semibold mb-4">Loading Timeout</div>
-              <p className="text-gray-700 mb-6">{error}</p>
+              <div className="text-red-500 text-lg font-semibold mb-4">Loading Timeout</div>
+              <p className="text-stone-400 mb-6">{error}</p>
               <div className="space-y-3">
                 <button
                   onClick={() => window.location.reload()}
-                  className="w-full px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-500 font-medium"
+                  className="w-full px-6 py-3 text-white bg-primary rounded-lg hover:bg-orange-600 font-medium"
                 >
                   Refresh Page
                 </button>
                 <button
                   onClick={() => router.push('/login')}
-                  className="w-full px-6 py-3 text-blue-600 bg-white border border-blue-600 rounded-lg hover:bg-blue-50 font-medium"
+                  className="w-full px-6 py-3 text-primary bg-transparent border border-primary rounded-lg hover:bg-primary/10 font-medium"
                 >
                   Go to Login
                 </button>
@@ -187,8 +188,8 @@ export default function ChatPage() {
             </>
           ) : (
             <>
-              <div className="text-gray-600 text-lg mb-2">Loading...</div>
-              <div className="text-gray-400 text-sm">Checking authentication</div>
+              <div className="text-stone-400 text-lg mb-2">Loading...</div>
+              <div className="text-stone-500 text-sm">Checking authentication</div>
             </>
           )}
         </div>
@@ -196,23 +197,22 @@ export default function ChatPage() {
     )
   }
 
-  // Show error if user exists but no profile
   if (user && !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background-dark">
         <div className="text-center max-w-md px-6">
-          <div className="text-red-600 text-lg font-semibold mb-4">Profile Not Found</div>
-          <p className="text-gray-700 mb-6">{error || 'Your user profile could not be loaded. Please contact support.'}</p>
+          <div className="text-red-500 text-lg font-semibold mb-4">Profile Not Found</div>
+          <p className="text-stone-400 mb-6">{error || 'Your user profile could not be loaded. Please contact support.'}</p>
           <div className="space-y-3">
             <button
-              onClick={handleSignOut}
+              onClick={() => signOut().then(() => router.push('/login'))}
               className="w-full px-6 py-3 text-white bg-red-600 rounded-lg hover:bg-red-500 font-medium"
             >
               Sign Out
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="w-full px-6 py-3 text-blue-600 bg-white border border-blue-600 rounded-lg hover:bg-blue-50 font-medium"
+              className="w-full px-6 py-3 text-primary bg-transparent border border-primary rounded-lg hover:bg-primary/10 font-medium"
             >
               Try Again
             </button>
@@ -222,7 +222,6 @@ export default function ChatPage() {
     )
   }
 
-  // Redirect to login if no user (shouldn't reach here, but safety check)
   if (!user || !profile) {
     return null
   }
@@ -231,122 +230,138 @@ export default function ChatPage() {
   const isClient = profile.is_client && !profile.is_trainer
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/home"
-            className="px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            ← Home
-          </Link>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Chat</h1>
-            <p className="text-xs text-gray-500">{profile.full_name || 'User'}</p>
+    <div className="h-screen flex flex-col bg-background-dark overflow-hidden">
+      {/* Header */}
+      <header className="flex-none bg-background-dark sticky top-0 z-50 border-b border-white/10 px-4 pt-safe-top pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/home')}
+              className="p-2 -ml-2 rounded-full hover:bg-white/5 transition-colors text-white"
+            >
+              <span className="material-symbols-outlined text-[28px]">arrow_back</span>
+            </button>
+            <h1 className="text-2xl font-bold uppercase tracking-wider text-white">Comms</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="p-2 rounded-full hover:bg-white/5 transition-colors relative">
+              <span className="material-symbols-outlined text-primary">notifications</span>
+              <span className="absolute top-2 right-2 size-2 bg-gold rounded-full border border-background-dark"></span>
+            </button>
+            <button className="flex items-center justify-center size-10 bg-primary hover:bg-orange-600 transition-colors rounded-full shadow-lg shadow-primary/20">
+              <span className="material-symbols-outlined text-white">add</span>
+            </button>
           </div>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-500"
-        >
-          Sign Out
-        </button>
-      </div>
 
-      {/* Main chat area */}
-      <div className="flex-1 flex overflow-hidden">
+        {/* Search Bar */}
+        <div className="mt-4">
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span className="material-symbols-outlined text-stone-500 group-focus-within:text-primary transition-colors">search</span>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-10 pr-3 py-3 border-none rounded-lg leading-5 bg-[#2C2C2C] text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm"
+              placeholder="Search conversations..."
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-hidden relative w-full max-w-2xl mx-auto">
         {isTrainer ? (
           <>
-            {/* Trainer view: Sidebar + Chat Window */}
-            <div className="w-full sm:w-80 flex-shrink-0">
+            {/* Trainer view: List or Thread based on showThread state */}
+            <div className={`h-full ${showThread ? 'hidden sm:block sm:w-80' : 'block'}`}>
               <ConversationList
                 currentUserId={user.id}
                 selectedConversationId={selectedConversationId}
-                onSelectConversation={setSelectedConversationId}
+                onSelectConversation={handleSelectConversation}
+                searchQuery={searchQuery}
               />
             </div>
-            <div className="flex-1 flex flex-col">
-              {selectedConversationId && conversationInfo ? (
+            {showThread && selectedConversationId && conversationInfo ? (
+              <div className="absolute inset-0 bg-background-dark z-20 flex flex-col sm:relative sm:flex-1">
                 <ChatWindow
                   conversationId={selectedConversationId}
                   currentUserId={user.id}
                   otherUserName={conversationInfo.client_name || 'Client'}
+                  otherUserAvatar={conversationInfo.avatar_url}
+                  onBack={handleBackToList}
                 />
-              ) : (
-                <div className="flex-1 flex items-center justify-center bg-gray-50">
-                  <div className="text-gray-500 text-center">
-                    {loadingConversation ? (
-                      'Loading conversation...'
-                    ) : (
-                      <>
-                        <p className="text-lg mb-2">Select a conversation</p>
-                        <p className="text-sm">Choose a client from the sidebar to start chatting</p>
-                      </>
-                    )}
-                  </div>
+              </div>
+            ) : !showThread ? null : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-stone-500 text-center">
+                  {loadingConversation ? 'Loading conversation...' : 'Select a conversation'}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </>
         ) : isClient ? (
           <>
-            {/* Client view: Sidebar + Chat Window */}
-            <div className="w-full sm:w-80 flex-shrink-0">
+            {/* Client view: List or Thread */}
+            <div className={`h-full ${showThread ? 'hidden sm:block sm:w-80' : 'block'}`}>
               <ClientConversationList
                 currentUserId={user.id}
                 selectedConversationId={selectedConversationId}
-                onSelectConversation={setSelectedConversationId}
+                onSelectConversation={handleSelectConversation}
               />
             </div>
-            <div className="flex-1 flex flex-col">
-              {error ? (
-                <div className="flex-1 flex items-center justify-center bg-gray-50">
-                  <div className="text-center max-w-md px-6">
-                    <div className="text-red-600 text-lg font-semibold mb-4">Error</div>
-                    <p className="text-gray-700 mb-6">{error}</p>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-500 font-medium"
-                    >
-                      Retry
-                    </button>
-                  </div>
+            {error ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center max-w-md px-6">
+                  <div className="text-red-500 text-lg font-semibold mb-4">Error</div>
+                  <p className="text-stone-400 mb-6">{error}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-3 text-white bg-primary rounded-lg hover:bg-orange-600 font-medium"
+                  >
+                    Retry
+                  </button>
                 </div>
-              ) : selectedConversationId && conversationInfo ? (
+              </div>
+            ) : showThread && selectedConversationId && conversationInfo ? (
+              <div className="absolute inset-0 bg-background-dark z-20 flex flex-col sm:relative sm:flex-1">
                 <ChatWindow
                   conversationId={selectedConversationId}
                   currentUserId={user.id}
                   otherUserName={conversationInfo.trainer_name || 'Your Trainer'}
+                  otherUserAvatar={conversationInfo.avatar_url}
+                  onBack={handleBackToList}
                 />
-              ) : (
-                <div className="flex-1 flex items-center justify-center bg-gray-50">
-                  <div className="text-gray-500 text-center px-6">
-                    {loadingConversation ? (
-                      <>
-                        <div className="text-lg mb-2">Loading your conversation...</div>
-                        <div className="text-sm text-gray-400">This should only take a moment</div>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-lg mb-2">No conversation found</p>
-                        <p className="text-sm">Please contact support to set up your trainer.</p>
-                      </>
-                    )}
-                  </div>
+              </div>
+            ) : !showThread ? null : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-stone-500 text-center px-6">
+                  {loadingConversation ? (
+                    <>
+                      <div className="text-lg mb-2">Loading your conversation...</div>
+                      <div className="text-sm text-stone-600">This should only take a moment</div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg mb-2">No conversation found</p>
+                      <p className="text-sm">Please contact support to set up your trainer.</p>
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-gray-500 text-center">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-stone-500 text-center">
               <p className="text-lg mb-2">Access Denied</p>
               <p className="text-sm">You need to be a trainer or client to access chat.</p>
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

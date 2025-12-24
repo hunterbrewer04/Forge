@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profile Page - Foundry Sports Performance</title>
+<!-- Material Symbols Link -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with Config -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ff6714",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#23160f",
+                        "surface-dark": "#2f251e", // Slightly lighter than bg-dark for cards
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl bg-background-light dark:bg-background-dark pb-24">
+<!-- Top App Bar -->
+<header class="flex items-center p-4 justify-between sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-black/5 dark:border-white/5">
+<button class="text-slate-900 dark:text-white flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold tracking-widest uppercase">My Profile</h2>
+<button class="text-slate-900 dark:text-white flex size-10 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[24px]">more_vert</span>
+</button>
+</header>
+<!-- Profile Header -->
+<section class="flex flex-col items-center pt-6 pb-2 px-4">
+<div class="relative mb-4 group cursor-pointer">
+<!-- Molten Ring Effect -->
+<div class="absolute -inset-1 bg-gradient-to-tr from-primary via-orange-500 to-yellow-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
+<div class="relative size-32 rounded-full border-4 border-background-dark overflow-hidden bg-gray-800" data-alt="Close up portrait of a fit athlete looking determined with dramatic lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAHqZVggI4oaH_9732gUrFd3ckhc8Rr-vleFahiPhJd9pJYNV37QHVeQMQLCASC9WVcxU_0M9Xaw3gBAcmzOrhvgfxdEpbbUBvaVIBpjb_B4anGYSiyyZXFGj7gmiOpB4y1ZKw01W_D7YBrRe8peGAcV6awYOWnN1SbL0pdF9DYRGXcNe6IuBotPMJAFpqApylLecppVLk4ADrXdO702bJhTeO9v0e8XO5Rm3Q1nGmI_M_6vlJX3V_bfiX44lrCsEkwuzdqensqJ5g'); background-size: cover; background-position: center;">
+</div>
+<div class="absolute bottom-1 right-1 bg-primary text-white rounded-full p-1.5 border-4 border-background-dark shadow-sm">
+<span class="material-symbols-outlined text-[16px] font-bold block">edit</span>
+</div>
+</div>
+<div class="text-center space-y-1">
+<h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">ALEX FORGE</h1>
+<div class="flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[#D4AF37] text-[18px]">verified</span>
+<p class="text-[#D4AF37] text-sm font-bold tracking-wider uppercase">Elite Member</p>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-xs">Member since 2021</p>
+</div>
+</section>
+<!-- Stats Dashboard -->
+<section class="p-4">
+<div class="grid grid-cols-3 gap-3">
+<!-- Stat Card 1 -->
+<div class="flex flex-col items-center justify-center p-3 rounded-xl bg-white dark:bg-surface-dark shadow-sm border border-slate-200 dark:border-white/5">
+<span class="material-symbols-outlined text-gray-400 mb-1">fitness_center</span>
+<p class="text-2xl font-bold text-slate-900 dark:text-white leading-none">42</p>
+<p class="text-[10px] font-medium text-slate-500 dark:text-gray-400 uppercase tracking-wider mt-1">Sessions</p>
+</div>
+<!-- Stat Card 2 (Primary Highlight) -->
+<div class="relative flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br from-primary/20 to-surface-dark border border-primary/30 shadow-sm overflow-hidden">
+<div class="absolute -top-6 -right-6 w-12 h-12 bg-primary/20 rounded-full blur-xl"></div>
+<span class="material-symbols-outlined text-primary mb-1">local_fire_department</span>
+<p class="text-2xl font-bold text-primary leading-none">5</p>
+<p class="text-[10px] font-medium text-primary/80 uppercase tracking-wider mt-1">Day Streak</p>
+</div>
+<!-- Stat Card 3 -->
+<div class="flex flex-col items-center justify-center p-3 rounded-xl bg-white dark:bg-surface-dark shadow-sm border border-slate-200 dark:border-white/5">
+<span class="material-symbols-outlined text-gray-400 mb-1">military_tech</span>
+<p class="text-2xl font-bold text-slate-900 dark:text-white leading-none">12</p>
+<p class="text-[10px] font-medium text-slate-500 dark:text-gray-400 uppercase tracking-wider mt-1">Badges</p>
+</div>
+</div>
+</section>
+<!-- Settings Group: Account -->
+<section class="mt-2">
+<h3 class="px-6 py-2 text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest">Account</h3>
+<div class="flex flex-col">
+<!-- Item -->
+<button class="flex items-center gap-4 px-6 py-4 hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+<div class="flex items-center justify-center rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex-1 text-left">
+<p class="text-base font-medium text-slate-900 dark:text-white">Personal Information</p>
+<p class="text-xs text-slate-500 dark:text-gray-400">Edit name, email, avatar</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</button>
+<!-- Item -->
+<button class="flex items-center gap-4 px-6 py-4 hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+<div class="flex items-center justify-center rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div class="flex-1 text-left">
+<p class="text-base font-medium text-slate-900 dark:text-white">Payment &amp; Billing</p>
+<p class="text-xs text-slate-500 dark:text-gray-400">Manage cards and history</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Settings Group: Preferences -->
+<section class="mt-4">
+<h3 class="px-6 py-2 text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest">Preferences</h3>
+<div class="flex flex-col">
+<!-- Item -->
+<button class="flex items-center gap-4 px-6 py-4 hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+<div class="flex items-center justify-center rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</div>
+<div class="flex-1 text-left">
+<p class="text-base font-medium text-slate-900 dark:text-white">Notifications</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</button>
+<!-- Item -->
+<button class="flex items-center gap-4 px-6 py-4 hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+<div class="flex items-center justify-center rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">tune</span>
+</div>
+<div class="flex-1 text-left">
+<p class="text-base font-medium text-slate-900 dark:text-white">App Settings</p>
+<p class="text-xs text-slate-500 dark:text-gray-400">Units, Theme</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Settings Group: Support & Logout -->
+<section class="mt-4 mb-8">
+<h3 class="px-6 py-2 text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest">Support</h3>
+<div class="flex flex-col">
+<!-- Item -->
+<button class="flex items-center gap-4 px-6 py-4 hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+<div class="flex items-center justify-center rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">help</span>
+</div>
+<div class="flex-1 text-left">
+<p class="text-base font-medium text-slate-900 dark:text-white">Help &amp; Support</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</button>
+<!-- Logout Item -->
+<div class="px-4 mt-6">
+<button class="w-full flex items-center justify-center gap-2 bg-[#A50000] hover:bg-[#800000] text-white py-4 rounded-lg font-bold tracking-wider uppercase transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined">logout</span>
+                        Log Out
+                     </button>
+</div>
+<div class="mt-6 text-center pb-4">
+<p class="text-xs text-slate-400 dark:text-white/20">Foundry App v2.4.0</p>
+</div>
+</div>
+</section>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 w-full max-w-md bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-white/5 pb-safe z-50">
+<div class="flex items-center justify-between px-6 py-3">
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors text-2xl">home</span>
+<span class="text-[10px] font-medium text-gray-400 group-hover:text-primary transition-colors">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors text-2xl">fitness_center</span>
+<span class="text-[10px] font-medium text-gray-400 group-hover:text-primary transition-colors">Train</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<div class="relative">
+<span class="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors text-2xl">bar_chart</span>
+<div class="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
+</div>
+<span class="text-[10px] font-medium text-gray-400 group-hover:text-primary transition-colors">Stats</span>
+</a>
+<a class="flex flex-col items-center gap-1" href="#">
+<span class="material-symbols-outlined text-primary text-2xl">person</span>
+<span class="text-[10px] font-medium text-primary">Profile</span>
+</a>
+</div>
+<!-- iOS Home Indicator Spacing -->
+<div class="h-5 w-full"></div>
+</nav>
+</div>
+</body></html>
