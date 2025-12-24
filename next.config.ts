@@ -14,15 +14,15 @@ import type { NextConfig } from "next";
 
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline' 'unsafe-eval';
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live;
   style-src 'self' 'unsafe-inline';
   img-src 'self' https: data: blob:;
-  font-src 'self';
+  font-src 'self' data:;
   object-src 'none';
   base-uri 'self';
   form-action 'self';
   frame-ancestors 'none';
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live;
   upgrade-insecure-requests;
 `.replace(/\n/g, '');
 
