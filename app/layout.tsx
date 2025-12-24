@@ -6,9 +6,11 @@ import InstallPrompt from "@/components/InstallPrompt";
 import UpdatePrompt from "@/components/UpdatePrompt";
 import { validateEnvironmentVariables } from "@/lib/env-validation";
 
-// Validate environment variables on app startup
+// Validate environment variables on app startup (server-side only)
 // This will throw an error if required variables are missing
-validateEnvironmentVariables();
+if (typeof window === 'undefined') {
+  validateEnvironmentVariables();
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
