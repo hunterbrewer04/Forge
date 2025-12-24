@@ -22,6 +22,7 @@ const cspHeader = `
   base-uri 'self';
   form-action 'self';
   frame-ancestors 'none';
+  frame-src https://vercel.live;
   connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live;
   upgrade-insecure-requests;
 `.replace(/\n/g, '');

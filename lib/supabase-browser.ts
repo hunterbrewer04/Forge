@@ -1,5 +1,4 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { env } from './env-validation'
 
 /**
  * Creates a Supabase client for use in client-side components.
@@ -15,8 +14,15 @@ import { env } from './env-validation'
  * @returns Supabase client for browser use
  */
 export function createClient() {
-  return createBrowserClient(
-    env.supabaseUrl(),
-    env.supabaseAnonKey()
-  )
+  // Access env vars directly in browser - they're replaced at build time
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing Supabase configuration. Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your deployment environment variables.'
+    )
+  }
+
+  return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
