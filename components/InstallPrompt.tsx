@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import '@/lib/types/navigator.d.ts'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
