@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import type { ProfileJoin } from '@/lib/types/database'
@@ -29,7 +29,7 @@ export default function HomePage() {
   const router = useRouter()
   const [stats, setStats] = useState<Stats>({ unreadCount: 0, totalConversations: 0 })
   const [loadingStats, setLoadingStats] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Mock data for demo - replace with real data later
   const [streak] = useState(12)
@@ -108,7 +108,7 @@ export default function HomePage() {
     }
 
     fetchStats()
-  }, [user, profile, supabase])
+  }, [user, profile])
 
   if (loading) {
     return (

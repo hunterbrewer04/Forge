@@ -3,7 +3,6 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import MobileLayout from '@/components/layout/MobileLayout'
 
 interface ProfileStats {
@@ -12,17 +11,10 @@ interface ProfileStats {
   badges: number
 }
 
-interface ExtendedProfile {
-  avatar_url: string | null
-  created_at: string
-}
-
 export default function ProfilePage() {
   const { user, profile, loading, signOut } = useAuth()
   const router = useRouter()
-  const supabase = createClient()
   const [stats] = useState<ProfileStats>({ sessions: 42, streak: 5, badges: 12 })
-  const [extendedProfile, setExtendedProfile] = useState<ExtendedProfile | null>(null)
   const [signingOut, setSigningOut] = useState(false)
 
   // Redirect to login if not authenticated
@@ -32,25 +24,6 @@ export default function ProfilePage() {
     }
   }, [user, loading, router])
 
-  // Fetch extended profile data
-  useEffect(() => {
-    const fetchExtendedProfile = async () => {
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('avatar_url, created_at')
-        .eq('id', user.id)
-        .single()
-
-      if (!error && data) {
-        setExtendedProfile(data)
-      }
-    }
-
-    fetchExtendedProfile()
-  }, [user, supabase])
-
   const handleSignOut = async () => {
     setSigningOut(true)
     await signOut()
@@ -58,8 +31,8 @@ export default function ProfilePage() {
   }
 
   const getMemberSince = () => {
-    if (!extendedProfile?.created_at) return 'Member'
-    const year = new Date(extendedProfile.created_at).getFullYear()
+    if (!profile?.created_at) return 'Member'
+    const year = new Date(profile.created_at).getFullYear()
     return `Member since ${year}`
   }
 
@@ -96,12 +69,12 @@ export default function ProfilePage() {
           <div
             className="relative size-32 rounded-full border-4 border-background-dark overflow-hidden bg-gray-800 bg-cover bg-center"
             style={
-              extendedProfile?.avatar_url
-                ? { backgroundImage: `url('${extendedProfile.avatar_url}')` }
+              profile?.avatar_url
+                ? { backgroundImage: `url('${profile.avatar_url}')` }
                 : undefined
             }
           >
-            {!extendedProfile?.avatar_url && (
+            {!profile?.avatar_url && (
               <div className="size-full flex items-center justify-center text-stone-400">
                 <span className="material-symbols-outlined text-[48px]">person</span>
               </div>

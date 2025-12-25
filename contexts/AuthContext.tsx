@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { User, AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase-browser'
 
@@ -11,6 +11,7 @@ interface Profile {
   is_trainer: boolean
   is_admin: boolean
   is_client: boolean
+  created_at: string
 }
 
 interface AuthContextType {
@@ -47,13 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<AuthError | null>(null)
   const supabase = createClient()
+  const profileFetched = useRef(false)
 
   // Fetch user profile with error handling
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, is_trainer, is_admin, is_client')
+        .select('id, full_name, avatar_url, is_trainer, is_admin, is_client, created_at')
         .eq('id', userId)
         .single()
 
@@ -120,7 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         setError(null)
 
-        if (session?.user) {
+        if (session?.user && !profileFetched.current) {
+          profileFetched.current = true
           await fetchProfile(session.user.id)
         }
 
@@ -144,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Handle different auth events
         if (event === 'SIGNED_OUT') {
+          profileFetched.current = false  // Reset on logout
           setUser(null)
           setProfile(null)
           setError(null)
@@ -155,9 +159,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user ?? null)
           setError(null)
 
-          if (session?.user) {
+          if (session?.user && !profileFetched.current) {
+            profileFetched.current = true
             await fetchProfile(session.user.id)
-          } else {
+          } else if (!session?.user) {
             setProfile(null)
           }
         }

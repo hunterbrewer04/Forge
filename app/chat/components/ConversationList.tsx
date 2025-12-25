@@ -64,7 +64,7 @@ export default function ConversationList({
     }
 
     loadConversations()
-  }, [currentUserId, selectedConversationId])
+  }, [currentUserId])
 
   const filteredConversations = conversations.filter(conv =>
     conv.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
