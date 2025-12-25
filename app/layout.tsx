@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { Providers } from "./providers";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -109,6 +110,7 @@ export default function RootLayout({
         <Providers>{children}</Providers>
         <InstallPrompt />
         <UpdatePrompt />
+        <SpeedInsights />
       </body>
     </html>
   );
