@@ -18,6 +18,11 @@ interface Message {
   created_at: string
   sender_name: string | null
   signedUrl?: string | null
+  pending?: boolean // For optimistic updates
+}
+
+interface SenderProfile {
+  full_name: string | null
 }
 
 interface ChatWindowProps {
@@ -40,7 +45,47 @@ export default function ChatWindow({
   const [error, setError] = useState<string | null>(null)
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const senderProfileCache = useRef<Map<string, SenderProfile>>(new Map())
   const supabase = createClient()
+
+  // Cached sender profile fetch - prevents O(n) queries for real-time messages
+  const getCachedSenderProfile = useCallback(async (senderId: string): Promise<string> => {
+    // Check cache first
+    if (senderProfileCache.current.has(senderId)) {
+      return senderProfileCache.current.get(senderId)!.full_name || 'Unknown'
+    }
+
+    // Fetch if not in cache
+    try {
+      const profile = await fetchSenderProfile(senderId)
+      senderProfileCache.current.set(senderId, { full_name: profile?.full_name || null })
+      return profile?.full_name || 'Unknown'
+    } catch {
+      logger.error('Failed to fetch sender profile')
+      return 'Unknown'
+    }
+  }, [])
+
+  // Optimistic message handler - shows message immediately before server confirms
+  const addOptimisticMessage = useCallback((content: string, tempId: string) => {
+    const optimisticMessage: Message = {
+      id: tempId,
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      content,
+      media_url: null,
+      media_type: null,
+      created_at: new Date().toISOString(),
+      sender_name: 'You',
+      pending: true,
+    }
+    setMessages(prev => [...prev, optimisticMessage])
+  }, [conversationId, currentUserId])
+
+  // Remove optimistic message on error
+  const removeOptimisticMessage = useCallback((tempId: string) => {
+    setMessages(prev => prev.filter(msg => msg.id !== tempId))
+  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -105,13 +150,8 @@ export default function ChatWindow({
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
-          let senderName = 'Unknown'
-          try {
-            const senderProfile = await fetchSenderProfile(payload.new.sender_id)
-            senderName = senderProfile?.full_name || 'Unknown'
-          } catch {
-            logger.error('Failed to fetch sender profile')
-          }
+          // Use cached sender profile fetch to prevent O(n) queries
+          const senderName = await getCachedSenderProfile(payload.new.sender_id)
 
           const newMessage: Message = {
             id: payload.new.id,
@@ -122,11 +162,23 @@ export default function ChatWindow({
             media_type: payload.new.media_type,
             created_at: payload.new.created_at,
             sender_name: senderName,
+            pending: false,
           }
 
           const processedMessage = await processMessage(newMessage)
 
-          setMessages((prev) => [...prev, processedMessage])
+          // Replace optimistic message with real one, or add if new
+          setMessages((prev) => {
+            // If this is from current user, remove any pending optimistic messages
+            // with matching content (they will be replaced by the real message)
+            if (payload.new.sender_id === currentUserId) {
+              const withoutOptimistic = prev.filter(msg =>
+                !(msg.pending && msg.content === payload.new.content)
+              )
+              return [...withoutOptimistic, processedMessage]
+            }
+            return [...prev, processedMessage]
+          })
         }
       )
       .subscribe()
@@ -134,7 +186,7 @@ export default function ChatWindow({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [conversationId, supabase])
+  }, [conversationId, supabase, getCachedSenderProfile, currentUserId])
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -295,8 +347,14 @@ export default function ChatWindow({
                       {message.content && <p>{message.content}</p>}
                     </div>
                     <div className="flex items-center gap-1 mt-1 mr-1">
-                      <span className="text-[10px] text-stone-500">{formatTimestamp(message.created_at)}</span>
-                      <CheckCheck size={12} strokeWidth={2} className="text-primary" />
+                      <span className="text-[10px] text-stone-500">
+                        {message.pending ? 'Sending...' : formatTimestamp(message.created_at)}
+                      </span>
+                      {message.pending ? (
+                        <div className="size-3 border-2 border-stone-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <CheckCheck size={12} strokeWidth={2} className="text-primary" />
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -370,7 +428,11 @@ export default function ChatWindow({
       </div>
 
       {/* Message Input */}
-      <MessageInput conversationId={conversationId} />
+      <MessageInput
+        conversationId={conversationId}
+        onOptimisticMessage={addOptimisticMessage}
+        onMessageError={removeOptimisticMessage}
+      />
     </div>
   )
 }

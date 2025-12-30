@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { fetchTrainerConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { User, BadgeCheck, ChevronRight, Pin, AlertCircle, RefreshCw } from '@/components/ui/icons'
@@ -72,12 +72,18 @@ export default function ConversationList({
     loadConversations()
   }, [loadConversations])
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Memoize filtering to prevent recalculation on every render
+  const { filteredConversations, pinnedConversations, recentConversations } = useMemo(() => {
+    const filtered = conversations.filter(conv =>
+      conv.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
-  const pinnedConversations = filteredConversations.filter(c => c.is_pinned)
-  const recentConversations = filteredConversations.filter(c => !c.is_pinned)
+    return {
+      filteredConversations: filtered,
+      pinnedConversations: filtered.filter(c => c.is_pinned),
+      recentConversations: filtered.filter(c => !c.is_pinned),
+    }
+  }, [conversations, searchQuery])
 
   if (loading) {
     return (

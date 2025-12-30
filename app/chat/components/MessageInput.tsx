@@ -8,6 +8,8 @@ import { Plus, Smile, Send } from '@/components/ui/icons'
 interface MessageInputProps {
   conversationId: string
   senderId?: string
+  onOptimisticMessage?: (content: string, tempId: string) => void
+  onMessageError?: (tempId: string) => void
 }
 
 const QUICK_REPLIES = [
@@ -16,7 +18,11 @@ const QUICK_REPLIES = [
   'Sounds good',
 ]
 
-export default function MessageInput({ conversationId }: MessageInputProps) {
+export default function MessageInput({
+  conversationId,
+  onOptimisticMessage,
+  onMessageError,
+}: MessageInputProps) {
   const { user } = useAuth()
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
@@ -147,10 +153,23 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
 
     if (!message.trim() || sending) return
 
+    const messageContent = message.trim()
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+    // Clear input immediately for instant feedback
+    setMessage('')
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
+
+    // Show optimistic message immediately
+    onOptimisticMessage?.(messageContent, tempId)
+
     setSending(true)
 
     try {
       if (!user?.id) {
+        onMessageError?.(tempId)
         alert('You must be logged in to send messages')
         return
       }
@@ -160,21 +179,23 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
         .insert({
           conversation_id: conversationId,
           sender_id: user.id,
-          content: message.trim(),
+          content: messageContent,
           created_at: new Date().toISOString(),
         })
 
       if (error) {
         console.error('Error sending message:', error)
+        // Remove optimistic message and restore input
+        onMessageError?.(tempId)
+        setMessage(messageContent)
         alert('Failed to send message. Please try again.')
-      } else {
-        setMessage('')
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto'
-        }
       }
+      // Success: real-time subscription will handle replacing optimistic message
     } catch (err) {
       console.error('Unexpected error:', err)
+      // Remove optimistic message and restore input
+      onMessageError?.(tempId)
+      setMessage(messageContent)
       alert('Failed to send message. Please try again.')
     } finally {
       setSending(false)
