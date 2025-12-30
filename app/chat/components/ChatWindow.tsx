@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import MessageInput from './MessageInput'
 import { fetchMessages, fetchSenderProfile } from '@/lib/services/messages'
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
-import { ArrowLeft, User, BadgeCheck, MoreVertical, CheckCheck } from '@/components/ui/icons'
+import { ArrowLeft, User, BadgeCheck, MoreVertical, CheckCheck, AlertCircle, RefreshCw } from '@/components/ui/icons'
 
 interface Message {
   id: string
@@ -37,6 +37,7 @@ export default function ChatWindow({
 }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
@@ -57,38 +58,40 @@ export default function ChatWindow({
     scrollToBottom()
   }, [messages])
 
-  useEffect(() => {
-    const loadMessages = async () => {
-      setLoading(true)
+  const loadMessages = useCallback(async () => {
+    setLoading(true)
+    setError(null)
 
-      try {
-        const data = await fetchMessages(conversationId)
+    try {
+      const data = await fetchMessages(conversationId)
 
-        const messagesWithNames: Message[] = data.map((msg) => ({
-          id: msg.id,
-          conversation_id: msg.conversation_id,
-          sender_id: msg.sender_id,
-          content: msg.content,
-          media_url: msg.media_url,
-          media_type: msg.media_type,
-          created_at: msg.created_at,
-          sender_name: msg.profiles?.full_name || 'Unknown',
-        }))
+      const messagesWithNames: Message[] = data.map((msg) => ({
+        id: msg.id,
+        conversation_id: msg.conversation_id,
+        sender_id: msg.sender_id,
+        content: msg.content,
+        media_url: msg.media_url,
+        media_type: msg.media_type,
+        created_at: msg.created_at,
+        sender_name: msg.profiles?.full_name || 'Unknown',
+      }))
 
-        const messagesWithSignedUrls = await Promise.all(
-          messagesWithNames.map(msg => processMessage(msg))
-        )
+      const messagesWithSignedUrls = await Promise.all(
+        messagesWithNames.map(msg => processMessage(msg))
+      )
 
-        setMessages(messagesWithSignedUrls)
-      } catch (err) {
-        logger.error('Error fetching messages:', err)
-      } finally {
-        setLoading(false)
-      }
+      setMessages(messagesWithSignedUrls)
+    } catch (err) {
+      logger.error('Error fetching messages:', err)
+      setError('Failed to load messages. Tap to retry.')
+    } finally {
+      setLoading(false)
     }
-
-    loadMessages()
   }, [conversationId])
+
+  useEffect(() => {
+    loadMessages()
+  }, [loadMessages])
 
   useEffect(() => {
     const channel = supabase
@@ -169,6 +172,28 @@ export default function ChatWindow({
       <div className="h-full flex flex-col bg-background-dark">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-stone-500">Loading messages...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex flex-col bg-background-dark">
+        <div className="flex-1 flex items-center justify-center">
+          <button
+            onClick={loadMessages}
+            className="flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:bg-white/5 rounded-xl transition-colors group"
+          >
+            <div className="size-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4 group-hover:bg-red-500/20 transition-colors">
+              <AlertCircle size={32} strokeWidth={2} className="text-red-400" />
+            </div>
+            <div className="text-stone-300 mb-2 font-medium">{error}</div>
+            <div className="flex items-center gap-2 text-primary text-sm font-medium">
+              <RefreshCw size={16} strokeWidth={2} />
+              Tap to retry
+            </div>
+          </button>
         </div>
       </div>
     )

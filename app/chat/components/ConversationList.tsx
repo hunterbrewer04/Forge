@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { fetchTrainerConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
-import { User, BadgeCheck, ChevronRight, Pin } from '@/components/ui/icons'
+import { User, BadgeCheck, ChevronRight, Pin, AlertCircle, RefreshCw } from '@/components/ui/icons'
 
 interface Conversation {
   id: string
@@ -33,39 +33,44 @@ export default function ConversationList({
 }: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadConversations = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const data = await fetchTrainerConversations(currentUserId)
+
+      const conversationsWithNames: Conversation[] = data.map((conv, index) => ({
+        id: conv.id,
+        client_id: conv.client_id,
+        trainer_id: conv.trainer_id,
+        client_name: conv.profiles?.full_name || 'Unknown Client',
+        avatar_url: conv.profiles?.avatar_url,
+        last_message: 'Tap to view messages',
+        last_message_time: 'Recently',
+        unread_count: index === 0 ? 1 : 0, // Mock unread for demo
+        is_online: index === 0, // Mock online status
+        is_pinned: index === 0, // First conversation is pinned
+      }))
+
+      setConversations(conversationsWithNames)
+
+      if (!selectedConversationId && conversationsWithNames.length > 0) {
+        // Don't auto-select, let user tap
+      }
+    } catch (err) {
+      logger.error('Error fetching conversations:', err)
+      setError('Failed to load conversations. Tap to retry.')
+    } finally {
+      setLoading(false)
+    }
+  }, [currentUserId, selectedConversationId])
 
   useEffect(() => {
-    const loadConversations = async () => {
-      try {
-        const data = await fetchTrainerConversations(currentUserId)
-
-        const conversationsWithNames: Conversation[] = data.map((conv, index) => ({
-          id: conv.id,
-          client_id: conv.client_id,
-          trainer_id: conv.trainer_id,
-          client_name: conv.profiles?.full_name || 'Unknown Client',
-          avatar_url: conv.profiles?.avatar_url,
-          last_message: 'Tap to view messages',
-          last_message_time: 'Recently',
-          unread_count: index === 0 ? 1 : 0, // Mock unread for demo
-          is_online: index === 0, // Mock online status
-          is_pinned: index === 0, // First conversation is pinned
-        }))
-
-        setConversations(conversationsWithNames)
-
-        if (!selectedConversationId && conversationsWithNames.length > 0) {
-          // Don't auto-select, let user tap
-        }
-      } catch (err) {
-        logger.error('Error fetching conversations:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     loadConversations()
-  }, [currentUserId])
+  }, [loadConversations])
 
   const filteredConversations = conversations.filter(conv =>
     conv.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -78,6 +83,26 @@ export default function ConversationList({
     return (
       <div className="h-full flex items-center justify-center bg-background-dark">
         <div className="text-stone-500 text-sm">Loading conversations...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center bg-background-dark p-4">
+        <button
+          onClick={loadConversations}
+          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-white/5 rounded-xl transition-colors group"
+        >
+          <div className="size-14 rounded-full bg-red-500/10 flex items-center justify-center mb-3 group-hover:bg-red-500/20 transition-colors">
+            <AlertCircle size={28} strokeWidth={2} className="text-red-400" />
+          </div>
+          <div className="text-stone-300 mb-2 text-sm font-medium">{error}</div>
+          <div className="flex items-center gap-2 text-primary text-xs font-medium">
+            <RefreshCw size={14} strokeWidth={2} />
+            Tap to retry
+          </div>
+        </button>
       </div>
     )
   }
