@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, Calendar, BarChart2, User, Plus } from "@/components/ui/icons";
 
 interface NavItem {
@@ -36,6 +37,16 @@ interface BottomNavProps {
 
 export default function BottomNav({ onFabClick }: BottomNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Prefetch all nav routes on mount for instant navigation
+  useEffect(() => {
+    navItems.forEach((item) => {
+      router.prefetch(item.href);
+    });
+    // Also prefetch chat since it's a common destination
+    router.prefetch("/chat");
+  }, [router]);
 
   const isActive = (href: string) => {
     if (href === "/home") {
