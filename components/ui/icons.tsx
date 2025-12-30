@@ -1,6 +1,74 @@
 "use client";
 
 import type { LucideIcon, LucideProps } from "lucide-react";
+import {
+  // Navigation
+  Home,
+  Calendar,
+  BarChart2,
+  User,
+  Users,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Menu,
+  X,
+  // Actions
+  Plus,
+  Pencil,
+  Trash2,
+  Send,
+  Search,
+  Filter,
+  Settings,
+  Settings2,
+  LogOut,
+  // Communication
+  MessageCircle,
+  MessageSquare,
+  Bell,
+  Mail,
+  Phone,
+  Smile,
+  CheckCheck,
+  // Status & Indicators
+  BadgeCheck,
+  Check,
+  CheckCircle,
+  AlertCircle,
+  Info,
+  Lock,
+  Unlock,
+  Eye,
+  EyeOff,
+  Pin,
+  // Gamification & Fitness
+  Flame,
+  Award,
+  Trophy,
+  Dumbbell,
+  TrendingUp,
+  Target,
+  Zap,
+  Star,
+  Heart,
+  // Utility
+  Clock,
+  Timer,
+  CreditCard,
+  HelpCircle,
+  MoreVertical,
+  MoreHorizontal,
+  Loader2,
+  RefreshCw,
+  Upload,
+  Download,
+  Image,
+  Video,
+  Camera,
+} from "lucide-react";
 
 // Re-export LucideIcon type for external use
 export type { LucideIcon };
@@ -83,7 +151,6 @@ export {
   ChevronUp,
   Menu,
   X,
-
   // Actions
   Plus,
   Pencil,
@@ -94,7 +161,6 @@ export {
   Settings,
   Settings2,
   LogOut,
-
   // Communication
   MessageCircle,
   MessageSquare,
@@ -103,7 +169,6 @@ export {
   Phone,
   Smile,
   CheckCheck,
-
   // Status & Indicators
   BadgeCheck,
   Check,
@@ -115,7 +180,6 @@ export {
   Eye,
   EyeOff,
   Pin,
-
   // Gamification & Fitness
   Flame,
   Award,
@@ -126,7 +190,6 @@ export {
   Zap,
   Star,
   Heart,
-
   // Utility
   Clock,
   Timer,
@@ -141,4 +204,4 @@ export {
   Image,
   Video,
   Camera,
-} from "lucide-react";
+};
