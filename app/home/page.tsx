@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import type { ProfileJoin } from '@/lib/types/database'
 import MobileLayout from '@/components/layout/MobileLayout'
-import { User, Flame, Award, Calendar, Mail, TrendingUp, Dumbbell, CheckCircle, Trophy, LucideIcon } from '@/components/ui/icons'
+import { User, Flame, Award, Calendar, Mail, TrendingUp, Dumbbell, CheckCircle, Trophy } from '@/components/ui/icons'
 
 interface Stats {
   unreadCount: number
@@ -16,13 +16,28 @@ interface Stats {
   clientsCount?: number
 }
 
+type ActivityIconKey = "checkCircle" | "trophy" | "dumbbell" | "flame"
+
 interface ActivityItem {
   id: string
   title: string
   timestamp: string
-  icon: LucideIcon
+  iconKey: ActivityIconKey
   iconColor: string
   xp?: number
+}
+
+function ActivityIcon({ iconKey, size, strokeWidth }: { iconKey: ActivityIconKey; size: number; strokeWidth: number }) {
+  switch (iconKey) {
+    case "checkCircle":
+      return <CheckCircle size={size} strokeWidth={strokeWidth} />;
+    case "trophy":
+      return <Trophy size={size} strokeWidth={strokeWidth} />;
+    case "dumbbell":
+      return <Dumbbell size={size} strokeWidth={strokeWidth} />;
+    case "flame":
+      return <Flame size={size} strokeWidth={strokeWidth} />;
+  }
 }
 
 export default function HomePage() {
@@ -40,7 +55,7 @@ export default function HomePage() {
       id: '1',
       title: 'Upper Body Hypertrophy',
       timestamp: 'Yesterday, 5:30 PM • 1h 15m',
-      icon: CheckCircle,
+      iconKey: 'checkCircle',
       iconColor: 'text-white',
       xp: 350,
     },
@@ -48,7 +63,7 @@ export default function HomePage() {
       id: '2',
       title: 'New PR: Deadlift',
       timestamp: 'Oct 24 • 405 lbs',
-      icon: Trophy,
+      iconKey: 'trophy',
       iconColor: 'text-gold',
     },
   ])
@@ -285,7 +300,7 @@ export default function HomePage() {
               className="flex items-center gap-4 bg-[#23160f] border border-steel/20 p-4 rounded-xl"
             >
               <div className={`size-12 rounded-full bg-stone-800 flex items-center justify-center shrink-0 ${activity.iconColor}`}>
-                <activity.icon size={24} strokeWidth={2} />
+                <ActivityIcon iconKey={activity.iconKey} size={24} strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-white font-bold truncate">{activity.title}</h4>

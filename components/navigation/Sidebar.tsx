@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LucideIcon } from "lucide-react";
 import {
   Home,
   Calendar,
@@ -13,23 +12,42 @@ import {
   LogOut,
 } from "@/components/ui/icons";
 
+type IconKey = "home" | "messages" | "calendar" | "stats" | "profile" | "settings";
+
 interface NavItem {
   href: string;
-  icon: LucideIcon;
+  iconKey: IconKey;
   label: string;
 }
 
 const mainNavItems: NavItem[] = [
-  { href: "/home", icon: Home, label: "Home" },
-  { href: "/chat", icon: MessageCircle, label: "Messages" },
-  { href: "/schedule", icon: Calendar, label: "Schedule" },
-  { href: "/stats", icon: BarChart2, label: "Stats" },
+  { href: "/home", iconKey: "home", label: "Home" },
+  { href: "/chat", iconKey: "messages", label: "Messages" },
+  { href: "/schedule", iconKey: "calendar", label: "Schedule" },
+  { href: "/stats", iconKey: "stats", label: "Stats" },
 ];
 
 const bottomNavItems: NavItem[] = [
-  { href: "/profile", icon: User, label: "Profile" },
-  { href: "/settings", icon: Settings, label: "Settings" },
+  { href: "/profile", iconKey: "profile", label: "Profile" },
+  { href: "/settings", iconKey: "settings", label: "Settings" },
 ];
+
+function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: number; strokeWidth: number }) {
+  switch (iconKey) {
+    case "home":
+      return <Home size={size} strokeWidth={strokeWidth} />;
+    case "messages":
+      return <MessageCircle size={size} strokeWidth={strokeWidth} />;
+    case "calendar":
+      return <Calendar size={size} strokeWidth={strokeWidth} />;
+    case "stats":
+      return <BarChart2 size={size} strokeWidth={strokeWidth} />;
+    case "profile":
+      return <User size={size} strokeWidth={strokeWidth} />;
+    case "settings":
+      return <Settings size={size} strokeWidth={strokeWidth} />;
+  }
+}
 
 interface SidebarProps {
   onSignOut?: () => void;
@@ -73,7 +91,8 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
                     : "text-stone-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                <item.icon
+                <SidebarIcon
+                  iconKey={item.iconKey}
                   size={22}
                   strokeWidth={isActive(item.href) ? 2.5 : 2}
                 />
@@ -96,7 +115,8 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
                 : "text-stone-400 hover:bg-white/5 hover:text-white"
             }`}
           >
-            <item.icon
+            <SidebarIcon
+              iconKey={item.iconKey}
               size={22}
               strokeWidth={isActive(item.href) ? 2.5 : 2}
             />

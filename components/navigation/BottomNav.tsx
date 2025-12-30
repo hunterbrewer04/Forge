@@ -2,21 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LucideIcon } from "lucide-react";
 import { Home, Calendar, BarChart2, User, Plus } from "@/components/ui/icons";
 
 interface NavItem {
   href: string;
-  icon: LucideIcon;
+  iconKey: "home" | "calendar" | "stats" | "profile";
   label: string;
 }
 
 const navItems: NavItem[] = [
-  { href: "/home", icon: Home, label: "Home" },
-  { href: "/schedule", icon: Calendar, label: "Schedule" },
-  { href: "/stats", icon: BarChart2, label: "Stats" },
-  { href: "/profile", icon: User, label: "Profile" },
+  { href: "/home", iconKey: "home", label: "Home" },
+  { href: "/schedule", iconKey: "calendar", label: "Schedule" },
+  { href: "/stats", iconKey: "stats", label: "Stats" },
+  { href: "/profile", iconKey: "profile", label: "Profile" },
 ];
+
+function NavIcon({ iconKey, size, strokeWidth }: { iconKey: NavItem["iconKey"]; size: number; strokeWidth: number }) {
+  switch (iconKey) {
+    case "home":
+      return <Home size={size} strokeWidth={strokeWidth} />;
+    case "calendar":
+      return <Calendar size={size} strokeWidth={strokeWidth} />;
+    case "stats":
+      return <BarChart2 size={size} strokeWidth={strokeWidth} />;
+    case "profile":
+      return <User size={size} strokeWidth={strokeWidth} />;
+  }
+}
 
 interface BottomNavProps {
   onFabClick?: () => void;
@@ -46,7 +58,7 @@ export default function BottomNav({ onFabClick }: BottomNavProps) {
                 : "text-stone-500 hover:text-stone-300"
             }`}
           >
-            <item.icon size={26} strokeWidth={2} />
+            <NavIcon iconKey={item.iconKey} size={26} strokeWidth={2} />
             <span
               className={`text-[10px] tracking-wide ${
                 isActive(item.href) ? "font-bold" : "font-medium"
@@ -79,7 +91,7 @@ export default function BottomNav({ onFabClick }: BottomNavProps) {
                 : "text-stone-500 hover:text-stone-300"
             }`}
           >
-            <item.icon size={26} strokeWidth={2} />
+            <NavIcon iconKey={item.iconKey} size={26} strokeWidth={2} />
             <span
               className={`text-[10px] tracking-wide ${
                 isActive(item.href) ? "font-bold" : "font-medium"
