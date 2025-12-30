@@ -73,7 +73,7 @@ export default function ChatPage() {
       logger.debug('[ChatPage] User exists but no profile found')
       setError('Profile not found. Please contact support.')
     }
-  }, [user, profile, loading, router])
+  }, [user, profile, loading])
 
   useEffect(() => {
     const loadClientConversation = async () => {
