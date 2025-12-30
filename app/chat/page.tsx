@@ -6,8 +6,10 @@ import { useState, useEffect } from 'react'
 import ConversationList from './components/ConversationList'
 import ClientConversationList from './components/ClientConversationList'
 import ChatWindow from './components/ChatWindow'
+import ChatLayout from '@/components/layout/ChatLayout'
 import { logger } from '@/lib/utils/logger'
 import { fetchClientConversation, fetchConversationById } from '@/lib/services/conversations'
+import { ArrowLeft, Bell, Plus, Search } from '@/components/ui/icons'
 
 interface ConversationInfo {
   id: string
@@ -229,139 +231,137 @@ export default function ChatPage() {
   const isTrainer = profile.is_trainer
   const isClient = profile.is_client && !profile.is_trainer
 
-  return (
-    <div className="h-screen flex flex-col bg-background-dark overflow-hidden">
-      {/* Header */}
-      <header className="flex-none bg-background-dark sticky top-0 z-50 border-b border-white/10 px-4 pt-safe-top pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+  // Mobile header component
+  const mobileHeader = (
+    <header className="flex-none bg-background-dark sticky top-0 z-50 border-b border-white/10 px-4 pt-safe-top pb-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push('/home')}
+            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] -ml-2 rounded-full hover:bg-white/5 transition-colors text-white active:scale-95"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={28} strokeWidth={2} />
+          </button>
+          <h1 className="text-2xl font-bold uppercase tracking-wider text-white">Comms</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full hover:bg-white/5 transition-colors relative active:scale-95"
+            aria-label="Notifications"
+          >
+            <Bell size={24} strokeWidth={2} className="text-primary" />
+            <span className="absolute top-1.5 right-1.5 size-2.5 bg-gold rounded-full ring-2 ring-background-dark"></span>
+          </button>
+          <button
+            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] bg-primary hover:bg-orange-600 transition-colors rounded-full shadow-lg shadow-primary/20 active:scale-95"
+            aria-label="New conversation"
+          >
+            <Plus size={24} strokeWidth={2} className="text-white" />
+          </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mt-4">
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={20} strokeWidth={2} className="text-stone-500 group-focus-within:text-primary transition-colors" />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full pl-10 pr-3 py-3 border-none rounded-lg leading-5 bg-[#2C2C2C] text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm"
+            placeholder="Search conversations..."
+          />
+        </div>
+      </div>
+    </header>
+  )
+
+  // Get the conversation list based on user type
+  const conversationListComponent = isTrainer ? (
+    <ConversationList
+      currentUserId={user.id}
+      selectedConversationId={selectedConversationId}
+      onSelectConversation={handleSelectConversation}
+      searchQuery={searchQuery}
+    />
+  ) : isClient ? (
+    <ClientConversationList
+      currentUserId={user.id}
+      selectedConversationId={selectedConversationId}
+      onSelectConversation={handleSelectConversation}
+    />
+  ) : null
+
+  // Get the active chat component
+  const activeChatComponent = (() => {
+    if (error) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md px-6">
+            <div className="text-red-500 text-lg font-semibold mb-4">Error</div>
+            <p className="text-stone-400 mb-6">{error}</p>
             <button
-              onClick={() => router.push('/home')}
-              className="p-2 -ml-2 rounded-full hover:bg-white/5 transition-colors text-white"
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 text-white bg-primary rounded-lg hover:bg-orange-600 font-medium"
             >
-              <span className="material-symbols-outlined text-[28px]">arrow_back</span>
-            </button>
-            <h1 className="text-2xl font-bold uppercase tracking-wider text-white">Comms</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-full hover:bg-white/5 transition-colors relative">
-              <span className="material-symbols-outlined text-primary">notifications</span>
-              <span className="absolute top-2 right-2 size-2 bg-gold rounded-full border border-background-dark"></span>
-            </button>
-            <button className="flex items-center justify-center size-10 bg-primary hover:bg-orange-600 transition-colors rounded-full shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined text-white">add</span>
+              Retry
             </button>
           </div>
         </div>
+      )
+    }
 
-        {/* Search Bar */}
-        <div className="mt-4">
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="material-symbols-outlined text-stone-500 group-focus-within:text-primary transition-colors">search</span>
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-3 border-none rounded-lg leading-5 bg-[#2C2C2C] text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm"
-              placeholder="Search conversations..."
-            />
-          </div>
+    if (loadingConversation) {
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-stone-500 text-center">Loading conversation...</div>
         </div>
-      </header>
+      )
+    }
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden relative w-full max-w-2xl mx-auto">
-        {isTrainer ? (
-          <>
-            {/* Trainer view: List or Thread based on showThread state */}
-            <div className={`h-full ${showThread ? 'hidden sm:block sm:w-80' : 'block'}`}>
-              <ConversationList
-                currentUserId={user.id}
-                selectedConversationId={selectedConversationId}
-                onSelectConversation={handleSelectConversation}
-                searchQuery={searchQuery}
-              />
-            </div>
-            {showThread && selectedConversationId && conversationInfo ? (
-              <div className="absolute inset-0 bg-background-dark z-20 flex flex-col sm:relative sm:flex-1">
-                <ChatWindow
-                  conversationId={selectedConversationId}
-                  currentUserId={user.id}
-                  otherUserName={conversationInfo.client_name || 'Client'}
-                  otherUserAvatar={conversationInfo.avatar_url}
-                  onBack={handleBackToList}
-                />
-              </div>
-            ) : !showThread ? null : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-stone-500 text-center">
-                  {loadingConversation ? 'Loading conversation...' : 'Select a conversation'}
-                </div>
-              </div>
-            )}
-          </>
-        ) : isClient ? (
-          <>
-            {/* Client view: List or Thread */}
-            <div className={`h-full ${showThread ? 'hidden sm:block sm:w-80' : 'block'}`}>
-              <ClientConversationList
-                currentUserId={user.id}
-                selectedConversationId={selectedConversationId}
-                onSelectConversation={handleSelectConversation}
-              />
-            </div>
-            {error ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center max-w-md px-6">
-                  <div className="text-red-500 text-lg font-semibold mb-4">Error</div>
-                  <p className="text-stone-400 mb-6">{error}</p>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="px-6 py-3 text-white bg-primary rounded-lg hover:bg-orange-600 font-medium"
-                  >
-                    Retry
-                  </button>
-                </div>
-              </div>
-            ) : showThread && selectedConversationId && conversationInfo ? (
-              <div className="absolute inset-0 bg-background-dark z-20 flex flex-col sm:relative sm:flex-1">
-                <ChatWindow
-                  conversationId={selectedConversationId}
-                  currentUserId={user.id}
-                  otherUserName={conversationInfo.trainer_name || 'Your Trainer'}
-                  otherUserAvatar={conversationInfo.avatar_url}
-                  onBack={handleBackToList}
-                />
-              </div>
-            ) : !showThread ? null : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-stone-500 text-center px-6">
-                  {loadingConversation ? (
-                    <>
-                      <div className="text-lg mb-2">Loading your conversation...</div>
-                      <div className="text-sm text-stone-600">This should only take a moment</div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-lg mb-2">No conversation found</p>
-                      <p className="text-sm">Please contact support to set up your trainer.</p>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-stone-500 text-center">
-              <p className="text-lg mb-2">Access Denied</p>
-              <p className="text-sm">You need to be a trainer or client to access chat.</p>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+    if (selectedConversationId && conversationInfo) {
+      const otherName = isTrainer
+        ? conversationInfo.client_name || 'Client'
+        : conversationInfo.trainer_name || 'Your Trainer'
+
+      return (
+        <ChatWindow
+          conversationId={selectedConversationId}
+          currentUserId={user.id}
+          otherUserName={otherName}
+          otherUserAvatar={conversationInfo.avatar_url}
+          onBack={handleBackToList}
+        />
+      )
+    }
+
+    return null
+  })()
+
+  // Access denied state
+  if (!isTrainer && !isClient) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background-dark">
+        <div className="text-stone-500 text-center">
+          <p className="text-lg mb-2">Access Denied</p>
+          <p className="text-sm">You need to be a trainer or client to access chat.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <ChatLayout
+      mobileHeader={mobileHeader}
+      conversationList={conversationListComponent}
+      activeChat={activeChatComponent}
+      showActiveChat={showThread}
+      onCloseActiveChat={handleBackToList}
+      onSignOut={() => signOut().then(() => router.push('/login'))}
+    />
   )
 }

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import type { ProfileJoin } from '@/lib/types/database'
 import MobileLayout from '@/components/layout/MobileLayout'
+import { User, Flame, Award, Calendar, Mail, TrendingUp, Dumbbell, CheckCircle, Trophy, LucideIcon } from '@/components/ui/icons'
 
 interface Stats {
   unreadCount: number
@@ -19,7 +20,7 @@ interface ActivityItem {
   id: string
   title: string
   timestamp: string
-  icon: string
+  icon: LucideIcon
   iconColor: string
   xp?: number
 }
@@ -39,7 +40,7 @@ export default function HomePage() {
       id: '1',
       title: 'Upper Body Hypertrophy',
       timestamp: 'Yesterday, 5:30 PM • 1h 15m',
-      icon: 'check_circle',
+      icon: CheckCircle,
       iconColor: 'text-white',
       xp: 350,
     },
@@ -47,7 +48,7 @@ export default function HomePage() {
       id: '2',
       title: 'New PR: Deadlift',
       timestamp: 'Oct 24 • 405 lbs',
-      icon: 'emoji_events',
+      icon: Trophy,
       iconColor: 'text-gold',
     },
   ])
@@ -136,7 +137,7 @@ export default function HomePage() {
         >
           {!profile.avatar_url && (
             <div className="size-full rounded-full flex items-center justify-center text-stone-300">
-              <span className="material-symbols-outlined text-[20px]">person</span>
+              <User size={20} strokeWidth={2} />
             </div>
           )}
         </div>
@@ -170,7 +171,7 @@ export default function HomePage() {
         {/* Current Streak */}
         <div className="bg-gradient-to-br from-[#2a2a2a] to-[#202020] border border-steel/30 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span className="material-symbols-outlined text-[48px] text-gold">local_fire_department</span>
+            <Flame size={48} strokeWidth={2} className="text-gold" />
           </div>
           <p className="text-stone-400 text-xs font-bold uppercase tracking-wider">Current Streak</p>
           <div className="flex items-baseline gap-1 mt-1">
@@ -182,7 +183,7 @@ export default function HomePage() {
         {/* Class Level */}
         <div className="bg-gradient-to-br from-[#2a2a2a] to-[#202020] border border-steel/30 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-            <span className="material-symbols-outlined text-[48px] text-stone-200">military_tech</span>
+            <Award size={48} strokeWidth={2} className="text-stone-200" />
           </div>
           <p className="text-stone-400 text-xs font-bold uppercase tracking-wider">Class Level</p>
           <div className="mt-1">
@@ -206,7 +207,7 @@ export default function HomePage() {
         >
           <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
           <div className="bg-black/20 self-start p-2 rounded-lg text-white mb-2 z-10 group-hover:bg-black/30 transition-colors">
-            <span className="material-symbols-outlined text-[28px]">calendar_month</span>
+            <Calendar size={28} strokeWidth={2} />
           </div>
           <div className="z-10">
             <h3 className="text-white text-lg font-bold leading-tight">Schedule<br/>Session</h3>
@@ -221,7 +222,7 @@ export default function HomePage() {
         >
           <div className="flex justify-between items-start w-full">
             <div className="bg-stone-800 p-2 rounded-lg text-white group-hover:text-primary transition-colors">
-              <span className="material-symbols-outlined text-[28px]">mail</span>
+              <Mail size={28} strokeWidth={2} />
             </div>
             {stats.unreadCount > 0 && (
               <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
@@ -243,7 +244,7 @@ export default function HomePage() {
           className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[140px] transition-all active:scale-95 text-left group"
         >
           <div className="bg-stone-800 self-start p-2 rounded-lg text-white mb-2 group-hover:text-primary transition-colors">
-            <span className="material-symbols-outlined text-[28px]">monitoring</span>
+            <TrendingUp size={28} strokeWidth={2} />
           </div>
           <div>
             <h3 className="text-white text-lg font-bold leading-tight">My Stats</h3>
@@ -257,10 +258,10 @@ export default function HomePage() {
           className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[140px] transition-all active:scale-95 text-left group relative overflow-hidden"
         >
           <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none translate-x-2 translate-y-2">
-            <span className="material-symbols-outlined text-[100px]">fitness_center</span>
+            <Dumbbell size={100} strokeWidth={2} />
           </div>
           <div className="bg-stone-800 self-start p-2 rounded-lg text-white mb-2 group-hover:text-primary transition-colors">
-            <span className="material-symbols-outlined text-[28px]">fitness_center</span>
+            <Dumbbell size={28} strokeWidth={2} />
           </div>
           <div>
             <h3 className="text-white text-lg font-bold leading-tight">Workout</h3>
@@ -284,7 +285,7 @@ export default function HomePage() {
               className="flex items-center gap-4 bg-[#23160f] border border-steel/20 p-4 rounded-xl"
             >
               <div className={`size-12 rounded-full bg-stone-800 flex items-center justify-center shrink-0 ${activity.iconColor}`}>
-                <span className="material-symbols-outlined">{activity.icon}</span>
+                <activity.icon size={24} strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-white font-bold truncate">{activity.title}</h4>

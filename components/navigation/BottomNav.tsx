@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LucideIcon } from "lucide-react";
+import { Home, Calendar, BarChart2, User, Plus } from "@/components/ui/icons";
 
 interface NavItem {
   href: string;
-  icon: string;
+  icon: LucideIcon;
   label: string;
 }
 
 const navItems: NavItem[] = [
-  { href: "/home", icon: "home", label: "Home" },
-  { href: "/schedule", icon: "calendar_month", label: "Schedule" },
-  { href: "/stats", icon: "bar_chart", label: "Stats" },
-  { href: "/profile", icon: "person", label: "Profile" },
+  { href: "/home", icon: Home, label: "Home" },
+  { href: "/schedule", icon: Calendar, label: "Schedule" },
+  { href: "/stats", icon: BarChart2, label: "Stats" },
+  { href: "/profile", icon: User, label: "Profile" },
 ];
 
 interface BottomNavProps {
@@ -44,9 +46,7 @@ export default function BottomNav({ onFabClick }: BottomNavProps) {
                 : "text-stone-500 hover:text-stone-300"
             }`}
           >
-            <span className="material-symbols-outlined text-[26px]">
-              {item.icon}
-            </span>
+            <item.icon size={26} strokeWidth={2} />
             <span
               className={`text-[10px] tracking-wide ${
                 isActive(item.href) ? "font-bold" : "font-medium"
@@ -64,7 +64,7 @@ export default function BottomNav({ onFabClick }: BottomNavProps) {
             className="size-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center border-4 border-[#1C1C1C] active:scale-95 transition-transform"
             aria-label="Quick action"
           >
-            <span className="material-symbols-outlined text-[32px]">add</span>
+            <Plus size={32} strokeWidth={2} />
           </button>
         </div>
 
@@ -79,9 +79,7 @@ export default function BottomNav({ onFabClick }: BottomNavProps) {
                 : "text-stone-500 hover:text-stone-300"
             }`}
           >
-            <span className="material-symbols-outlined text-[26px]">
-              {item.icon}
-            </span>
+            <item.icon size={26} strokeWidth={2} />
             <span
               className={`text-[10px] tracking-wide ${
                 isActive(item.href) ? "font-bold" : "font-medium"

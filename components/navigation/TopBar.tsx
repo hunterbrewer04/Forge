@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Bell, Menu } from "@/components/ui/icons";
 
 interface TopBarProps {
   title?: string;
@@ -31,12 +32,10 @@ export default function TopBar({
           {showBack && (
             <button
               onClick={() => router.back()}
-              className="flex items-center justify-center size-10 rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary"
+              className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
               aria-label="Go back"
             >
-              <span className="material-symbols-outlined text-[24px]">
-                arrow_back
-              </span>
+              <ArrowLeft size={24} strokeWidth={2} />
             </button>
           )}
           {leftContent}
@@ -50,25 +49,21 @@ export default function TopBar({
           {rightContent}
           {showNotifications && !rightContent && (
             <button
-              className="flex items-center justify-center size-10 rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary relative"
+              className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95 relative"
               aria-label="Notifications"
             >
-              <span className="material-symbols-outlined text-[24px]">
-                notifications
-              </span>
+              <Bell size={24} strokeWidth={2} />
               {notificationCount > 0 && (
-                <span className="absolute top-2 right-2 size-2 rounded-full bg-primary" />
+                <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-primary ring-2 ring-background-dark" />
               )}
             </button>
           )}
           {showMenu && (
             <button
-              className="flex items-center justify-center size-10 rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary"
+              className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
               aria-label="Menu"
             >
-              <span className="material-symbols-outlined text-[24px]">
-                menu
-              </span>
+              <Menu size={24} strokeWidth={2} />
             </button>
           )}
         </div>

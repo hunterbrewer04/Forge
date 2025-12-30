@@ -3,6 +3,7 @@
 import { useState, FormEvent, useRef, ChangeEvent } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useAuth } from '@/contexts/AuthContext'
+import { Plus, Smile, Send } from '@/components/ui/icons'
 
 interface MessageInputProps {
   conversationId: string
@@ -280,10 +281,10 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
           type="button"
           onClick={handleUploadButtonClick}
           disabled={sending || uploading}
-          className="p-2.5 rounded-full bg-[#2C2C2C] text-stone-500 hover:text-primary transition-colors shrink-0 mb-0.5 disabled:opacity-50"
+          className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-[#2C2C2C] text-stone-500 hover:text-primary transition-colors shrink-0 mb-0.5 disabled:opacity-50 active:scale-95"
           aria-label="Upload photo or video"
         >
-          <span className="material-symbols-outlined text-[20px]">add</span>
+          <Plus size={20} strokeWidth={2} />
         </button>
 
         {/* Text input */}
@@ -299,9 +300,10 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
           />
           <button
             type="button"
-            className="ml-2 text-stone-500 hover:text-white transition-colors"
+            className="flex items-center justify-center size-8 min-w-[32px] min-h-[32px] ml-2 text-stone-500 hover:text-white transition-colors active:scale-95"
+            aria-label="Add emoji"
           >
-            <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
+            <Smile size={20} strokeWidth={2} />
           </button>
         </div>
 
@@ -309,9 +311,10 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
         <button
           type="submit"
           disabled={!message.trim() || sending || uploading}
-          className="size-11 rounded-full bg-primary hover:bg-orange-600 text-white flex items-center justify-center shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0 mb-0.5 disabled:opacity-50 disabled:bg-stone-600 disabled:shadow-none"
+          className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-primary hover:bg-orange-600 text-white shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0 mb-0.5 disabled:opacity-50 disabled:bg-stone-600 disabled:shadow-none"
+          aria-label="Send message"
         >
-          <span className="material-symbols-outlined text-[20px] ml-0.5">send</span>
+          <Send size={20} strokeWidth={2} className="ml-0.5" />
         </button>
       </form>
     </div>

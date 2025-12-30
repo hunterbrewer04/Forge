@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { fetchTrainerConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
+import { User, BadgeCheck, ChevronRight, Pin } from '@/components/ui/icons'
 
 interface Conversation {
   id: string
@@ -109,7 +110,7 @@ export default function ConversationList({
           style={conversation.avatar_url ? { backgroundImage: `url('${conversation.avatar_url}')` } : undefined}
         >
           {!conversation.avatar_url && (
-            <span className="material-symbols-outlined text-stone-400 text-[24px]">person</span>
+            <User size={24} strokeWidth={2} className="text-stone-400" />
           )}
         </div>
         {conversation.is_online && (
@@ -125,7 +126,7 @@ export default function ConversationList({
           <h4 className={`font-bold text-white truncate flex items-center gap-1 ${isPinned ? 'text-base' : 'text-base'}`}>
             {conversation.client_name}
             {isPinned && (
-              <span className="material-symbols-outlined text-gold text-[14px]" title="Certified">verified</span>
+              <BadgeCheck size={14} strokeWidth={2} className="text-gold" aria-label="Certified" />
             )}
           </h4>
           <span className={`text-xs font-medium ${conversation.unread_count ? 'text-primary' : 'text-stone-500'}`}>
@@ -144,7 +145,7 @@ export default function ConversationList({
 
       {/* Chevron on hover */}
       <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <span className="material-symbols-outlined text-stone-500 text-[20px]">chevron_right</span>
+        <ChevronRight size={20} strokeWidth={2} className="text-stone-500" />
       </div>
     </button>
   )
@@ -155,7 +156,7 @@ export default function ConversationList({
       {pinnedConversations.length > 0 && (
         <div className="px-4 py-4">
           <h3 className="text-xs font-bold text-gold uppercase tracking-widest mb-3 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">push_pin</span> Pinned
+            <Pin size={14} strokeWidth={2} /> Pinned
           </h3>
           <div className="space-y-3">
             {pinnedConversations.map((conversation) => (

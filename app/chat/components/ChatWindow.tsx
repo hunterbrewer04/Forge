@@ -6,6 +6,7 @@ import MessageInput from './MessageInput'
 import { fetchMessages, fetchSenderProfile } from '@/lib/services/messages'
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
+import { ArrowLeft, User, BadgeCheck, MoreVertical, CheckCheck } from '@/components/ui/icons'
 
 interface Message {
   id: string
@@ -184,7 +185,7 @@ export default function ChatWindow({
                 onClick={onBack}
                 className="p-2 -ml-2 rounded-full hover:bg-white/5 transition-colors text-stone-400 hover:text-white"
               >
-                <span className="material-symbols-outlined">arrow_back_ios_new</span>
+                <ArrowLeft size={20} strokeWidth={2} />
               </button>
             )}
             <div className="flex items-center gap-3">
@@ -194,7 +195,7 @@ export default function ChatWindow({
                   style={otherUserAvatar ? { backgroundImage: `url('${otherUserAvatar}')` } : undefined}
                 >
                   {!otherUserAvatar && (
-                    <span className="material-symbols-outlined text-stone-400 text-[20px]">person</span>
+                    <User size={20} strokeWidth={2} className="text-stone-400" />
                   )}
                 </div>
                 <div className="absolute bottom-0 right-0 size-2.5 bg-green-500 rounded-full border-2 border-background-dark" />
@@ -202,14 +203,14 @@ export default function ChatWindow({
               <div>
                 <h3 className="font-bold text-base leading-tight text-white flex items-center gap-1">
                   {otherUserName}
-                  <span className="material-symbols-outlined text-gold text-[14px]">verified</span>
+                  <BadgeCheck size={14} strokeWidth={2} className="text-gold" />
                 </h3>
                 <p className="text-xs text-primary font-medium">Online</p>
               </div>
             </div>
           </div>
           <button className="p-2 rounded-full hover:bg-white/5 text-stone-500">
-            <span className="material-symbols-outlined">more_vert</span>
+            <MoreVertical size={24} strokeWidth={2} />
           </button>
         </div>
       </div>
@@ -270,7 +271,7 @@ export default function ChatWindow({
                     </div>
                     <div className="flex items-center gap-1 mt-1 mr-1">
                       <span className="text-[10px] text-stone-500">{formatTimestamp(message.created_at)}</span>
-                      <span className="material-symbols-outlined text-[12px] text-primary">done_all</span>
+                      <CheckCheck size={12} strokeWidth={2} className="text-primary" />
                     </div>
                   </div>
                 ) : (
@@ -281,7 +282,7 @@ export default function ChatWindow({
                       style={otherUserAvatar ? { backgroundImage: `url('${otherUserAvatar}')` } : undefined}
                     >
                       {!otherUserAvatar && (
-                        <span className="material-symbols-outlined text-stone-400 text-[14px]">person</span>
+                        <User size={14} strokeWidth={2} className="text-stone-400" />
                       )}
                     </div>
                     <div className="flex flex-col gap-1">
@@ -329,7 +330,7 @@ export default function ChatWindow({
               style={otherUserAvatar ? { backgroundImage: `url('${otherUserAvatar}')` } : undefined}
             >
               {!otherUserAvatar && (
-                <span className="material-symbols-outlined text-stone-400 text-[14px]">person</span>
+                <User size={14} strokeWidth={2} className="text-stone-400" />
               )}
             </div>
             <div className="bg-[#4A4A4A]/50 px-4 py-3 rounded-2xl rounded-bl-none w-16 flex items-center justify-center gap-1">

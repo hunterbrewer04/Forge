@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import MobileLayout from '@/components/layout/MobileLayout'
+import { Bell, User, ChevronLeft, ChevronRight, Filter, Clock, Zap, Lock, Plus } from '@/components/ui/icons'
 
 type SessionFilter = 'all' | '1-on-1' | 'strength' | 'conditioning'
 type TabType = 'upcoming' | 'history'
@@ -153,11 +154,11 @@ export default function SchedulePage() {
   const topBarRightContent = (
     <div className="flex gap-2 items-center">
       <button className="relative p-2 text-gray-300 hover:text-primary transition-colors">
-        <span className="material-symbols-outlined">notifications</span>
+        <Bell size={24} strokeWidth={2} />
         <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
       </button>
       <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden border border-gray-600 flex items-center justify-center">
-        <span className="material-symbols-outlined text-[16px] text-gray-400">person</span>
+        <User size={16} strokeWidth={2} className="text-gray-400" />
       </div>
     </div>
   )
@@ -215,10 +216,10 @@ export default function SchedulePage() {
           <h3 className="text-lg font-bold text-white">{currentMonth}</h3>
           <div className="flex gap-2">
             <button className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
-              <span className="material-symbols-outlined text-sm">chevron_left</span>
+              <ChevronLeft size={16} strokeWidth={2} />
             </button>
             <button className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
-              <span className="material-symbols-outlined text-sm">chevron_right</span>
+              <ChevronRight size={16} strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -270,7 +271,7 @@ export default function SchedulePage() {
 
       {/* Filter FAB */}
       <button className="fixed bottom-24 right-4 w-12 h-12 bg-primary text-white rounded-full shadow-xl flex items-center justify-center hover:scale-110 transition-transform z-10 max-w-md">
-        <span className="material-symbols-outlined">filter_list</span>
+        <Filter size={24} strokeWidth={2} />
       </button>
     </MobileLayout>
   )
@@ -294,7 +295,7 @@ function SessionCard({ session }: { session: Session }) {
             </h4>
             <div className="flex items-center gap-2 mb-3">
               <span className="flex items-center text-xs font-medium text-gray-400 bg-gray-800 px-2 py-0.5 rounded">
-                <span className="material-symbols-outlined text-[14px] mr-1">timer</span>
+                <Clock size={14} strokeWidth={2} className="mr-1" />
                 {session.duration} min
               </span>
               {session.spotsLeft !== null && (
@@ -311,14 +312,14 @@ function SessionCard({ session }: { session: Session }) {
                     style={{ backgroundImage: `url('${session.coachAvatar}')` }}
                   />
                 ) : (
-                  <span className="material-symbols-outlined text-[14px] text-gray-400">person</span>
+                  <User size={14} strokeWidth={2} className="text-gray-400" />
                 )}
               </div>
               <span className="text-sm font-medium text-gray-300">{session.coachName}</span>
             </div>
           </div>
           <button className="self-center bg-gold text-black font-bold p-2 rounded-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-gold/20">
-            <span className="material-symbols-outlined">bolt</span>
+            <Zap size={24} strokeWidth={2} />
           </button>
         </div>
       </div>
@@ -337,7 +338,7 @@ function SessionCard({ session }: { session: Session }) {
             <h4 className="text-lg font-bold text-gray-400 leading-tight mb-1">{session.name}</h4>
             <div className="flex items-center gap-2 mb-3">
               <span className="flex items-center text-xs font-medium text-gray-600 bg-gray-800/50 px-2 py-0.5 rounded">
-                <span className="material-symbols-outlined text-[14px] mr-1">timer</span>
+                <Clock size={14} strokeWidth={2} className="mr-1" />
                 {session.duration} min
               </span>
               <span className="text-xs font-medium text-red-500 uppercase">Full</span>
@@ -350,14 +351,14 @@ function SessionCard({ session }: { session: Session }) {
                     style={{ backgroundImage: `url('${session.coachAvatar}')` }}
                   />
                 ) : (
-                  <span className="material-symbols-outlined text-[14px] text-gray-400">person</span>
+                  <User size={14} strokeWidth={2} className="text-gray-400" />
                 )}
               </div>
               <span className="text-sm font-medium text-gray-500">{session.coachName}</span>
             </div>
           </div>
           <button className="self-center bg-transparent border border-gray-700 text-gray-600 font-bold p-2 rounded-lg cursor-not-allowed">
-            <span className="material-symbols-outlined">lock</span>
+            <Lock size={24} strokeWidth={2} />
           </button>
         </div>
       </div>
@@ -377,7 +378,7 @@ function SessionCard({ session }: { session: Session }) {
           </h4>
           <div className="flex items-center gap-2 mb-3">
             <span className="flex items-center text-xs font-medium text-gray-400 bg-gray-800 px-2 py-0.5 rounded">
-              <span className="material-symbols-outlined text-[14px] mr-1">timer</span>
+              <Clock size={14} strokeWidth={2} className="mr-1" />
               {session.duration} min
             </span>
             {session.spotsLeft !== null && (
@@ -392,14 +393,14 @@ function SessionCard({ session }: { session: Session }) {
                   style={{ backgroundImage: `url('${session.coachAvatar}')` }}
                 />
               ) : (
-                <span className="material-symbols-outlined text-[14px] text-gray-400">person</span>
+                <User size={14} strokeWidth={2} className="text-gray-400" />
               )}
             </div>
             <span className="text-sm font-medium text-gray-300">{session.coachName}</span>
           </div>
         </div>
         <button className="self-center bg-white text-black font-bold p-2 rounded-lg hover:bg-primary hover:text-white transition-colors shadow-lg">
-          <span className="material-symbols-outlined">add</span>
+          <Plus size={24} strokeWidth={2} />
         </button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import MobileLayout from '@/components/layout/MobileLayout'
+import { MoreVertical, User, Pencil, BadgeCheck, Dumbbell, Flame, Award, CreditCard, Bell, Settings2, HelpCircle, LogOut, ChevronRight } from '@/components/ui/icons'
 
 interface ProfileStats {
   sessions: number
@@ -57,7 +58,7 @@ export default function ProfilePage() {
       showNotifications={false}
       topBarRightContent={
         <button className="size-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
-          <span className="material-symbols-outlined">more_vert</span>
+          <MoreVertical size={24} strokeWidth={2} />
         </button>
       }
     >
@@ -76,18 +77,18 @@ export default function ProfilePage() {
           >
             {!profile?.avatar_url && (
               <div className="size-full flex items-center justify-center text-stone-400">
-                <span className="material-symbols-outlined text-[48px]">person</span>
+                <User size={48} strokeWidth={2} />
               </div>
             )}
           </div>
           <div className="absolute bottom-1 right-1 bg-primary text-white rounded-full p-1.5 border-4 border-background-dark shadow-sm">
-            <span className="material-symbols-outlined text-[16px] font-bold block">edit</span>
+            <Pencil size={16} strokeWidth={2.5} className="block" />
           </div>
         </div>
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-white uppercase">{displayName}</h1>
           <div className="flex items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-gold text-[18px]">verified</span>
+            <BadgeCheck size={18} strokeWidth={2} className="text-gold" />
             <p className="text-gold text-sm font-bold tracking-wider uppercase">Elite Member</p>
           </div>
           <p className="text-gray-400 text-xs">{getMemberSince()}</p>
@@ -99,7 +100,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-3 gap-3">
           {/* Sessions Card */}
           <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-surface-dark shadow-sm border border-white/5">
-            <span className="material-symbols-outlined text-gray-400 mb-1">fitness_center</span>
+            <Dumbbell size={24} strokeWidth={2} className="text-gray-400 mb-1" />
             <p className="text-2xl font-bold text-white leading-none">{stats.sessions}</p>
             <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mt-1">Sessions</p>
           </div>
@@ -107,14 +108,14 @@ export default function ProfilePage() {
           {/* Streak Card (Primary Highlight) */}
           <div className="relative flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br from-primary/20 to-surface-dark border border-primary/30 shadow-sm overflow-hidden">
             <div className="absolute -top-6 -right-6 w-12 h-12 bg-primary/20 rounded-full blur-xl"></div>
-            <span className="material-symbols-outlined text-primary mb-1">local_fire_department</span>
+            <Flame size={24} strokeWidth={2} className="text-primary mb-1" />
             <p className="text-2xl font-bold text-primary leading-none">{stats.streak}</p>
             <p className="text-[10px] font-medium text-primary/80 uppercase tracking-wider mt-1">Day Streak</p>
           </div>
 
           {/* Badges Card */}
           <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-surface-dark shadow-sm border border-white/5">
-            <span className="material-symbols-outlined text-gray-400 mb-1">military_tech</span>
+            <Award size={24} strokeWidth={2} className="text-gray-400 mb-1" />
             <p className="text-2xl font-bold text-white leading-none">{stats.badges}</p>
             <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mt-1">Badges</p>
           </div>
@@ -128,25 +129,25 @@ export default function ProfilePage() {
           {/* Personal Information */}
           <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
             <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <span className="material-symbols-outlined">person</span>
+              <User size={24} strokeWidth={2} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-base font-medium text-white">Personal Information</p>
               <p className="text-xs text-gray-400">Edit name, email, avatar</p>
             </div>
-            <span className="material-symbols-outlined text-gray-400">chevron_right</span>
+            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
           </button>
 
           {/* Payment & Billing */}
           <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
             <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <span className="material-symbols-outlined">payments</span>
+              <CreditCard size={24} strokeWidth={2} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-base font-medium text-white">Payment & Billing</p>
               <p className="text-xs text-gray-400">Manage cards and history</p>
             </div>
-            <span className="material-symbols-outlined text-gray-400">chevron_right</span>
+            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
           </button>
         </div>
       </section>
@@ -158,24 +159,24 @@ export default function ProfilePage() {
           {/* Notifications */}
           <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
             <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <span className="material-symbols-outlined">notifications</span>
+              <Bell size={24} strokeWidth={2} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-base font-medium text-white">Notifications</p>
             </div>
-            <span className="material-symbols-outlined text-gray-400">chevron_right</span>
+            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
           </button>
 
           {/* App Settings */}
           <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
             <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <span className="material-symbols-outlined">tune</span>
+              <Settings2 size={24} strokeWidth={2} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-base font-medium text-white">App Settings</p>
               <p className="text-xs text-gray-400">Units, Theme</p>
             </div>
-            <span className="material-symbols-outlined text-gray-400">chevron_right</span>
+            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
           </button>
         </div>
       </section>
@@ -187,12 +188,12 @@ export default function ProfilePage() {
           {/* Help & Support */}
           <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
             <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <span className="material-symbols-outlined">help</span>
+              <HelpCircle size={24} strokeWidth={2} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-base font-medium text-white">Help & Support</p>
             </div>
-            <span className="material-symbols-outlined text-gray-400">chevron_right</span>
+            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
           </button>
 
           {/* Logout Button */}
@@ -202,7 +203,7 @@ export default function ProfilePage() {
               disabled={signingOut}
               className="w-full flex items-center justify-center gap-2 bg-[#A50000] hover:bg-[#800000] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-lg font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
             >
-              <span className="material-symbols-outlined">logout</span>
+              <LogOut size={24} strokeWidth={2} />
               {signingOut ? 'Signing Out...' : 'Log Out'}
             </button>
           </div>
