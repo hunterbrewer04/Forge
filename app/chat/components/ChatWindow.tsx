@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import MessageInput from './MessageInput'
+import MediaViewer, { useMediaViewer } from './MediaViewer'
 import { fetchMessages, fetchSenderProfile } from '@/lib/services/messages'
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
@@ -47,6 +48,16 @@ export default function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const senderProfileCache = useRef<Map<string, SenderProfile>>(new Map())
   const supabase = createClient()
+
+  // Media lightbox viewer state
+  const {
+    isOpen: mediaViewerOpen,
+    slides: mediaSlides,
+    initialIndex: mediaIndex,
+    closeViewer: closeMediaViewer,
+    openSingleImage,
+    openSingleVideo
+  } = useMediaViewer()
 
   // Cached sender profile fetch - prevents O(n) queries for real-time messages
   const getCachedSenderProfile = useCallback(async (senderId: string): Promise<string> => {
@@ -327,20 +338,29 @@ export default function ChatWindow({
                             src={message.signedUrl}
                             alt="Shared image"
                             className="max-w-full max-h-64 rounded-lg cursor-pointer"
-                            onClick={() => window.open(message.signedUrl!, '_blank')}
+                            onClick={() => openSingleImage(message.signedUrl!, 'Shared image')}
                           />
                         </div>
                       )}
 
                       {/* Render video */}
                       {message.media_type === 'video' && message.signedUrl && (
-                        <div className="mb-2 relative">
+                        <div className="mb-2 relative group">
                           <video
                             src={message.signedUrl}
                             controls
                             preload="metadata"
                             className="max-w-full max-h-64 rounded-lg"
                           />
+                          <button
+                            onClick={() => openSingleVideo(message.signedUrl!)}
+                            className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="View fullscreen"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                            </svg>
+                          </button>
                         </div>
                       )}
 
@@ -377,20 +397,29 @@ export default function ChatWindow({
                               src={message.signedUrl}
                               alt="Shared image"
                               className="max-w-full max-h-64 rounded-lg cursor-pointer"
-                              onClick={() => window.open(message.signedUrl!, '_blank')}
+                              onClick={() => openSingleImage(message.signedUrl!, 'Shared image')}
                             />
                           </div>
                         )}
 
                         {/* Render video */}
                         {message.media_type === 'video' && message.signedUrl && (
-                          <div className="mb-2 relative aspect-video w-full rounded-lg overflow-hidden bg-black group cursor-pointer">
+                          <div className="mb-2 relative aspect-video w-full rounded-lg overflow-hidden bg-black group">
                             <video
                               src={message.signedUrl}
                               controls
                               preload="metadata"
                               className="w-full h-full object-cover"
                             />
+                            <button
+                              onClick={() => openSingleVideo(message.signedUrl!)}
+                              className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="View fullscreen"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                              </svg>
+                            </button>
                           </div>
                         )}
 
@@ -432,6 +461,14 @@ export default function ChatWindow({
         conversationId={conversationId}
         onOptimisticMessage={addOptimisticMessage}
         onMessageError={removeOptimisticMessage}
+      />
+
+      {/* Media Lightbox Viewer */}
+      <MediaViewer
+        isOpen={mediaViewerOpen}
+        onClose={closeMediaViewer}
+        slides={mediaSlides}
+        initialIndex={mediaIndex}
       />
     </div>
   )

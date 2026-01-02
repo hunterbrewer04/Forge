@@ -1,0 +1,21 @@
+/* Custom styles for media lightbox */
+.yarl__root {
+  --yarl__color_backdrop: rgba(0, 0, 0, 0.95);
+  --yarl__color_button: #ff6714;
+  --yarl__color_button_active: #ff8a4c;
+}
+
+/* Ensure lightbox appears above everything */
+.yarl__root {
+  z-index: 9999;
+}
+
+/* Style the close button */
+.yarl__button {
+  filter: none;
+}
+
+/* Style video controls */
+.yarl__slide_video video {
+  max-height: 90vh;
+}
