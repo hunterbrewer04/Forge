@@ -345,13 +345,13 @@ app/schedule/page.tsx               # Replace mock data with real queries
 ### Phase 4: Trainer Admin UI
 **Goal:** Session management interface for owner
 
-- [ ] Create admin layout with auth guard
-- [ ] Build session list page (table or calendar view)
-- [ ] Build create session form
-- [ ] Build edit session page
-- [ ] Show bookings per session with client names
-- [ ] Implement session cancellation (notify booked clients?)
-- [ ] Add quick actions (duplicate session, mark complete)
+- [x] Create admin layout with auth guard
+- [x] Build session list page (table or calendar view)
+- [x] Build create session form
+- [x] Build edit session page
+- [x] Show bookings per session with client names
+- [x] Implement session cancellation (notify booked clients?)
+- [x] Add quick actions (duplicate session, mark complete)
 
 **Key files:**
 - `app/admin/layout.tsx`
@@ -405,11 +405,11 @@ app/schedule/page.tsx               # Replace mock data with real queries
 - [ ] Can cancel booking from schedule page
 
 ### Admin UI
-- [ ] Only trainers/admins can access /admin
-- [ ] Can create new session with all fields
-- [ ] Can edit existing session
-- [ ] Can cancel session
-- [ ] Can see list of booked clients
+- [x] Only trainers/admins can access /admin
+- [x] Can create new session with all fields
+- [x] Can edit existing session
+- [x] Can cancel session
+- [x] Can see list of booked clients
 
 ### iCal Export
 - [ ] Feed URL returns valid .ics file
