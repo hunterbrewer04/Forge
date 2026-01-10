@@ -364,18 +364,19 @@ app/schedule/page.tsx               # Replace mock data with real queries
 ### Phase 5: iCal Export
 **Goal:** Owner can view schedule in external calendar apps
 
-- [ ] Create `lib/services/calendar.ts` for iCal generation
-- [ ] Create `/api/calendar/[trainerId]/route.ts` endpoint
-- [ ] Generate secure per-trainer tokens
-- [ ] Build calendar settings page in admin
-- [ ] Add copy-to-clipboard for feed URL
-- [ ] Add token regeneration feature
-- [ ] Test with Google Calendar and Apple Calendar
-- [ ] Add setup instructions in UI
+- [x] Create `lib/services/calendar.ts` for iCal generation
+- [x] Create `/api/calendar/[trainerId]/route.ts` endpoint
+- [x] Generate secure per-trainer tokens
+- [x] Build calendar settings page in admin
+- [x] Add copy-to-clipboard for feed URL
+- [x] Add token regeneration feature
+- [x] Test with Google Calendar and Apple Calendar
+- [x] Add setup instructions in UI
 
 **Key files:**
 - `lib/services/calendar.ts`
 - `app/api/calendar/[trainerId]/route.ts`
+- `app/api/calendar/token/route.ts`
 - `app/admin/settings/calendar/page.tsx`
 
 ---
@@ -383,26 +384,26 @@ app/schedule/page.tsx               # Replace mock data with real queries
 ## Verification Checklist
 
 ### Database
-- [ ] All tables created with correct columns
-- [ ] RLS policies working (test as client vs trainer)
-- [ ] `book_session()` function prevents overbooking
-- [ ] Indexes improve query performance
+- [x] All tables created with correct columns
+- [x] RLS policies working (test as client vs trainer)
+- [x] `book_session()` function prevents overbooking
+- [x] Indexes improve query performance
 
 ### API
-- [ ] GET /api/sessions returns filtered results
-- [ ] POST /api/sessions creates session (trainer only)
-- [ ] POST /api/sessions/[id]/book handles capacity correctly
-- [ ] Booking same session twice returns error
-- [ ] Booking full session returns error
-- [ ] Rate limiting prevents abuse
+- [x] GET /api/sessions returns filtered results
+- [x] POST /api/sessions creates session (trainer only)
+- [x] POST /api/sessions/[id]/book handles capacity correctly
+- [x] Booking same session twice returns error
+- [x] Booking full session returns error
+- [x] Rate limiting prevents abuse
 
 ### Client UI
-- [ ] Sessions load for selected date
-- [ ] Spots remaining updates after booking
-- [ ] Booking modal shows correct session details
-- [ ] Success state shows after booking
-- [ ] "Booked" badge appears on user's sessions
-- [ ] Can cancel booking from schedule page
+- [x] Sessions load for selected date
+- [x] Spots remaining updates after booking
+- [x] Booking modal shows correct session details
+- [x] Success state shows after booking
+- [x] "Booked" badge appears on user's sessions
+- [x] Can cancel booking from schedule page
 
 ### Admin UI
 - [x] Only trainers/admins can access /admin
@@ -412,12 +413,12 @@ app/schedule/page.tsx               # Replace mock data with real queries
 - [x] Can see list of booked clients
 
 ### iCal Export
-- [ ] Feed URL returns valid .ics file
-- [ ] Google Calendar successfully subscribes
-- [ ] Apple Calendar successfully subscribes
-- [ ] Sessions appear with correct times
-- [ ] Cancelled sessions don't appear (or show as cancelled)
-- [ ] Token regeneration invalidates old URL
+- [x] Feed URL returns valid .ics file
+- [x] Google Calendar successfully subscribes
+- [x] Apple Calendar successfully subscribes
+- [x] Sessions appear with correct times
+- [x] Cancelled sessions don't appear (or show as cancelled)
+- [x] Token regeneration invalidates old URL
 
 ### Mobile
 - [ ] Schedule page works on 375px viewport
