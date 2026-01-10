@@ -29,6 +29,12 @@ export type AuditAction =
   | 'MEDIA_DELETE'
   | 'CONVERSATION_CREATE'
   | 'CONVERSATION_DELETE'
+  | 'SESSION_CREATE'
+  | 'SESSION_UPDATE'
+  | 'SESSION_CANCEL'
+  | 'SESSION_DELETE'
+  | 'BOOKING_CREATE'
+  | 'BOOKING_CANCEL'
   | 'ADMIN_ACTION'
   | 'RATE_LIMIT_EXCEEDED'
   | 'SECURITY_ALERT'
@@ -39,6 +45,8 @@ export type AuditResource =
   | 'message'
   | 'media'
   | 'conversation'
+  | 'session'
+  | 'booking'
   | 'system'
 
 export interface AuditLogEntry {
