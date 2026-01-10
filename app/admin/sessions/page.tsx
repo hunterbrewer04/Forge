@@ -13,6 +13,7 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  Settings,
 } from '@/components/ui/icons'
 import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
 
@@ -137,16 +138,24 @@ export default function AdminSessionsPage() {
       showBack
       showNotifications={false}
       topBarRightContent={
-        <button
-          onClick={handleRefresh}
-          className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
-          disabled={isRefreshing}
-        >
-          <RefreshCw
-            size={20}
-            className={isRefreshing ? 'animate-spin' : ''}
-          />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              size={20}
+              className={isRefreshing ? 'animate-spin' : ''}
+            />
+          </button>
+          <button
+            onClick={() => router.push('/admin/settings')}
+            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+          >
+            <Settings size={20} />
+          </button>
+        </div>
       }
     >
       {/* Filters */}

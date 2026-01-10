@@ -72,6 +72,9 @@ import {
   AlertTriangle,
   Copy,
   CheckSquare,
+  Link2,
+  ExternalLink,
+  Clipboard,
 } from "lucide-react";
 
 // Re-export LucideIcon type for external use
@@ -212,4 +215,7 @@ export {
   AlertTriangle,
   Copy,
   CheckSquare,
+  Link2,
+  ExternalLink,
+  Clipboard,
 };
