@@ -23,10 +23,14 @@ interface RouteParams {
  * GET /api/sessions/[id]
  *
  * Returns a single session with details
+ * Query params:
+ * - include_bookings: If true, includes all bookings for the session (trainer only)
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const includeBookings = searchParams.get('include_bookings') === 'true'
 
     // 1. Validate authentication
     const authResult = await validateAuth(request)
@@ -112,15 +116,40 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       ? session.trainer[0] || null
       : session.trainer
 
+    // 8. Fetch bookings if requested (trainer only)
+    let bookings = null
+    if (includeBookings && session.trainer_id === user.id) {
+      const { data: bookingsData } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          client:profiles!bookings_client_id_fkey(
+            id,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('session_id', id)
+        .order('booked_at', { ascending: true })
+
+      bookings = (bookingsData || []).map((booking) => {
+        const client = Array.isArray(booking.client)
+          ? booking.client[0] || null
+          : booking.client
+        return { ...booking, client }
+      })
+    }
+
     return NextResponse.json({
       success: true,
-      data: {
+      session: {
         ...session,
         session_type,
         trainer,
         availability,
         user_booking: bookingData,
       },
+      bookings,
     })
   } catch (error) {
     return handleUnexpectedError(error, 'session-get')

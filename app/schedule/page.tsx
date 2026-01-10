@@ -85,11 +85,11 @@ export default function SchedulePage() {
       }
 
       const data = await response.json()
-      setSessions(data.data || [])
+      setSessions(data.sessions || [])
 
       // Extract unique session types from sessions
       const types = new Map<string, SessionType>()
-      data.data?.forEach((session: SessionWithDetails) => {
+      data.sessions?.forEach((session: SessionWithDetails) => {
         if (session.session_type) {
           types.set(session.session_type.id, session.session_type)
         }

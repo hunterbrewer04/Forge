@@ -70,6 +70,8 @@ import {
   Camera,
   MapPin,
   AlertTriangle,
+  Copy,
+  CheckSquare,
 } from "lucide-react";
 
 // Re-export LucideIcon type for external use
@@ -208,4 +210,6 @@ export {
   Camera,
   MapPin,
   AlertTriangle,
+  Copy,
+  CheckSquare,
 };

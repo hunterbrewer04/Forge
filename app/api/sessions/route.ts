@@ -22,9 +22,10 @@ import type { SessionFilters, CreateSessionInput } from '@/lib/types/sessions'
  * - from: Start of date range (ISO string)
  * - to: End of date range (ISO string)
  * - type: Filter by session_type slug
- * - trainer_id: Filter by trainer
+ * - trainer_id: Filter by trainer (use "me" for current user)
  * - include_full: Include fully booked sessions (default: true)
  * - status: Filter by status (default: scheduled)
+ * - types_only: If true, returns session types instead of sessions
  */
 export async function GET(request: NextRequest) {
   try {
@@ -47,12 +48,51 @@ export async function GET(request: NextRequest) {
 
     // 3. Parse query params
     const { searchParams } = new URL(request.url)
+
+    // Handle types_only request
+    if (searchParams.get('types_only') === 'true') {
+      const supabase = createServerClient(
+        env.supabaseUrl(),
+        env.supabaseAnonKey(),
+        {
+          cookies: {
+            get(name: string) {
+              return request.cookies.get(name)?.value
+            },
+            set() {},
+            remove() {},
+          },
+        }
+      )
+
+      const { data: sessionTypes, error } = await supabase
+        .from('session_types')
+        .select('*')
+        .order('name')
+
+      if (error) {
+        console.error('Error fetching session types:', error)
+        return createApiError('Failed to fetch session types', 500, 'DATABASE_ERROR')
+      }
+
+      return NextResponse.json({
+        success: true,
+        session_types: sessionTypes || [],
+      })
+    }
+
+    // Handle trainer_id=me
+    let trainerId = searchParams.get('trainer_id') || undefined
+    if (trainerId === 'me') {
+      trainerId = user.id
+    }
+
     const filters: SessionFilters = {
       date: searchParams.get('date') || undefined,
       from: searchParams.get('from') || undefined,
       to: searchParams.get('to') || undefined,
       type: searchParams.get('type') || undefined,
-      trainer_id: searchParams.get('trainer_id') || undefined,
+      trainer_id: trainerId,
       include_full: searchParams.get('include_full') !== 'false',
       status: (searchParams.get('status') as SessionFilters['status']) || 'scheduled',
     }
@@ -174,7 +214,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: finalSessions,
+      sessions: finalSessions,
       count: finalSessions.length,
     })
   } catch (error) {
