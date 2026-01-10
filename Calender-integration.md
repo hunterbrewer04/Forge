@@ -327,17 +327,18 @@ app/schedule/page.tsx               # Replace mock data with real queries
 ### Phase 3: Client Schedule UI
 **Goal:** Replace mock data, implement booking flow
 
-- [ ] Fetch real sessions from API based on selected date
-- [ ] Display spots remaining from database
-- [ ] Implement booking modal with confirmation
-- [ ] Handle booking success/error states
-- [ ] Show "Booked" state for sessions user has reserved
-- [ ] Implement booking cancellation
-- [ ] Add pull-to-refresh / auto-refresh for availability
+- [x] Fetch real sessions from API based on selected date
+- [x] Display spots remaining from database
+- [x] Implement booking modal with confirmation
+- [x] Handle booking success/error states
+- [x] Show "Booked" state for sessions user has reserved
+- [x] Implement booking cancellation
+- [x] Add pull-to-refresh / auto-refresh for availability
 
 **Key files:**
 - `app/schedule/page.tsx` (major update)
 - `app/schedule/components/BookingModal.tsx` (new)
+- `app/schedule/components/CancelBookingModal.tsx` (new)
 
 ---
 
