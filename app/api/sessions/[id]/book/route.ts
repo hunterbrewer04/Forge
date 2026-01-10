@@ -76,6 +76,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return createApiError('Failed to fetch session', 500, 'DATABASE_ERROR')
     }
 
+    // 4b. Prevent booking past sessions (Issue #7 - defensive API layer check)
+    if (new Date(session.starts_at) <= new Date()) {
+      return createApiError(
+        'Cannot book a session that has already started',
+        400,
+        'SESSION_STARTED'
+      )
+    }
+
     // 5. Call atomic booking function
     const { data: bookingResult, error: bookingError } = await supabase.rpc(
       'book_session',

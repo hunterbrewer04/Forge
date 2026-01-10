@@ -151,7 +151,7 @@ CREATE POLICY "Admins can delete session types"
 
 ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
 
--- Anyone authenticated can read scheduled sessions
+-- Anyone can read scheduled sessions; trainers can also read their own sessions in any status
 CREATE POLICY "Anyone can read scheduled sessions"
     ON public.sessions
     FOR SELECT

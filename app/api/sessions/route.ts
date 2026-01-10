@@ -165,47 +165,59 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // 8. Fetch availability for each session
-    const sessionsWithDetails = await Promise.all(
-      filteredSessions.map(async (session) => {
-        // Get availability
-        const { data: availabilityData } = await supabase.rpc(
-          'get_session_availability',
-          { p_session_id: session.id }
-        )
-        const availability = availabilityData?.[0] || {
-          capacity: session.capacity || 1,
-          booked_count: 0,
-          spots_left: session.capacity || 1,
-          is_full: false,
-        }
+    // 8. Fetch availability in batch (Issue #13, #14 - N+2 query optimization)
+    const sessionIds = filteredSessions.map((s) => s.id)
 
-        // Check if current user has a booking
-        const { data: bookingData } = await supabase
+    // Get batch availability - single query instead of N queries
+    const { data: availabilityData } = sessionIds.length > 0
+      ? await supabase.rpc('get_sessions_availability_batch', { p_session_ids: sessionIds })
+      : { data: [] }
+
+    // Get user bookings in batch - single query instead of N queries
+    const { data: userBookings } = sessionIds.length > 0
+      ? await supabase
           .from('bookings')
-          .select('id, status')
-          .eq('session_id', session.id)
+          .select('session_id, id, status')
+          .in('session_id', sessionIds)
           .eq('client_id', user.id)
           .eq('status', 'confirmed')
-          .maybeSingle()
+      : { data: [] }
 
-        // Handle FK join format
-        const session_type = Array.isArray(session.session_type)
-          ? session.session_type[0] || null
-          : session.session_type
-        const trainer = Array.isArray(session.trainer)
-          ? session.trainer[0] || null
-          : session.trainer
-
-        return {
-          ...session,
-          session_type,
-          trainer,
-          availability,
-          user_booking: bookingData,
-        }
-      })
+    // Create lookup maps for O(1) access
+    const availabilityMap = new Map(
+      (availabilityData || []).map((a: { session_id: string; capacity: number; booked_count: number; spots_left: number; is_full: boolean }) => [a.session_id, a])
     )
+    const userBookingMap = new Map(
+      (userBookings || []).map((b: { session_id: string; id: string; status: string }) => [b.session_id, { id: b.id, status: b.status }])
+    )
+
+    // Map sessions with availability and booking data
+    const sessionsWithDetails = filteredSessions.map((session) => {
+      const availability = availabilityMap.get(session.id) || {
+        capacity: session.capacity || 1,
+        booked_count: 0,
+        spots_left: session.capacity || 1,
+        is_full: false,
+      }
+
+      const userBooking = userBookingMap.get(session.id) || null
+
+      // Handle FK join format
+      const session_type = Array.isArray(session.session_type)
+        ? session.session_type[0] || null
+        : session.session_type
+      const trainer = Array.isArray(session.trainer)
+        ? session.trainer[0] || null
+        : session.trainer
+
+      return {
+        ...session,
+        session_type,
+        trainer,
+        availability,
+        user_booking: userBooking,
+      }
+    })
 
     // 9. Filter out full sessions if requested
     const finalSessions = filters.include_full === false
@@ -269,6 +281,34 @@ export async function POST(request: NextRequest) {
     if (!body.title || !body.starts_at || !body.ends_at) {
       return createApiError(
         'Missing required fields: title, starts_at, ends_at',
+        400,
+        'VALIDATION_ERROR'
+      )
+    }
+
+    // 4b. Validate date formats and range (Issue #10)
+    const startsAt = new Date(body.starts_at)
+    const endsAt = new Date(body.ends_at)
+
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
+      return createApiError(
+        'Invalid date format: starts_at and ends_at must be valid ISO date strings',
+        400,
+        'VALIDATION_ERROR'
+      )
+    }
+
+    if (endsAt <= startsAt) {
+      return createApiError(
+        'Invalid time range: ends_at must be after starts_at',
+        400,
+        'VALIDATION_ERROR'
+      )
+    }
+
+    if (startsAt <= new Date()) {
+      return createApiError(
+        'Cannot create sessions in the past',
         400,
         'VALIDATION_ERROR'
       )

@@ -1,3 +1,8 @@
+/**
+ * Client-side service for bookings.
+ * Uses browser Supabase client - do not call from server components or API routes.
+ * For server-side usage, use the API routes instead.
+ */
 import { createClient } from '@/lib/supabase-browser'
 import type {
   Booking,

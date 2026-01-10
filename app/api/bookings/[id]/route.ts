@@ -188,7 +188,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         session:sessions(
           id,
           title,
-          trainer_id
+          trainer_id,
+          starts_at
         )
       `)
       .eq('id', id)
@@ -207,11 +208,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return createApiError('Booking is already cancelled', 400, 'ALREADY_CANCELLED')
     }
 
-    // 7. Check user has permission (booking owner, trainer, or admin)
+    // 6b. Prevent cancellation for past sessions (Issue #11)
     const session = Array.isArray(existingBooking.session)
       ? existingBooking.session[0]
       : existingBooking.session
 
+    if (session?.starts_at && new Date(session.starts_at) <= new Date()) {
+      return createApiError(
+        'Cannot cancel booking for a session that has already started',
+        400,
+        'SESSION_STARTED'
+      )
+    }
+
+    // 7. Check user has permission (booking owner, trainer, or admin)
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')

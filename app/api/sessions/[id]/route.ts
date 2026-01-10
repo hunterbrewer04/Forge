@@ -221,7 +221,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // 5. Check if session exists and user has permission
     const { data: existingSession, error: fetchError } = await supabase
       .from('sessions')
-      .select('id, trainer_id, title')
+      .select('id, trainer_id, title, starts_at, ends_at')
       .eq('id', id)
       .single()
 
@@ -249,6 +249,45 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         403,
         'FORBIDDEN'
       )
+    }
+
+    // 6b. Validate date range when starts_at or ends_at is updated (Issue #8)
+    if (body.starts_at !== undefined || body.ends_at !== undefined) {
+      const newStartsAt = body.starts_at ? new Date(body.starts_at) : new Date(existingSession.starts_at)
+      const newEndsAt = body.ends_at ? new Date(body.ends_at) : new Date(existingSession.ends_at)
+
+      if (Number.isNaN(newStartsAt.getTime()) || Number.isNaN(newEndsAt.getTime())) {
+        return createApiError(
+          'Invalid date format: dates must be valid ISO strings',
+          400,
+          'VALIDATION_ERROR'
+        )
+      }
+
+      if (newEndsAt <= newStartsAt) {
+        return createApiError(
+          'Invalid time range: ends_at must be after starts_at',
+          400,
+          'INVALID_TIME_RANGE'
+        )
+      }
+    }
+
+    // 6c. Validate capacity reduction (Issue #9)
+    if (body.capacity !== undefined) {
+      const { count } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', id)
+        .eq('status', 'confirmed')
+
+      if (body.capacity < (count || 0)) {
+        return createApiError(
+          `Cannot reduce capacity below ${count} confirmed bookings`,
+          400,
+          'INVALID_CAPACITY'
+        )
+      }
     }
 
     // 7. Build update object
