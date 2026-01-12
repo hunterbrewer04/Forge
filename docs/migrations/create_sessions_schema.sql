@@ -41,13 +41,14 @@ CREATE TABLE IF NOT EXISTS public.sessions (
     session_type_id UUID REFERENCES public.session_types(id) ON DELETE SET NULL,
     title VARCHAR(100) NOT NULL,
     description TEXT,
-    duration_minutes INTEGER NOT NULL DEFAULT 60,
-    capacity INTEGER DEFAULT 1,
+    duration_minutes INTEGER NOT NULL DEFAULT 60 CHECK (duration_minutes > 0),
+    capacity INTEGER DEFAULT 1 CHECK (capacity >= 0),
     is_premium BOOLEAN DEFAULT false,
     location VARCHAR(200),
     starts_at TIMESTAMPTZ NOT NULL,
     ends_at TIMESTAMPTZ NOT NULL,
     status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'cancelled', 'completed')),
+    CONSTRAINT valid_time_range CHECK (ends_at > starts_at),
     cancelled_at TIMESTAMPTZ,
     cancellation_reason TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -298,6 +299,38 @@ COMMENT ON FUNCTION get_session_availability IS 'Returns capacity, booked count,
 -- Set search_path for security
 ALTER FUNCTION public.get_session_availability(UUID) SET search_path = public;
 
+-- Batch function for fetching availability of multiple sessions (performance optimization)
+CREATE OR REPLACE FUNCTION get_sessions_availability_batch(p_session_ids UUID[])
+RETURNS TABLE (
+    session_id UUID,
+    capacity INTEGER,
+    booked_count BIGINT,
+    spots_left INTEGER,
+    is_full BOOLEAN
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        s.id AS session_id,
+        COALESCE(s.capacity, 1)::INTEGER AS capacity,
+        COUNT(b.id) AS booked_count,
+        GREATEST(0, COALESCE(s.capacity, 1) - COUNT(b.id)::INTEGER)::INTEGER AS spots_left,
+        COUNT(b.id) >= COALESCE(s.capacity, 1) AS is_full
+    FROM public.sessions s
+    LEFT JOIN public.bookings b ON s.id = b.session_id AND b.status = 'confirmed'
+    WHERE s.id = ANY(p_session_ids)
+    GROUP BY s.id, s.capacity;
+END;
+$$;
+
+COMMENT ON FUNCTION get_sessions_availability_batch IS 'Batch version of get_session_availability for fetching multiple sessions at once';
+
+-- Set search_path for security
+ALTER FUNCTION public.get_sessions_availability_batch(UUID[]) SET search_path = public;
+
 -- Function to book a session atomically
 CREATE OR REPLACE FUNCTION book_session(p_session_id UUID, p_client_id UUID)
 RETURNS TABLE (
@@ -315,14 +348,20 @@ DECLARE
     v_existing_booking UUID;
     v_new_booking_id UUID;
 BEGIN
+    -- Verify the client ID matches the authenticated user (RLS bypass prevention)
+    IF p_client_id != auth.uid() THEN
+        RETURN QUERY SELECT false, NULL::UUID, 'Unauthorized: cannot book for other users'::TEXT;
+        RETURN;
+    END IF;
+
     -- Lock the session row to prevent race conditions
     SELECT s.capacity, s.status INTO v_capacity, v_session_status
     FROM public.sessions s
     WHERE s.id = p_session_id
     FOR UPDATE;
 
-    -- Check if session exists
-    IF v_capacity IS NULL AND v_session_status IS NULL THEN
+    -- Check if session exists (v_session_status is the definitive indicator)
+    IF v_session_status IS NULL THEN
         RETURN QUERY SELECT false, NULL::UUID, 'Session not found'::TEXT;
         RETURN;
     END IF;
@@ -355,6 +394,12 @@ BEGIN
     FROM public.bookings b
     WHERE b.session_id = p_session_id
     AND b.status = 'confirmed';
+
+    -- Check if session is display-only (capacity = 0)
+    IF v_capacity = 0 THEN
+        RETURN QUERY SELECT false, NULL::UUID, 'This session is display-only and not bookable'::TEXT;
+        RETURN;
+    END IF;
 
     -- Check capacity
     IF v_booked_count >= v_capacity THEN
