@@ -2,35 +2,17 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import MobileLayout from '@/components/layout/MobileLayout'
-import { Bell, User, ChevronLeft, ChevronRight, Filter, Clock, Zap, Lock, Plus } from '@/components/ui/icons'
+import { Bell, User, ChevronLeft, ChevronRight, Clock, Zap, Lock, Plus, Check, RefreshCw } from '@/components/ui/icons'
+import BookingModal from './components/BookingModal'
+import CancelBookingModal from './components/CancelBookingModal'
+import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
 
-type SessionFilter = 'all' | '1-on-1' | 'strength' | 'conditioning'
 type TabType = 'upcoming' | 'history'
 
-interface Session {
-  id: string
-  time: string
-  period: 'AM' | 'PM'
-  name: string
-  duration: number
-  spotsLeft: number | null
-  coachName: string
-  coachAvatar: string
-  isPremium: boolean
-  isFull: boolean
-  type: SessionFilter
-}
-
-interface NextSession {
-  name: string
-  time: string
-  coach: string
-}
-
 // Generate dates for the calendar strip
-function generateDates(baseDate: Date): { day: string; date: number; fullDate: Date }[] {
+function generateDates(baseDate: Date): { day: string; date: number; fullDate: Date; isoDate: string }[] {
   const dates = []
   for (let i = 0; i < 7; i++) {
     const date = new Date(baseDate)
@@ -39,106 +21,177 @@ function generateDates(baseDate: Date): { day: string; date: number; fullDate: D
       day: date.toLocaleDateString('en-US', { weekday: 'short' }),
       date: date.getDate(),
       fullDate: date,
+      isoDate: date.toISOString().split('T')[0],
     })
   }
   return dates
 }
 
 export default function SchedulePage() {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
 
   const [activeTab, setActiveTab] = useState<TabType>('upcoming')
-  const [activeFilter, setActiveFilter] = useState<SessionFilter>('all')
+  const [activeFilter, setActiveFilter] = useState<string>('all')
   const [selectedDateIndex, setSelectedDateIndex] = useState(0)
+  const [sessions, setSessions] = useState<SessionWithDetails[]>([])
+  const [sessionTypes, setSessionTypes] = useState<SessionType[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Booking modal state
+  const [selectedSession, setSelectedSession] = useState<SessionWithDetails | null>(null)
+  const [showBookingModal, setShowBookingModal] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
   // Generate calendar dates starting from today
   const baseDate = useMemo(() => new Date(), [])
   const calendarDates = useMemo(() => generateDates(baseDate), [baseDate])
   const currentMonth = baseDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const selectedDate = calendarDates[selectedDateIndex]?.isoDate
 
-  // Mock data - replace with real data later
-  const [nextSession] = useState<NextSession>({
-    name: 'Heavy Lifting',
-    time: 'Tomorrow, 06:00 AM',
-    coach: 'Coach Mike',
-  })
+  // Fetch session types on mount
+  useEffect(() => {
+    async function fetchSessionTypes() {
+      try {
+        const response = await fetch('/api/sessions?status=scheduled&limit=1')
+        if (response.ok) {
+          // We'll extract types from sessions or fetch separately
+        }
+      } catch (err) {
+        console.error('Failed to fetch session types:', err)
+      }
+    }
+    fetchSessionTypes()
+  }, [])
 
-  const [sessions] = useState<Session[]>([
-    {
-      id: '1',
-      time: '06:00',
-      period: 'AM',
-      name: 'Iron Circuit',
-      duration: 60,
-      spotsLeft: 5,
-      coachName: 'Coach Mike',
-      coachAvatar: '',
-      isPremium: false,
-      isFull: false,
-      type: 'strength',
-    },
-    {
-      id: '2',
-      time: '07:30',
-      period: 'AM',
-      name: '1-on-1 Performance',
-      duration: 45,
-      spotsLeft: 1,
-      coachName: 'Coach Sarah',
-      coachAvatar: '',
-      isPremium: true,
-      isFull: false,
-      type: '1-on-1',
-    },
-    {
-      id: '3',
-      time: '09:00',
-      period: 'AM',
-      name: 'Mobility & Flow',
-      duration: 60,
-      spotsLeft: null,
-      coachName: 'Coach Dav',
-      coachAvatar: '',
-      isPremium: false,
-      isFull: true,
-      type: 'conditioning',
-    },
-    {
-      id: '4',
-      time: '05:30',
-      period: 'PM',
-      name: 'Evening Grind',
-      duration: 90,
-      spotsLeft: 8,
-      coachName: 'Coach Alex',
-      coachAvatar: '',
-      isPremium: false,
-      isFull: false,
-      type: 'strength',
-    },
-  ])
+  // Fetch sessions for selected date
+  const fetchSessions = useCallback(async (isRefresh = false) => {
+    if (!selectedDate) return
 
-  const filters: { key: SessionFilter; label: string }[] = [
-    { key: 'all', label: 'All Sessions' },
-    { key: '1-on-1', label: '1-on-1' },
-    { key: 'strength', label: 'Strength' },
-    { key: 'conditioning', label: 'Conditioning' },
-  ]
+    if (isRefresh) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
+    setError(null)
 
+    try {
+      const response = await fetch(`/api/sessions?date=${selectedDate}&status=scheduled`)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch sessions')
+      }
+
+      const data = await response.json()
+      setSessions(data.sessions || [])
+
+      // Extract unique session types from sessions
+      const types = new Map<string, SessionType>()
+      data.sessions?.forEach((session: SessionWithDetails) => {
+        if (session.session_type) {
+          types.set(session.session_type.id, session.session_type)
+        }
+      })
+      setSessionTypes(Array.from(types.values()))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load sessions')
+      console.error('Failed to fetch sessions:', err)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [selectedDate])
+
+  // Fetch sessions when date changes
+  useEffect(() => {
+    if (user && selectedDate) {
+      fetchSessions()
+    }
+  }, [user, selectedDate, fetchSessions])
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!user) return
+
+    const interval = setInterval(() => {
+      fetchSessions(true)
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [user, fetchSessions])
+
+  // Filter sessions by type
   const filteredSessions = useMemo(() => {
     if (activeFilter === 'all') return sessions
-    return sessions.filter((s) => s.type === activeFilter)
+    return sessions.filter((s) => s.session_type?.slug === activeFilter)
   }, [sessions, activeFilter])
+
+  // Get user's next booked session
+  const nextBookedSession = useMemo(() => {
+    const booked = sessions.find((s) => s.user_booking)
+    if (booked) {
+      return {
+        name: booked.title,
+        time: new Date(booked.starts_at).toLocaleString('en-US', {
+          weekday: 'short',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        }),
+        coach: booked.trainer?.full_name || 'Trainer',
+        session: booked,
+      }
+    }
+    return null
+  }, [sessions])
+
+  // Build filter options from session types
+  const filters = useMemo(() => {
+    const baseFilters = [{ key: 'all', label: 'All Sessions' }]
+    const typeFilters = sessionTypes.map((t) => ({
+      key: t.slug,
+      label: t.name,
+    }))
+    return [...baseFilters, ...typeFilters]
+  }, [sessionTypes])
+
+  // Handle booking
+  const handleBookSession = (session: SessionWithDetails) => {
+    setSelectedSession(session)
+    setShowBookingModal(true)
+  }
+
+  // Handle cancel booking
+  const handleCancelBooking = (session: SessionWithDetails) => {
+    setSelectedSession(session)
+    setShowCancelModal(true)
+  }
+
+  // Handle booking success
+  const handleBookingSuccess = () => {
+    fetchSessions(true)
+  }
+
+  // Handle cancel success
+  const handleCancelSuccess = () => {
+    fetchSessions(true)
+  }
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    fetchSessions(true)
+  }
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push('/login')
     }
-  }, [user, loading, router])
+  }, [user, authLoading, router])
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-dark">
         <div className="text-stone-400">Loading...</div>
@@ -153,6 +206,15 @@ export default function SchedulePage() {
   // Custom TopBar content for schedule page
   const topBarRightContent = (
     <div className="flex gap-2 items-center">
+      <button
+        onClick={handleRefresh}
+        disabled={refreshing}
+        className={`relative p-2 text-gray-300 hover:text-primary transition-colors ${
+          refreshing ? 'animate-spin' : ''
+        }`}
+      >
+        <RefreshCw size={20} strokeWidth={2} />
+      </button>
       <button className="relative p-2 text-gray-300 hover:text-primary transition-colors">
         <Bell size={24} strokeWidth={2} />
         <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
@@ -196,19 +258,24 @@ export default function SchedulePage() {
         </button>
       </div>
 
-      {/* Next Up Card */}
-      <div className="bg-surface-dark rounded-lg p-4 shadow-md border-l-4 border-primary flex justify-between items-center">
-        <div>
-          <p className="text-xs font-bold text-primary uppercase mb-1">Next Up</p>
-          <h3 className="text-lg font-bold leading-tight text-white">{nextSession.name}</h3>
-          <p className="text-sm text-gray-400 mt-1">
-            {nextSession.time} • {nextSession.coach}
-          </p>
+      {/* Next Up Card - Only show if user has a booking */}
+      {nextBookedSession && (
+        <div className="bg-surface-dark rounded-lg p-4 shadow-md border-l-4 border-primary flex justify-between items-center">
+          <div>
+            <p className="text-xs font-bold text-primary uppercase mb-1">Next Up</p>
+            <h3 className="text-lg font-bold leading-tight text-white">{nextBookedSession.name}</h3>
+            <p className="text-sm text-gray-400 mt-1">
+              {nextBookedSession.time} &bull; {nextBookedSession.coach}
+            </p>
+          </div>
+          <button
+            onClick={() => handleCancelBooking(nextBookedSession.session)}
+            className="bg-[#3a2e27] text-xs font-bold px-3 py-2 rounded uppercase tracking-wide hover:bg-[#4a3b32] transition-colors text-white"
+          >
+            Cancel
+          </button>
         </div>
-        <button className="bg-[#3a2e27] text-xs font-bold px-3 py-2 rounded uppercase tracking-wide hover:bg-[#4a3b32] transition-colors text-white">
-          Reschedule
-        </button>
-      </div>
+      )}
 
       {/* Calendar Strip */}
       <div>
@@ -262,23 +329,101 @@ export default function SchedulePage() {
         ))}
       </div>
 
-      {/* Session List */}
-      <div className="space-y-4 pb-6">
-        {filteredSessions.map((session) => (
-          <SessionCard key={session.id} session={session} />
-        ))}
-      </div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-400">Loading sessions...</div>
+        </div>
+      )}
 
-      {/* Filter FAB */}
-      <button className="fixed bottom-24 right-4 w-12 h-12 bg-primary text-white rounded-full shadow-xl flex items-center justify-center hover:scale-110 transition-transform z-10 max-w-md">
-        <Filter size={24} strokeWidth={2} />
-      </button>
+      {/* Error State */}
+      {error && !loading && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-primary text-white rounded-lg font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && filteredSessions.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-gray-400 mb-2">No sessions available</p>
+          <p className="text-gray-500 text-sm">
+            Try selecting a different date or filter
+          </p>
+        </div>
+      )}
+
+      {/* Session List */}
+      {!loading && !error && filteredSessions.length > 0 && (
+        <div className="space-y-4 pb-6">
+          {filteredSessions.map((session) => (
+            <SessionCard
+              key={session.id}
+              session={session}
+              onBook={() => handleBookSession(session)}
+              onCancel={() => handleCancelBooking(session)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {selectedSession && (
+        <BookingModal
+          session={selectedSession}
+          isOpen={showBookingModal}
+          onClose={() => {
+            setShowBookingModal(false)
+            setSelectedSession(null)
+          }}
+          onBookingSuccess={handleBookingSuccess}
+        />
+      )}
+
+      {/* Cancel Booking Modal */}
+      {selectedSession?.user_booking && (
+        <CancelBookingModal
+          session={selectedSession}
+          bookingId={selectedSession.user_booking.id}
+          isOpen={showCancelModal}
+          onClose={() => {
+            setShowCancelModal(false)
+            setSelectedSession(null)
+          }}
+          onCancelSuccess={handleCancelSuccess}
+        />
+      )}
     </MobileLayout>
   )
 }
 
-function SessionCard({ session }: { session: Session }) {
-  if (session.isPremium) {
+interface SessionCardProps {
+  session: SessionWithDetails
+  onBook: () => void
+  onCancel: () => void
+}
+
+function SessionCard({ session, onBook, onCancel }: SessionCardProps) {
+  const startTime = new Date(session.starts_at)
+  const time = startTime.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: false,
+  })
+  const period = startTime.getHours() < 12 ? 'AM' : 'PM'
+
+  const isBooked = !!session.user_booking
+  const isFull = session.availability.is_full
+  const spotsLeft = session.availability.spots_left
+
+  // Premium session style
+  if (session.is_premium) {
     return (
       <div className="group relative bg-gradient-to-r from-surface-dark to-[#3a3a1a] rounded-xl p-4 shadow-sm border border-gold/30 hover:border-gold transition-all">
         <div className="absolute top-0 right-0 bg-gold text-black text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl uppercase tracking-wider">
@@ -286,75 +431,80 @@ function SessionCard({ session }: { session: Session }) {
         </div>
         <div className="flex items-start gap-4">
           <div className="flex flex-col items-center gap-1 min-w-[3.5rem]">
-            <span className="text-lg font-bold text-gold">{session.time}</span>
-            <span className="text-xs text-gray-400 uppercase font-bold">{session.period}</span>
+            <span className="text-lg font-bold text-gold">{time}</span>
+            <span className="text-xs text-gray-400 uppercase font-bold">{period}</span>
           </div>
           <div className="flex-1">
             <h4 className="text-lg font-bold text-white leading-tight mb-1 group-hover:text-gold transition-colors">
-              {session.name}
+              {session.title}
             </h4>
             <div className="flex items-center gap-2 mb-3">
               <span className="flex items-center text-xs font-medium text-gray-400 bg-gray-800 px-2 py-0.5 rounded">
                 <Clock size={14} strokeWidth={2} className="mr-1" />
-                {session.duration} min
+                {session.duration_minutes} min
               </span>
-              {session.spotsLeft !== null && (
+              {isBooked ? (
+                <span className="text-xs font-medium text-green-500 uppercase">Booked</span>
+              ) : spotsLeft !== null && (
                 <span className="text-xs font-medium text-gold">
-                  {session.spotsLeft === 1 ? 'Only 1 slot' : `${session.spotsLeft} spots left`}
+                  {spotsLeft === 1 ? 'Only 1 slot' : `${spotsLeft} spots left`}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-gray-600 overflow-hidden flex items-center justify-center">
-                {session.coachAvatar ? (
-                  <div
-                    className="w-full h-full bg-cover bg-center"
-                    style={{ backgroundImage: `url('${session.coachAvatar}')` }}
-                  />
-                ) : (
-                  <User size={14} strokeWidth={2} className="text-gray-400" />
-                )}
+                <User size={14} strokeWidth={2} className="text-gray-400" />
               </div>
-              <span className="text-sm font-medium text-gray-300">{session.coachName}</span>
+              <span className="text-sm font-medium text-gray-300">
+                {session.trainer?.full_name || 'Trainer'}
+              </span>
             </div>
           </div>
-          <button className="self-center bg-gold text-black font-bold p-2 rounded-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-gold/20">
-            <Zap size={24} strokeWidth={2} />
-          </button>
+          {isBooked ? (
+            <button
+              onClick={onCancel}
+              className="self-center bg-green-500/20 border border-green-500 text-green-500 font-bold p-2 rounded-lg hover:bg-green-500 hover:text-white transition-colors"
+            >
+              <Check size={24} strokeWidth={2} />
+            </button>
+          ) : (
+            <button
+              onClick={onBook}
+              className="self-center bg-gold text-black font-bold p-2 rounded-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-gold/20"
+            >
+              <Zap size={24} strokeWidth={2} />
+            </button>
+          )}
         </div>
       </div>
     )
   }
 
-  if (session.isFull) {
+  // Full session style (not booked by user)
+  if (isFull && !isBooked) {
     return (
       <div className="group relative bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-800 opacity-70">
         <div className="flex items-start gap-4">
           <div className="flex flex-col items-center gap-1 min-w-[3.5rem]">
-            <span className="text-lg font-bold text-gray-500">{session.time}</span>
-            <span className="text-xs text-gray-600 uppercase font-bold">{session.period}</span>
+            <span className="text-lg font-bold text-gray-500">{time}</span>
+            <span className="text-xs text-gray-600 uppercase font-bold">{period}</span>
           </div>
           <div className="flex-1">
-            <h4 className="text-lg font-bold text-gray-400 leading-tight mb-1">{session.name}</h4>
+            <h4 className="text-lg font-bold text-gray-400 leading-tight mb-1">{session.title}</h4>
             <div className="flex items-center gap-2 mb-3">
               <span className="flex items-center text-xs font-medium text-gray-600 bg-gray-800/50 px-2 py-0.5 rounded">
                 <Clock size={14} strokeWidth={2} className="mr-1" />
-                {session.duration} min
+                {session.duration_minutes} min
               </span>
               <span className="text-xs font-medium text-red-500 uppercase">Full</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-gray-600 overflow-hidden grayscale opacity-50 flex items-center justify-center">
-                {session.coachAvatar ? (
-                  <div
-                    className="w-full h-full bg-cover bg-center"
-                    style={{ backgroundImage: `url('${session.coachAvatar}')` }}
-                  />
-                ) : (
-                  <User size={14} strokeWidth={2} className="text-gray-400" />
-                )}
+                <User size={14} strokeWidth={2} className="text-gray-400" />
               </div>
-              <span className="text-sm font-medium text-gray-500">{session.coachName}</span>
+              <span className="text-sm font-medium text-gray-500">
+                {session.trainer?.full_name || 'Trainer'}
+              </span>
             </div>
           </div>
           <button className="self-center bg-transparent border border-gray-700 text-gray-600 font-bold p-2 rounded-lg cursor-not-allowed">
@@ -365,43 +515,62 @@ function SessionCard({ session }: { session: Session }) {
     )
   }
 
+  // Regular session style (booked or available)
   return (
     <div className="group relative bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-800 hover:border-primary/50 transition-all">
+      {isBooked && (
+        <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl uppercase tracking-wider">
+          Booked
+        </div>
+      )}
       <div className="flex items-start gap-4">
         <div className="flex flex-col items-center gap-1 min-w-[3.5rem]">
-          <span className="text-lg font-bold text-white">{session.time}</span>
-          <span className="text-xs text-gray-400 uppercase font-bold">{session.period}</span>
+          <span className={`text-lg font-bold ${isBooked ? 'text-green-500' : 'text-white'}`}>
+            {time}
+          </span>
+          <span className="text-xs text-gray-400 uppercase font-bold">{period}</span>
         </div>
         <div className="flex-1">
-          <h4 className="text-lg font-bold text-white leading-tight mb-1 group-hover:text-primary transition-colors">
-            {session.name}
+          <h4 className={`text-lg font-bold leading-tight mb-1 transition-colors ${
+            isBooked ? 'text-green-500' : 'text-white group-hover:text-primary'
+          }`}>
+            {session.title}
           </h4>
           <div className="flex items-center gap-2 mb-3">
             <span className="flex items-center text-xs font-medium text-gray-400 bg-gray-800 px-2 py-0.5 rounded">
               <Clock size={14} strokeWidth={2} className="mr-1" />
-              {session.duration} min
+              {session.duration_minutes} min
             </span>
-            {session.spotsLeft !== null && (
-              <span className="text-xs font-medium text-primary">{session.spotsLeft} spots left</span>
+            {isBooked ? (
+              <span className="text-xs font-medium text-green-500">Your spot reserved</span>
+            ) : spotsLeft !== null && (
+              <span className="text-xs font-medium text-primary">{spotsLeft} spots left</span>
             )}
           </div>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-gray-600 overflow-hidden flex items-center justify-center">
-              {session.coachAvatar ? (
-                <div
-                  className="w-full h-full bg-cover bg-center"
-                  style={{ backgroundImage: `url('${session.coachAvatar}')` }}
-                />
-              ) : (
-                <User size={14} strokeWidth={2} className="text-gray-400" />
-              )}
+              <User size={14} strokeWidth={2} className="text-gray-400" />
             </div>
-            <span className="text-sm font-medium text-gray-300">{session.coachName}</span>
+            <span className="text-sm font-medium text-gray-300">
+              {session.trainer?.full_name || 'Trainer'}
+            </span>
           </div>
         </div>
-        <button className="self-center bg-white text-black font-bold p-2 rounded-lg hover:bg-primary hover:text-white transition-colors shadow-lg">
-          <Plus size={24} strokeWidth={2} />
-        </button>
+        {isBooked ? (
+          <button
+            onClick={onCancel}
+            className="self-center bg-green-500/20 border border-green-500 text-green-500 font-bold p-2 rounded-lg hover:bg-green-500 hover:text-white transition-colors"
+          >
+            <Check size={24} strokeWidth={2} />
+          </button>
+        ) : (
+          <button
+            onClick={onBook}
+            className="self-center bg-white text-black font-bold p-2 rounded-lg hover:bg-primary hover:text-white transition-colors shadow-lg"
+          >
+            <Plus size={24} strokeWidth={2} />
+          </button>
+        )}
       </div>
     </div>
   )

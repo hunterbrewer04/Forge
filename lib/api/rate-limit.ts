@@ -74,6 +74,13 @@ export const RateLimitPresets = {
     windowSeconds: 60,
     keyPrefix: 'strict',
   } as RateLimitConfig,
+
+  /** Booking operations - 10 requests per minute */
+  BOOKING: {
+    maxRequests: 10,
+    windowSeconds: 60,
+    keyPrefix: 'booking',
+  } as RateLimitConfig,
 } as const
 
 // ============================================================================

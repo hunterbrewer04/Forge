@@ -68,6 +68,13 @@ import {
   Image,
   Video,
   Camera,
+  MapPin,
+  AlertTriangle,
+  Copy,
+  CheckSquare,
+  Link2,
+  ExternalLink,
+  Clipboard,
 } from "lucide-react";
 
 // Re-export LucideIcon type for external use
@@ -204,4 +211,11 @@ export {
   Image,
   Video,
   Camera,
+  MapPin,
+  AlertTriangle,
+  Copy,
+  CheckSquare,
+  Link2,
+  ExternalLink,
+  Clipboard,
 };
