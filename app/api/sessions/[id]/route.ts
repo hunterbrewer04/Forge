@@ -274,7 +274,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 6c. Validate capacity reduction (Issue #9)
-    if (body.capacity !== undefined) {
+    if (body.capacity !== undefined && body.capacity !== null) {
       const { count } = await supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
