@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, AlertTriangle, CheckCircle, Loader2 } from '@/components/ui/icons'
 import type { SessionWithDetails } from '@/lib/types/sessions'
 
@@ -23,6 +23,21 @@ export default function CancelBookingModal({
 }: CancelBookingModalProps) {
   const [modalState, setModalState] = useState<ModalState>('confirm')
   const [errorMessage, setErrorMessage] = useState<string>('')
+
+  // Refs for cleanup - prevent state updates after unmount
+  const mountedRef = useRef(true)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Track mounted state and cleanup timeouts
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   if (!isOpen) return null
 
@@ -61,7 +76,9 @@ export default function CancelBookingModal({
 
       setModalState('success')
       // Call success callback after a brief delay to show success state
-      setTimeout(() => {
+      // Guard with mounted check to prevent state updates after unmount
+      timeoutRef.current = setTimeout(() => {
+        if (!mountedRef.current) return
         onCancelSuccess()
         onClose()
         setModalState('confirm')

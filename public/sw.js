@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
@@ -131,26 +131,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 3: Stale-while-revalidate for navigation routes
+  // Strategy 3: Network-first for navigation routes
+  // IMPORTANT: Using network-first instead of stale-while-revalidate
+  // to prevent serving cached pages with stale auth state
   if (request.mode === 'navigate' || NAV_ROUTES.some(route => url.pathname.startsWith(route))) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, clone);
-              limitCacheSize(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
-            });
-          }
-          return response;
-        }).catch(() => {
-          // Network failed, return cached or offline page
+      fetch(request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(request, clone);
+            limitCacheSize(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
+          });
+        }
+        return response;
+      }).catch(() => {
+        // Network failed, fall back to cache or offline page
+        return caches.match(request).then((cached) => {
           return cached || caches.match('/offline.html');
         });
-
-        // Return cached immediately, update in background
-        return cached || fetchPromise;
       })
     );
     return;

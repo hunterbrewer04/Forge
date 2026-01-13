@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import MobileLayout from '@/components/layout/MobileLayout'
 import { Bell, User, ChevronLeft, ChevronRight, Clock, Zap, Lock, Plus, Check, RefreshCw } from '@/components/ui/icons'
 import BookingModal from './components/BookingModal'
@@ -45,6 +45,9 @@ export default function SchedulePage() {
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
 
+  // Ref for aborting in-flight requests on navigation/unmount
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   // Generate calendar dates starting from today
   const baseDate = useMemo(() => new Date(), [])
   const calendarDates = useMemo(() => generateDates(baseDate), [baseDate])
@@ -70,6 +73,13 @@ export default function SchedulePage() {
   const fetchSessions = useCallback(async (isRefresh = false) => {
     if (!selectedDate) return
 
+    // Abort any in-flight request before starting a new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
+
     if (isRefresh) {
       setRefreshing(true)
     } else {
@@ -78,13 +88,17 @@ export default function SchedulePage() {
     setError(null)
 
     try {
-      const response = await fetch(`/api/sessions?date=${selectedDate}&status=scheduled`)
+      const response = await fetch(`/api/sessions?date=${selectedDate}&status=scheduled`, { signal })
 
       if (!response.ok) {
         throw new Error('Failed to fetch sessions')
       }
 
       const data = await response.json()
+
+      // Check if request was aborted before updating state
+      if (signal.aborted) return
+
       setSessions(data.sessions || [])
 
       // Extract unique session types from sessions
@@ -96,11 +110,17 @@ export default function SchedulePage() {
       })
       setSessionTypes(Array.from(types.values()))
     } catch (err) {
+      // Ignore abort errors - they're expected on navigation/unmount
+      if (err instanceof Error && err.name === 'AbortError') return
+
       setError(err instanceof Error ? err.message : 'Failed to load sessions')
       console.error('Failed to fetch sessions:', err)
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      // Only update loading states if not aborted
+      if (!signal.aborted) {
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
   }, [selectedDate])
 
@@ -108,6 +128,13 @@ export default function SchedulePage() {
   useEffect(() => {
     if (user && selectedDate) {
       fetchSessions()
+    }
+
+    // Cleanup: abort any in-flight requests on unmount or dependency change
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
     }
   }, [user, selectedDate, fetchSessions])
 
@@ -119,7 +146,13 @@ export default function SchedulePage() {
       fetchSessions(true)
     }, 30000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      // Also abort any in-flight refresh request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
   }, [user, fetchSessions])
 
   // Filter sessions by type

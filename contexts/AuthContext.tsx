@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { User, AuthError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase-browser'
 
@@ -47,8 +47,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<AuthError | null>(null)
-  const supabase = createClient()
+  // Memoize supabase client to prevent recreation on every render
+  // This fixes infinite useEffect loop caused by changing dependencies
+  const supabase = useMemo(() => createClient(), [])
   const profileFetched = useRef(false)
+  const authTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch user profile with error handling
   const fetchProfile = useCallback(async (userId: string) => {
@@ -103,6 +106,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true
 
+    // Safety timeout - if auth takes longer than 10 seconds, stop loading
+    // This prevents infinite loading states from network issues or edge cases
+    authTimeoutRef.current = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('Auth timeout reached - forcing loading to false')
+        setLoading(false)
+      }
+    }, 10000)
+
     // Get initial session
     const getSession = async () => {
       try {
@@ -151,10 +163,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null)
           setProfile(null)
           setError(null)
+          setLoading(false)
         } else if (event === 'TOKEN_REFRESHED') {
           // Session was refreshed, update user
           setUser(session?.user ?? null)
           setError(null)
+          setLoading(false)
         } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
           setUser(session?.user ?? null)
           setError(null)
@@ -165,14 +179,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else if (!session?.user) {
             setProfile(null)
           }
+          setLoading(false)
         }
-
-        setLoading(false)
       }
     )
 
     return () => {
       mounted = false
+      if (authTimeoutRef.current) {
+        clearTimeout(authTimeoutRef.current)
+      }
       subscription.unsubscribe()
     }
   }, [supabase, fetchProfile])

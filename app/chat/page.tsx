@@ -76,6 +76,8 @@ export default function ChatPage() {
   }, [user, profile, loading])
 
   useEffect(() => {
+    let mounted = true
+
     const loadClientConversation = async () => {
       logger.debug('[ChatPage] Fetching client conversation for:', user?.id)
       if (!profile || !profile.is_client || profile.is_trainer || !user?.id) {
@@ -88,6 +90,9 @@ export default function ChatPage() {
 
       try {
         const data = await fetchClientConversation(user.id)
+        // Check if still mounted before updating state
+        if (!mounted) return
+
         logger.debug('[ChatPage] Client conversation loaded:', data.id)
         const convInfo: ConversationInfo = {
           id: data.id,
@@ -100,6 +105,9 @@ export default function ChatPage() {
         setConversationInfo(convInfo)
         setSelectedConversationId(data.id)
       } catch (err) {
+        // Check if still mounted before updating state
+        if (!mounted) return
+
         logger.error('[ChatPage] Error fetching client conversation:', err)
         const error = err as { code?: string; message?: string }
         if (error.code === 'PGRST116') {
@@ -108,7 +116,9 @@ export default function ChatPage() {
           setError(`Failed to load conversation: ${error.message || 'Unknown error'}`)
         }
       } finally {
-        setLoadingConversation(false)
+        if (mounted) {
+          setLoadingConversation(false)
+        }
       }
     }
 
@@ -116,9 +126,15 @@ export default function ChatPage() {
       logger.debug('[ChatPage] Profile is client-only, fetching conversation')
       loadClientConversation()
     }
+
+    return () => {
+      mounted = false
+    }
   }, [profile, user?.id])
 
   useEffect(() => {
+    let mounted = true
+
     const loadConversationInfo = async () => {
       logger.debug('[ChatPage] Fetching conversation info for trainer:', selectedConversationId)
       if (!selectedConversationId || !profile?.is_trainer) {
@@ -131,6 +147,9 @@ export default function ChatPage() {
 
       try {
         const data = await fetchConversationById(selectedConversationId, true)
+        // Check if still mounted before updating state
+        if (!mounted) return
+
         logger.debug('[ChatPage] Trainer conversation loaded:', data.id)
         const convInfo: ConversationInfo = {
           id: data.id,
@@ -142,17 +161,26 @@ export default function ChatPage() {
         }
         setConversationInfo(convInfo)
       } catch (err) {
+        // Check if still mounted before updating state
+        if (!mounted) return
+
         logger.error('[ChatPage] Error fetching conversation info:', err)
         const error = err as { message?: string }
         setError(`Failed to load conversation: ${error.message || 'Unknown error'}`)
       } finally {
-        setLoadingConversation(false)
+        if (mounted) {
+          setLoadingConversation(false)
+        }
       }
     }
 
     if (selectedConversationId && profile?.is_trainer) {
       logger.debug('[ChatPage] Selected conversation changed, fetching info')
       loadConversationInfo()
+    }
+
+    return () => {
+      mounted = false
     }
   }, [selectedConversationId, profile])
 

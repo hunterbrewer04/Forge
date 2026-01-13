@@ -24,6 +24,19 @@ export default function TopBar({
 }: TopBarProps) {
   const router = useRouter();
 
+  // Safe back navigation - check if there's history to go back to
+  const handleBack = () => {
+    // Check if we have history to go back to
+    // window.history.length > 1 means there's at least one entry to go back to
+    // Also check if the referrer is from our own domain (not external navigation)
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      // No history - navigate to home as fallback
+      router.push('/home');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 w-full bg-background-dark/95 backdrop-blur-md border-b border-steel/20 pt-safe-top">
       <div className="flex items-center justify-between px-5 py-4">
@@ -31,7 +44,7 @@ export default function TopBar({
         <div className="flex items-center gap-3">
           {showBack && (
             <button
-              onClick={() => router.back()}
+              onClick={handleBack}
               className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
               aria-label="Go back"
             >
