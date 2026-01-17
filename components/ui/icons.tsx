@@ -25,6 +25,7 @@ import {
   Settings,
   Settings2,
   LogOut,
+  Save,
   // Communication
   MessageCircle,
   MessageSquare,
@@ -168,6 +169,7 @@ export {
   Settings,
   Settings2,
   LogOut,
+  Save,
   // Communication
   MessageCircle,
   MessageSquare,
