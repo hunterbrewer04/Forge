@@ -86,9 +86,12 @@ export default function SchedulePage() {
     setError(null)
 
     try {
-      // Always fetch all upcoming sessions from today onwards
+      // Fetch upcoming sessions from today for the next 2 weeks
       const todayLocal = getLocalDateString()
-      const url = `/api/sessions?from=${todayLocal}&status=scheduled`
+      const twoWeeksLater = new Date()
+      twoWeeksLater.setDate(twoWeeksLater.getDate() + 14)
+      const toDate = twoWeeksLater.toISOString().split('T')[0]
+      const url = `/api/sessions?from=${todayLocal}&to=${toDate}&status=scheduled`
 
       const response = await fetch(url, { signal })
 
@@ -162,6 +165,13 @@ export default function SchedulePage() {
     if (activeFilter === 'all') return sessions
     return sessions.filter((s) => s.session_type?.slug === activeFilter)
   }, [sessions, activeFilter])
+
+  // Get sessions for the selected date in the calendar strip
+  const selectedDateSessions = useMemo(() => {
+    const selectedIso = calendarDates[selectedDateIndex]?.isoDate
+    if (!selectedIso) return []
+    return filteredSessions.filter((s) => s.starts_at.startsWith(selectedIso))
+  }, [filteredSessions, selectedDateIndex, calendarDates])
 
   // Group sessions by date
   const groupedSessions = useMemo(() => {
@@ -431,9 +441,48 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* Session List */}
+      {/* Selected Date Sessions */}
+      {!loading && !error && selectedDateSessions.length > 0 && (
+        <div className="space-y-4 pb-2">
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
+              {calendarDates[selectedDateIndex]?.fullDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </h3>
+            <div className="space-y-3">
+              {selectedDateSessions.map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  onBook={() => handleBookSession(session)}
+                  onCancel={() => handleCancelBooking(session)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No sessions on selected date */}
+      {!loading && !error && selectedDateSessions.length === 0 && filteredSessions.length > 0 && (
+        <div className="text-center py-4 text-gray-500 text-sm border-b border-gray-800 mb-4">
+          No sessions on {calendarDates[selectedDateIndex]?.fullDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+          })}
+        </div>
+      )}
+
+      {/* All Upcoming Sessions */}
       {!loading && !error && filteredSessions.length > 0 && (
         <div className="space-y-4 pb-6">
+          <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            All Upcoming
+          </h3>
           {groupedSessions.map((group) => (
             <div key={group.dateKey}>
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">

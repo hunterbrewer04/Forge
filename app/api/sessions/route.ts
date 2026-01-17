@@ -137,7 +137,8 @@ export async function GET(request: NextRequest) {
         query = query.gte('starts_at', filters.from)
       }
       if (filters.to) {
-        query = query.lte('starts_at', filters.to)
+        // Add time component to include the full day
+        query = query.lte('starts_at', `${filters.to}T23:59:59`)
       }
     }
 
