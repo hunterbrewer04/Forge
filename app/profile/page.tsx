@@ -2,21 +2,20 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import MobileLayout from '@/components/layout/MobileLayout'
-import { MoreVertical, User, Pencil, BadgeCheck, Dumbbell, Flame, Award, CreditCard, Bell, Settings2, HelpCircle, LogOut, ChevronRight } from '@/components/ui/icons'
-
-interface ProfileStats {
-  sessions: number
-  streak: number
-  badges: number
-}
+import { createClient } from '@/lib/supabase-browser'
+import { logger } from '@/lib/utils/logger'
+import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
+import { MoreVertical, User, Pencil, BadgeCheck, CreditCard, Bell, Settings2, HelpCircle, LogOut, ChevronRight, Lock } from '@/components/ui/icons'
 
 export default function ProfilePage() {
-  const { user, profile, loading, signOut } = useAuth()
+  const { user, profile, loading, signOut, refreshSession } = useAuth()
   const router = useRouter()
-  const [stats] = useState<ProfileStats>({ sessions: 42, streak: 5, badges: 12 })
   const [signingOut, setSigningOut] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const supabase = createClient()
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -31,6 +30,73 @@ export default function ProfilePage() {
     router.push('/login')
   }
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0 || !user) {
+      return
+    }
+
+    setUploadingAvatar(true)
+    const file = event.target.files[0]
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${user.id}-${Math.random()}.${fileExt}`
+    const filePath = `${fileName}`
+
+    try {
+      // Upload image to avatars bucket
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      // Refresh local state
+      await refreshSession()
+      
+      // Show success feedback (optional, or rely on UI update)
+      logger.debug('Avatar updated successfully')
+    } catch (error) {
+      logger.error('Error uploading avatar:', error)
+      alert('Error updating avatar!')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!user?.email) return
+
+    const confirmed = window.confirm(`Send password reset email to ${user.email}?`)
+    if (!confirmed) return
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth/update-password`,
+      })
+      if (error) throw error
+      alert('Password reset email sent!')
+    } catch (error) {
+      logger.error('Error sending reset password email:', error)
+      alert('Failed to send reset email.')
+    }
+  }
+
   const getMemberSince = () => {
     if (!profile?.created_at) return 'Member'
     const year = new Date(profile.created_at).getFullYear()
@@ -39,9 +105,9 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-dark">
-        <div className="text-stone-400">Loading...</div>
-      </div>
+      <MobileLayout title="My Profile" showBack showNotifications={false}>
+        <ProfileSkeleton />
+      </MobileLayout>
     )
   }
 
@@ -62,9 +128,17 @@ export default function ProfilePage() {
         </button>
       }
     >
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleAvatarChange}
+        className="hidden"
+        accept="image/*"
+      />
+      
       {/* Profile Header */}
       <section className="flex flex-col items-center pt-2 pb-2">
-        <div className="relative mb-4 group cursor-pointer">
+        <div className="relative mb-4 group cursor-pointer" onClick={handleAvatarClick}>
           {/* Molten Ring Effect */}
           <div className="absolute -inset-1 bg-gradient-to-tr from-primary via-orange-500 to-yellow-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
           <div
@@ -75,7 +149,11 @@ export default function ProfilePage() {
                 : undefined
             }
           >
-            {!profile?.avatar_url && (
+            {uploadingAvatar ? (
+               <div className="size-full flex items-center justify-center bg-black/50 text-white">
+                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+               </div>
+            ) : !profile?.avatar_url && (
               <div className="size-full flex items-center justify-center text-stone-400">
                 <User size={48} strokeWidth={2} />
               </div>
@@ -95,45 +173,36 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* Stats Dashboard */}
-      <section>
-        <div className="grid grid-cols-3 gap-3">
-          {/* Sessions Card */}
-          <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-surface-dark shadow-sm border border-white/5">
-            <Dumbbell size={24} strokeWidth={2} className="text-gray-400 mb-1" />
-            <p className="text-2xl font-bold text-white leading-none">{stats.sessions}</p>
-            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mt-1">Sessions</p>
-          </div>
-
-          {/* Streak Card (Primary Highlight) */}
-          <div className="relative flex flex-col items-center justify-center p-3 rounded-xl bg-gradient-to-br from-primary/20 to-surface-dark border border-primary/30 shadow-sm overflow-hidden">
-            <div className="absolute -top-6 -right-6 w-12 h-12 bg-primary/20 rounded-full blur-xl"></div>
-            <Flame size={24} strokeWidth={2} className="text-primary mb-1" />
-            <p className="text-2xl font-bold text-primary leading-none">{stats.streak}</p>
-            <p className="text-[10px] font-medium text-primary/80 uppercase tracking-wider mt-1">Day Streak</p>
-          </div>
-
-          {/* Badges Card */}
-          <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-surface-dark shadow-sm border border-white/5">
-            <Award size={24} strokeWidth={2} className="text-gray-400 mb-1" />
-            <p className="text-2xl font-bold text-white leading-none">{stats.badges}</p>
-            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mt-1">Badges</p>
-          </div>
-        </div>
-      </section>
-
       {/* Settings Group: Account */}
       <section className="mt-2">
         <h3 className="py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Account</h3>
         <div className="flex flex-col -mx-4">
           {/* Personal Information */}
-          <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
+          <button 
+            onClick={() => router.push('/profile/edit')}
+            className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group"
+          >
             <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
               <User size={24} strokeWidth={2} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-base font-medium text-white">Personal Information</p>
               <p className="text-xs text-gray-400">Edit name, email, avatar</p>
+            </div>
+            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
+          </button>
+
+          {/* Reset Password */}
+          <button 
+            onClick={handleResetPassword}
+            className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group"
+          >
+            <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+              <Lock size={24} strokeWidth={2} />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-base font-medium text-white">Reset Password</p>
+              <p className="text-xs text-gray-400">Update your security credentials</p>
             </div>
             <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
           </button>

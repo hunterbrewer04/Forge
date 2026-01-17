@@ -7,7 +7,9 @@ import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import type { ProfileJoin } from '@/lib/types/database'
 import MobileLayout from '@/components/layout/MobileLayout'
-import { User, Flame, Award, Calendar, Mail, TrendingUp, Dumbbell, CheckCircle, Trophy } from '@/components/ui/icons'
+import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
+import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
+import { User, Flame, Calendar, Mail, Dumbbell, CheckCircle, Trophy } from '@/components/ui/icons'
 
 interface Stats {
   unreadCount: number
@@ -47,9 +49,13 @@ export default function HomePage() {
   const [loadingStats, setLoadingStats] = useState(true)
   const supabase = useMemo(() => createClient(), [])
 
-  // Mock data for demo - replace with real data later
-  const [streak] = useState(12)
-  const [classLevel] = useState({ name: 'Elite Class', progress: 75 })
+  // Use shared unread count hook for real-time message count
+  const { unreadCount } = useUnreadCount({
+    userId: user?.id,
+    isTrainer: profile?.is_trainer,
+    isClient: profile?.is_client,
+  })
+
   const [recentActivity] = useState<ActivityItem[]>([
     {
       id: '1',
@@ -90,7 +96,7 @@ export default function HomePage() {
 
         if (!error && conversations) {
           setStats({
-            unreadCount: 2, // Mock unread count
+            unreadCount: 0, // Using useUnreadCount hook for real-time count
             totalConversations: conversations.length,
             clientsCount: conversations.length,
           })
@@ -113,7 +119,7 @@ export default function HomePage() {
             ? trainerData[0] as ProfileJoin | undefined
             : trainerData as ProfileJoin | null
           setStats({
-            unreadCount: 2, // Mock unread count
+            unreadCount: 0, // Using useUnreadCount hook for real-time count
             totalConversations: 1,
             trainerName: trainer?.full_name || 'Coach Mike',
           })
@@ -128,9 +134,9 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-dark">
-        <div className="text-stone-400">Loading...</div>
-      </div>
+      <MobileLayout>
+        <HomePageSkeleton />
+      </MobileLayout>
     )
   }
 
@@ -168,7 +174,7 @@ export default function HomePage() {
   return (
     <MobileLayout
       topBarLeftContent={topBarLeftContent}
-      notificationCount={stats.unreadCount}
+      notificationCount={unreadCount}
       onFabClick={() => router.push('/schedule')}
     >
       {/* Hero Section */}
@@ -181,44 +187,12 @@ export default function HomePage() {
         </p>
       </section>
 
-      {/* Stats Cards */}
-      <section className="grid grid-cols-2 gap-3">
-        {/* Current Streak */}
-        <div className="bg-gradient-to-br from-[#2a2a2a] to-[#202020] border border-steel/30 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Flame size={48} strokeWidth={2} className="text-gold" />
-          </div>
-          <p className="text-stone-400 text-xs font-bold uppercase tracking-wider">Current Streak</p>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-3xl font-bold text-gold">{streak}</span>
-            <span className="text-sm font-medium text-gold/80">Days</span>
-          </div>
-        </div>
-
-        {/* Class Level */}
-        <div className="bg-gradient-to-br from-[#2a2a2a] to-[#202020] border border-steel/30 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Award size={48} strokeWidth={2} className="text-stone-200" />
-          </div>
-          <p className="text-stone-400 text-xs font-bold uppercase tracking-wider">Class Level</p>
-          <div className="mt-1">
-            <span className="text-xl font-bold text-white">{classLevel.name}</span>
-            <div className="w-full h-1 bg-stone-700 rounded-full mt-2">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
-                style={{ width: `${classLevel.progress}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Quick Actions Grid */}
       <section className="grid grid-cols-2 gap-3">
         {/* Schedule Session - Primary Action */}
         <Link
           href="/schedule"
-          className="col-span-1 row-span-1 bg-primary active:bg-orange-600 rounded-xl p-5 flex flex-col justify-between min-h-[140px] shadow-lg shadow-orange-900/20 transition-transform active:scale-95 text-left group relative overflow-hidden"
+          className="bg-primary active:bg-orange-600 rounded-xl p-5 flex flex-col justify-between min-h-[160px] shadow-lg shadow-orange-900/20 transition-transform active:scale-95 text-left group relative overflow-hidden"
         >
           <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
           <div className="bg-black/20 self-start p-2 rounded-lg text-white mb-2 z-10 group-hover:bg-black/30 transition-colors">
@@ -233,15 +207,15 @@ export default function HomePage() {
         {/* Messages */}
         <Link
           href="/chat"
-          className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[140px] transition-all active:scale-95 text-left group"
+          className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[160px] transition-all active:scale-95 text-left group"
         >
           <div className="flex justify-between items-start w-full">
             <div className="bg-stone-800 p-2 rounded-lg text-white group-hover:text-primary transition-colors">
               <Mail size={28} strokeWidth={2} />
             </div>
-            {stats.unreadCount > 0 && (
+            {unreadCount > 0 && (
               <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {stats.unreadCount} NEW
+                {unreadCount} NEW
               </span>
             )}
           </div>
@@ -250,37 +224,6 @@ export default function HomePage() {
             <p className="text-stone-400 text-xs mt-1">
               {loadingStats ? 'Loading...' : stats.trainerName || 'Coach Mike'}
             </p>
-          </div>
-        </Link>
-
-        {/* My Stats */}
-        <Link
-          href="/stats"
-          className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[140px] transition-all active:scale-95 text-left group"
-        >
-          <div className="bg-stone-800 self-start p-2 rounded-lg text-white mb-2 group-hover:text-primary transition-colors">
-            <TrendingUp size={28} strokeWidth={2} />
-          </div>
-          <div>
-            <h3 className="text-white text-lg font-bold leading-tight">My Stats</h3>
-            <p className="text-stone-400 text-xs mt-1">+5% vs Last Wk</p>
-          </div>
-        </Link>
-
-        {/* Workout */}
-        <Link
-          href="/workout"
-          className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[140px] transition-all active:scale-95 text-left group relative overflow-hidden"
-        >
-          <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none translate-x-2 translate-y-2">
-            <Dumbbell size={100} strokeWidth={2} />
-          </div>
-          <div className="bg-stone-800 self-start p-2 rounded-lg text-white mb-2 group-hover:text-primary transition-colors">
-            <Dumbbell size={28} strokeWidth={2} />
-          </div>
-          <div>
-            <h3 className="text-white text-lg font-bold leading-tight">Workout</h3>
-            <p className="text-primary text-xs mt-1 font-bold">Next: Leg Day</p>
           </div>
         </Link>
       </section>

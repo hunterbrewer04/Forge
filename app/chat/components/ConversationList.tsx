@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { fetchTrainerConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
+import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
 import { User, BadgeCheck, ChevronRight, Pin, AlertCircle, RefreshCw } from '@/components/ui/icons'
 
 interface Conversation {
@@ -50,8 +51,8 @@ export default function ConversationList({
         avatar_url: conv.profiles?.avatar_url,
         last_message: 'Tap to view messages',
         last_message_time: 'Recently',
-        unread_count: index === 0 ? 1 : 0, // Mock unread for demo
-        is_online: index === 0, // Mock online status
+        unread_count: 0, // Real unread count handled by useUnreadCount hook at app level
+        is_online: index === 0, // Online status (future: real-time presence)
         is_pinned: index === 0, // First conversation is pinned
       }))
 
@@ -86,11 +87,7 @@ export default function ConversationList({
   }, [conversations, searchQuery])
 
   if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center bg-background-dark">
-        <div className="text-stone-500 text-sm">Loading conversations...</div>
-      </div>
-    )
+    return <ConversationListSkeleton />
   }
 
   if (error) {

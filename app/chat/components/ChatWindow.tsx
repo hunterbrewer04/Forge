@@ -7,6 +7,7 @@ import MediaViewer, { useMediaViewer } from './MediaViewer'
 import { fetchMessages, fetchSenderProfile } from '@/lib/services/messages'
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
+import { MessageListSkeleton } from '@/components/skeletons/MessageSkeleton'
 import { ArrowLeft, User, BadgeCheck, MoreVertical, CheckCheck, AlertCircle, RefreshCw } from '@/components/ui/icons'
 
 interface Message {
@@ -233,9 +234,7 @@ export default function ChatWindow({
   if (loading) {
     return (
       <div className="h-full flex flex-col bg-background-dark">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-stone-500">Loading messages...</div>
-        </div>
+        <MessageListSkeleton />
       </div>
     )
   }
