@@ -11,7 +11,6 @@ import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
 import { getLocalDateString } from '@/lib/utils/date'
 
 type TabType = 'upcoming' | 'history'
-type ScheduleViewMode = 'calendar' | 'all_upcoming'
 
 // Generate dates for the calendar strip
 function generateDates(baseDate: Date): { day: string; date: number; fullDate: Date; isoDate: string }[] {
@@ -36,7 +35,6 @@ export default function SchedulePage() {
   const [activeTab, setActiveTab] = useState<TabType>('upcoming')
   const [activeFilter, setActiveFilter] = useState<string>('all')
   const [selectedDateIndex, setSelectedDateIndex] = useState(0)
-  const [scheduleViewMode, setScheduleViewMode] = useState<ScheduleViewMode>('calendar')
   const [sessions, setSessions] = useState<SessionWithDetails[]>([])
   const [sessionTypes, setSessionTypes] = useState<SessionType[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,7 +53,6 @@ export default function SchedulePage() {
   const baseDate = useMemo(() => new Date(), [])
   const calendarDates = useMemo(() => generateDates(baseDate), [baseDate])
   const currentMonth = baseDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  const selectedDate = calendarDates[selectedDateIndex]?.isoDate
 
   // Fetch session types on mount
   useEffect(() => {
@@ -89,17 +86,9 @@ export default function SchedulePage() {
     setError(null)
 
     try {
-      // Build URL based on view mode
-      let url: string
-      if (scheduleViewMode === 'all_upcoming') {
-        // Get all sessions from today onwards
-        const todayLocal = getLocalDateString()
-        url = `/api/sessions?from=${todayLocal}&status=scheduled`
-      } else {
-        // Get sessions for specific date
-        if (!selectedDate) return
-        url = `/api/sessions?date=${selectedDate}&status=scheduled`
-      }
+      // Always fetch all upcoming sessions from today onwards
+      const todayLocal = getLocalDateString()
+      const url = `/api/sessions?from=${todayLocal}&status=scheduled`
 
       const response = await fetch(url, { signal })
 
@@ -135,11 +124,11 @@ export default function SchedulePage() {
         setRefreshing(false)
       }
     }
-  }, [selectedDate, scheduleViewMode])
+  }, [])
 
-  // Fetch sessions when date changes or view mode changes
+  // Fetch sessions on mount
   useEffect(() => {
-    if (user && (scheduleViewMode === 'all_upcoming' || selectedDate)) {
+    if (user) {
       fetchSessions()
     }
 
@@ -149,7 +138,7 @@ export default function SchedulePage() {
         abortControllerRef.current.abort()
       }
     }
-  }, [user, selectedDate, scheduleViewMode, fetchSessions])
+  }, [user, fetchSessions])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -174,10 +163,8 @@ export default function SchedulePage() {
     return sessions.filter((s) => s.session_type?.slug === activeFilter)
   }, [sessions, activeFilter])
 
-  // Group sessions by date for all_upcoming view
+  // Group sessions by date
   const groupedSessions = useMemo(() => {
-    if (scheduleViewMode !== 'all_upcoming') return null
-
     const groups: { [dateKey: string]: { label: string; sessions: SessionWithDetails[] } } = {}
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -211,7 +198,7 @@ export default function SchedulePage() {
     return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([dateKey, group]) => ({ dateKey, ...group }))
-  }, [filteredSessions, scheduleViewMode])
+  }, [filteredSessions])
 
   // Get user's next booked session
   const nextBookedSession = useMemo(() => {
@@ -343,30 +330,6 @@ export default function SchedulePage() {
         </button>
       </div>
 
-      {/* View Mode Toggle */}
-      <div className="flex gap-2 bg-surface-dark rounded-lg p-1">
-        <button
-          onClick={() => setScheduleViewMode('calendar')}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            scheduleViewMode === 'calendar'
-              ? 'bg-primary text-white'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          By Date
-        </button>
-        <button
-          onClick={() => setScheduleViewMode('all_upcoming')}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            scheduleViewMode === 'all_upcoming'
-              ? 'bg-primary text-white'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          All Upcoming
-        </button>
-      </div>
-
       {/* Next Up Card - Only show if user has a booking */}
       {nextBookedSession && (
         <div className="bg-surface-dark rounded-lg p-4 shadow-md border-l-4 border-primary flex justify-between items-center">
@@ -386,42 +349,40 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* Calendar Strip - Only show in calendar view mode */}
-      {scheduleViewMode === 'calendar' && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-white">{currentMonth}</h3>
-            <div className="flex gap-2">
-              <button className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
-                <ChevronLeft size={16} strokeWidth={2} />
-              </button>
-              <button className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
-                <ChevronRight size={16} strokeWidth={2} />
-              </button>
-            </div>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar snap-x -mx-4 px-4">
-            {calendarDates.map((dateItem, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedDateIndex(index)}
-                className={`flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 rounded-lg transition-all ${
-                  selectedDateIndex === index
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105'
-                    : 'bg-surface-dark border border-gray-700 text-gray-400 hover:border-primary/50'
-                }`}
-              >
-                <span className={`text-xs font-medium ${selectedDateIndex === index ? 'opacity-80' : ''}`}>
-                  {dateItem.day}
-                </span>
-                <span className={`text-xl font-bold ${selectedDateIndex !== index ? 'text-white' : ''}`}>
-                  {dateItem.date}
-                </span>
-              </button>
-            ))}
+      {/* Calendar Strip */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-bold text-white">{currentMonth}</h3>
+          <div className="flex gap-2">
+            <button className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
+              <ChevronLeft size={16} strokeWidth={2} />
+            </button>
+            <button className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
+              <ChevronRight size={16} strokeWidth={2} />
+            </button>
           </div>
         </div>
-      )}
+        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar snap-x -mx-4 px-4">
+          {calendarDates.map((dateItem, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedDateIndex(index)}
+              className={`flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 rounded-lg transition-all ${
+                selectedDateIndex === index
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105'
+                  : 'bg-surface-dark border border-gray-700 text-gray-400 hover:border-primary/50'
+              }`}
+            >
+              <span className={`text-xs font-medium ${selectedDateIndex === index ? 'opacity-80' : ''}`}>
+                {dateItem.day}
+              </span>
+              <span className={`text-xl font-bold ${selectedDateIndex !== index ? 'text-white' : ''}`}>
+                {dateItem.date}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Session Type Filters */}
       <div className="overflow-x-auto no-scrollbar flex gap-3 -mx-4 px-4">
@@ -465,7 +426,7 @@ export default function SchedulePage() {
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-gray-400 mb-2">No sessions available</p>
           <p className="text-gray-500 text-sm">
-            Try selecting a different date or filter
+            Try selecting a different filter
           </p>
         </div>
       )}
@@ -473,36 +434,23 @@ export default function SchedulePage() {
       {/* Session List */}
       {!loading && !error && filteredSessions.length > 0 && (
         <div className="space-y-4 pb-6">
-          {scheduleViewMode === 'all_upcoming' && groupedSessions ? (
-            // Grouped display for all upcoming view
-            groupedSessions.map((group) => (
-              <div key={group.dateKey}>
-                <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">
-                  {group.label}
-                </h3>
-                <div className="space-y-3">
-                  {group.sessions.map((session) => (
-                    <SessionCard
-                      key={session.id}
-                      session={session}
-                      onBook={() => handleBookSession(session)}
-                      onCancel={() => handleCancelBooking(session)}
-                    />
-                  ))}
-                </div>
+          {groupedSessions.map((group) => (
+            <div key={group.dateKey}>
+              <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">
+                {group.label}
+              </h3>
+              <div className="space-y-3">
+                {group.sessions.map((session) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    onBook={() => handleBookSession(session)}
+                    onCancel={() => handleCancelBooking(session)}
+                  />
+                ))}
               </div>
-            ))
-          ) : (
-            // Flat list for calendar view
-            filteredSessions.map((session) => (
-              <SessionCard
-                key={session.id}
-                session={session}
-                onBook={() => handleBookSession(session)}
-                onCancel={() => handleCancelBooking(session)}
-              />
-            ))
-          )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -550,6 +498,11 @@ function SessionCard({ session, onBook, onCancel }: SessionCardProps) {
     hour12: false,
   })
   const period = startTime.getHours() < 12 ? 'AM' : 'PM'
+  const dateLabel = startTime.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
 
   const isBooked = !!session.user_booking
   const isFull = session.availability.is_full
@@ -568,6 +521,7 @@ function SessionCard({ session, onBook, onCancel }: SessionCardProps) {
             <span className="text-xs text-gray-400 uppercase font-bold">{period}</span>
           </div>
           <div className="flex-1">
+            <p className="text-xs text-gray-400 mb-1">{dateLabel}</p>
             <h4 className="text-lg font-bold text-white leading-tight mb-1 group-hover:text-gold transition-colors">
               {session.title}
             </h4>
@@ -623,6 +577,7 @@ function SessionCard({ session, onBook, onCancel }: SessionCardProps) {
             <span className="text-xs text-gray-600 uppercase font-bold">{period}</span>
           </div>
           <div className="flex-1">
+            <p className="text-xs text-gray-500 mb-1">{dateLabel}</p>
             <h4 className="text-lg font-bold text-gray-400 leading-tight mb-1">{session.title}</h4>
             <div className="flex items-center gap-2 mb-3">
               <span className="flex items-center text-xs font-medium text-gray-600 bg-gray-800/50 px-2 py-0.5 rounded">
@@ -664,6 +619,7 @@ function SessionCard({ session, onBook, onCancel }: SessionCardProps) {
           <span className="text-xs text-gray-400 uppercase font-bold">{period}</span>
         </div>
         <div className="flex-1">
+          <p className="text-xs text-gray-400 mb-1">{dateLabel}</p>
           <h4 className={`text-lg font-bold leading-tight mb-1 transition-colors ${
             isBooked ? 'text-green-500' : 'text-white group-hover:text-primary'
           }`}>
