@@ -9,7 +9,8 @@ import ChatWindow from './components/ChatWindow'
 import ChatLayout from '@/components/layout/ChatLayout'
 import { logger } from '@/lib/utils/logger'
 import { fetchClientConversation, fetchConversationById } from '@/lib/services/conversations'
-import { ArrowLeft, Bell, Plus, Search } from '@/components/ui/icons'
+import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
+import { ArrowLeft, Bell, Plus, Search, RefreshCw } from '@/components/ui/icons'
 
 interface ConversationInfo {
   id: string
@@ -45,14 +46,16 @@ export default function ChatPage() {
     })
   }, [loading, user, profile])
 
+  // Extended timeout (15 seconds) with graceful degradation
+  // Shows skeleton loading first, then offers manual refresh option
   useEffect(() => {
     if (loading) {
       logger.debug('[ChatPage] Setting loading timeout')
       const timeout = setTimeout(() => {
-        logger.debug('[ChatPage] Loading timeout reached!')
+        logger.debug('[ChatPage] Loading timeout reached after 15s')
         setLoadingTimeout(true)
-        setError('Authentication is taking too long. Please refresh the page or try logging in again.')
-      }, 5000)
+        // Don't set error immediately - just show the timeout UI with refresh option
+      }, 15000)
 
       return () => {
         logger.debug('[ChatPage] Clearing loading timeout')
@@ -193,36 +196,45 @@ export default function ChatPage() {
     setShowThread(false)
   }
 
-  if (loading || loadingTimeout) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-dark">
-        <div className="text-center max-w-md px-6">
-          {loadingTimeout ? (
-            <>
-              <div className="text-red-500 text-lg font-semibold mb-4">Loading Timeout</div>
-              <p className="text-stone-400 mb-6">{error}</p>
-              <div className="space-y-3">
+      <div className="min-h-screen bg-background-dark flex flex-col">
+        {/* Show skeleton loading with optional refresh after timeout */}
+        <header className="flex-none bg-background-dark border-b border-white/10 px-4 pt-safe-top pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="size-11 rounded-full bg-stone-700 animate-pulse" />
+              <div className="h-7 w-24 bg-stone-700 rounded animate-pulse" />
+            </div>
+          </div>
+        </header>
+        <div className="flex-1">
+          <ConversationListSkeleton />
+        </div>
+        {loadingTimeout && (
+          <div className="fixed bottom-20 left-0 right-0 px-4 z-50">
+            <div className="bg-[#2C2C2C] border border-steel/30 rounded-xl p-4 shadow-xl max-w-md mx-auto">
+              <p className="text-stone-300 text-sm mb-3 text-center">
+                Taking longer than expected...
+              </p>
+              <div className="flex gap-2">
                 <button
                   onClick={() => window.location.reload()}
-                  className="w-full px-6 py-3 text-white bg-primary rounded-lg hover:bg-orange-600 font-medium"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-white bg-primary rounded-lg hover:bg-orange-600 font-medium text-sm transition-colors"
                 >
-                  Refresh Page
+                  <RefreshCw size={16} strokeWidth={2} />
+                  Refresh
                 </button>
                 <button
                   onClick={() => router.push('/login')}
-                  className="w-full px-6 py-3 text-primary bg-transparent border border-primary rounded-lg hover:bg-primary/10 font-medium"
+                  className="flex-1 px-4 py-2.5 text-stone-300 bg-stone-700 rounded-lg hover:bg-stone-600 font-medium text-sm transition-colors"
                 >
-                  Go to Login
+                  Re-login
                 </button>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="text-stone-400 text-lg mb-2">Loading...</div>
-              <div className="text-stone-500 text-sm">Checking authentication</div>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
