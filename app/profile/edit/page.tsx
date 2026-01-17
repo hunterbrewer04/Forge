@@ -90,7 +90,6 @@ export default function EditProfilePage() {
     <MobileLayout
       title="Edit Profile"
       showBack
-      onBack={() => router.push('/profile')}
       showNotifications={false}
     >
       <div className="px-4 py-6">
