@@ -4,22 +4,20 @@ import { useState, useCallback } from 'react'
 import type { ToastType } from '@/components/ui/Toast'
 
 interface ToastState {
-  id: number
+  id: string
   message: string
   type: ToastType
 }
-
-let toastId = 0
 
 export function useToast() {
   const [toasts, setToasts] = useState<ToastState[]>([])
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = ++toastId
+    const id = crypto.randomUUID()
     setToasts((prev) => [...prev, { id, message, type }])
   }, [])
 
-  const removeToast = useCallback((id: number) => {
+  const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
   }, [])
 

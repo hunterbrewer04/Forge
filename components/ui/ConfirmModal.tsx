@@ -49,7 +49,12 @@ export default function ConfirmModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-[#2C2C2C] border border-stone-700 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-scale-up">
+      <div
+        className="relative bg-[#2C2C2C] border border-stone-700 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-scale-up"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
         {/* Icon */}
         <div className="flex justify-center mb-4">
           <div className="size-14 rounded-full bg-primary/10 flex items-center justify-center">
@@ -58,7 +63,7 @@ export default function ConfirmModal({
         </div>
 
         {/* Title */}
-        <h3 className="text-xl font-bold text-white text-center mb-2">{title}</h3>
+        <h3 id="modal-title" className="text-xl font-bold text-white text-center mb-2">{title}</h3>
 
         {/* Message */}
         <p className="text-sm text-stone-400 text-center mb-6">{message}</p>

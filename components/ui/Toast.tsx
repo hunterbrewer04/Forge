@@ -10,9 +10,10 @@ export interface ToastProps {
   type?: ToastType
   duration?: number
   onClose: () => void
+  index?: number
 }
 
-export default function Toast({ message, type = 'info', duration = 3000, onClose }: ToastProps) {
+export default function Toast({ message, type = 'info', duration = 3000, onClose, index = 0 }: ToastProps) {
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
@@ -55,8 +56,19 @@ export default function Toast({ message, type = 'info', duration = 3000, onClose
     }
   }
 
+  const getRole = () => {
+    return type === 'error' ? 'alert' : 'status'
+  }
+
+  const bottomOffset = 80 + index * 72
+
   return (
-    <div className={`fixed bottom-20 left-4 right-4 z-50 animate-slide-up`}>
+    <div
+      className={`fixed left-4 right-4 z-50 animate-slide-up`}
+      style={{ bottom: `${bottomOffset}px` }}
+      role={getRole()}
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+    >
       <div className={`flex items-center gap-3 p-4 rounded-xl border ${getBgColor()} backdrop-blur-sm shadow-lg`}>
         {getIcon()}
         <p className={`flex-1 text-sm font-medium ${getTextColor()}`}>{message}</p>

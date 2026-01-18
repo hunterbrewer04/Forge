@@ -168,7 +168,14 @@ export default function ProfilePage() {
         <div
           className="relative mb-4 group cursor-pointer"
           onClick={handleAvatarClick}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleAvatarClick(); } }}
+          onKeyDown={(e) => {
+            if (e.key === ' ') {
+              e.preventDefault();
+              handleAvatarClick();
+            } else if (e.key === 'Enter') {
+              handleAvatarClick();
+            }
+          }}
           role="button"
           tabIndex={0}
           aria-label="Click to change profile picture"
@@ -319,11 +326,12 @@ export default function ProfilePage() {
       </section>
 
       {/* Toast Notifications */}
-      {toasts.map((toast) => (
+      {toasts.map((toast, index) => (
         <Toast
           key={toast.id}
           message={toast.message}
           type={toast.type}
+          index={index}
           onClose={() => removeToast(toast.id)}
         />
       ))}

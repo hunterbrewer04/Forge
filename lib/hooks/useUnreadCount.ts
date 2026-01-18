@@ -71,6 +71,7 @@ export function useUnreadCount({ userId, isTrainer, isClient }: UseUnreadCountOp
 
       if (conversationIds.length === 0) {
         setUnreadCount(0)
+        setLoading(false)
         return
       }
 
