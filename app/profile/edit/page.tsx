@@ -38,21 +38,21 @@ export default function EditProfilePage() {
     setError(null)
 
     try {
+      const trimmedFullName = fullName.trim()
+      if (!trimmedFullName) {
+        setError('Full name cannot be empty.')
+        setSaving(false)
+        return
+      }
+
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ full_name: fullName })
+        .update({ full_name: trimmedFullName })
         .eq('id', user.id)
 
       if (updateError) throw updateError
 
-      // Use a hard reload or force a re-fetch if possible.
-      // Since AuthContext listens to real-time changes or we can trigger a refresh manually if we had access to one.
-      // For now, we'll just navigate back, and the profile page should eventually update or we can rely on nextjs cache revalidation if setup.
-      // The AuthContext in this app listens to onAuthStateChange 'USER_UPDATED', but updating the profile table doesn't trigger that automatically for the auth user object.
-      // However, the AuthContext.tsx implementation shows it fetches profile on mount/session change.
-      // We might need to manually trigger a session refresh to see the change immediately or just wait.
-      
-      // Let's try to refresh the session to force a profile re-fetch
+      // Refresh the session so AuthContext re-fetches the updated profile data
       await refreshSession()
       
       router.push('/profile')
