@@ -14,9 +14,9 @@ interface Conversation {
   avatar_url?: string | null
   last_message?: string
   last_message_time?: string
-  unread_count?: number
   is_online?: boolean
   is_pinned?: boolean
+  // TODO: Implement per-conversation unread counts when is_read column is added to messages table
 }
 
 interface ConversationListProps {
@@ -51,7 +51,6 @@ export default function ConversationList({
         avatar_url: conv.profiles?.avatar_url,
         last_message: 'Tap to view messages',
         last_message_time: 'Recently',
-        unread_count: 0, // Real unread count handled by useUnreadCount hook at app level
         is_online: index === 0, // Online status (future: real-time presence)
         is_pinned: index === 0, // First conversation is pinned
       }))
@@ -157,17 +156,14 @@ export default function ConversationList({
               <BadgeCheck size={14} strokeWidth={2} className="text-gold" aria-label="Certified" />
             )}
           </h4>
-          <span className={`text-xs font-medium ${conversation.unread_count ? 'text-primary' : 'text-stone-500'}`}>
+          <span className="text-xs font-medium text-stone-500">
             {conversation.last_message_time}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <p className={`text-sm truncate w-[85%] ${conversation.unread_count ? 'text-white font-medium' : 'text-stone-500'}`}>
+          <p className="text-sm truncate text-stone-500">
             {conversation.last_message}
           </p>
-          {conversation.unread_count && conversation.unread_count > 0 && (
-            <span className="size-2.5 rounded-full bg-primary shrink-0 animate-pulse" />
-          )}
         </div>
       </div>
 
