@@ -12,7 +12,6 @@ import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import { User, Flame, Calendar, Mail, Dumbbell, CheckCircle, Trophy } from '@/components/ui/icons'
 
 interface Stats {
-  unreadCount: number
   totalConversations: number
   trainerName?: string
   clientsCount?: number
@@ -45,7 +44,7 @@ function ActivityIcon({ iconKey, size, strokeWidth }: { iconKey: ActivityIconKey
 export default function HomePage() {
   const { user, profile, loading } = useAuth()
   const router = useRouter()
-  const [stats, setStats] = useState<Stats>({ unreadCount: 0, totalConversations: 0 })
+  const [stats, setStats] = useState<Stats>({ totalConversations: 0 })
   const [loadingStats, setLoadingStats] = useState(true)
   const supabase = useMemo(() => createClient(), [])
 
@@ -96,7 +95,6 @@ export default function HomePage() {
 
         if (!error && conversations) {
           setStats({
-            unreadCount: 0, // Using useUnreadCount hook for real-time count
             totalConversations: conversations.length,
             clientsCount: conversations.length,
           })
@@ -119,7 +117,6 @@ export default function HomePage() {
             ? trainerData[0] as ProfileJoin | undefined
             : trainerData as ProfileJoin | null
           setStats({
-            unreadCount: 0, // Using useUnreadCount hook for real-time count
             totalConversations: 1,
             trainerName: trainer?.full_name || 'Coach Mike',
           })
