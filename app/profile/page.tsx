@@ -39,41 +39,68 @@ export default function ProfilePage() {
       return
     }
 
-    setUploadingAvatar(true)
     const file = event.target.files[0]
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}-${Math.random()}.${fileExt}`
-    const filePath = `${fileName}`
+
+    // Validate file size (max 5MB)
+    const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+    if (file.size > MAX_SIZE) {
+      alert('Image too large. Maximum size is 5MB.')
+      return
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Please use JPG, PNG, GIF, or WebP.')
+      return
+    }
+
+    setUploadingAvatar(true)
 
     try {
-      // Upload image to avatars bucket
+      // Delete old avatar if exists
+      if (profile?.avatar_url) {
+        const oldPath = profile.avatar_url.split('/avatars/')[1]
+        if (oldPath) {
+          await supabase.storage.from('avatars').remove([oldPath])
+        }
+      }
+
+      // Upload new avatar
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file)
+        .upload(fileName, file, { upsert: true })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        logger.error('Upload error:', uploadError)
+        alert(`Upload failed: ${uploadError.message}`)
+        return
+      }
 
-      // Get public URL
+      // Get public URL and update profile
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath)
+        .getPublicUrl(fileName)
 
-      // Update profile
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
         .eq('id', user.id)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        logger.error('Profile update error:', updateError)
+        alert(`Failed to save: ${updateError.message}`)
+        return
+      }
 
-      // Refresh local state
       await refreshSession()
-      
-      // Show success feedback (optional, or rely on UI update)
       logger.debug('Avatar updated successfully')
     } catch (error) {
-      logger.error('Error uploading avatar:', error)
-      alert('Error updating avatar!')
+      logger.error('Avatar error:', error)
+      alert('An unexpected error occurred. Please try again.')
     } finally {
       setUploadingAvatar(false)
     }
@@ -165,6 +192,9 @@ export default function ProfilePage() {
         </div>
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-white uppercase">{displayName}</h1>
+          {profile?.username && (
+            <p className="text-gray-400 text-sm">@{profile.username}</p>
+          )}
           <div className="flex items-center justify-center gap-2">
             <BadgeCheck size={18} strokeWidth={2} className="text-gold" />
             <p className="text-gold text-sm font-bold tracking-wider uppercase">Elite Member</p>

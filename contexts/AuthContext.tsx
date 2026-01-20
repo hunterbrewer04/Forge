@@ -8,6 +8,7 @@ interface Profile {
   id: string
   full_name: string | null
   avatar_url: string | null
+  username: string | null
   is_trainer: boolean
   is_admin: boolean
   is_client: boolean
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, is_trainer, is_admin, is_client, created_at')
+        .select('id, full_name, avatar_url, username, is_trainer, is_admin, is_client, created_at')
         .eq('id', userId)
         .single()
 
