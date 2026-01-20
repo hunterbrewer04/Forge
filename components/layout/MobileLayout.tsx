@@ -13,7 +13,6 @@ interface MobileLayoutProps {
   topBarLeftContent?: React.ReactNode;
   topBarRightContent?: React.ReactNode;
   notificationCount?: number;
-  onFabClick?: () => void;
 }
 
 export default function MobileLayout({
@@ -26,7 +25,6 @@ export default function MobileLayout({
   topBarLeftContent,
   topBarRightContent,
   notificationCount = 0,
-  onFabClick,
 }: MobileLayoutProps) {
   return (
     <div className="min-h-screen bg-background-dark">
@@ -48,7 +46,7 @@ export default function MobileLayout({
       {/* Bottom nav only shows on mobile/tablet, hidden on large screens */}
       {showBottomNav && (
         <div className="lg:hidden">
-          <BottomNav onFabClick={onFabClick} />
+          <BottomNav />
         </div>
       )}
     </div>

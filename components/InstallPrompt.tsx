@@ -89,7 +89,7 @@ export default function InstallPrompt() {
   // iOS Install Instructions
   if (isIOS) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50 animate-slide-up">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-[60] animate-slide-up">
         <div className="max-w-md mx-auto">
           <div className="flex items-start gap-3 mb-3">
             <div className="text-3xl">📱</div>
@@ -118,7 +118,7 @@ export default function InstallPrompt() {
 
   // Chrome/Edge Android Install Prompt
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50 animate-slide-up">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-[60] animate-slide-up">
       <div className="max-w-md mx-auto flex items-center gap-4">
         <div className="text-3xl">📱</div>
         <div className="flex-1">

@@ -33,7 +33,7 @@ export function UpdatePrompt() {
   if (!showUpdate) return null
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 animate-slide-up">
+    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-[60] animate-slide-up">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">
           <svg

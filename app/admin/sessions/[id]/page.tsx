@@ -20,6 +20,7 @@ import {
   AlertTriangle,
 } from '@/components/ui/icons'
 import type { SessionWithDetails, SessionType, Booking } from '@/lib/types/sessions'
+import { utcToLocalInputs, localInputsToUtc } from '@/lib/utils/date'
 
 type ViewMode = 'view' | 'edit'
 type ModalType = 'cancel' | 'duplicate' | 'complete' | null
@@ -73,14 +74,15 @@ export default function EditSessionPage() {
 
       // Populate form data
       const s = data.session
-      const startDate = new Date(s.starts_at)
+      // Use utility to convert UTC to local date/time for form inputs
+      const { date: localDate, time: localTime } = utcToLocalInputs(s.starts_at)
       setFormData({
         title: s.title || '',
         description: s.description || '',
         session_type_id: s.session_type_id || '',
         location: s.location || '',
-        starts_at: startDate.toISOString().split('T')[0],
-        starts_time: startDate.toTimeString().slice(0, 5),
+        starts_at: localDate,
+        starts_time: localTime,
         duration_minutes: s.duration_minutes || 60,
         capacity: s.capacity || 8,
         is_premium: s.is_premium || false,
@@ -129,17 +131,19 @@ export default function EditSessionPage() {
     setError(null)
 
     try {
-      // Combine date and time
-      const startDateTime = new Date(`${formData.starts_at}T${formData.starts_time}:00`)
-      const endDateTime = new Date(startDateTime.getTime() + formData.duration_minutes * 60000)
+      // Convert local date/time inputs to UTC for database
+      const startsAtUtc = localInputsToUtc(formData.starts_at, formData.starts_time)
+      const endsAtUtc = new Date(
+        new Date(startsAtUtc).getTime() + formData.duration_minutes * 60000
+      ).toISOString()
 
       const body = {
         title: formData.title,
         description: formData.description || null,
         session_type_id: formData.session_type_id || null,
         location: formData.location || null,
-        starts_at: startDateTime.toISOString(),
-        ends_at: endDateTime.toISOString(),
+        starts_at: startsAtUtc,
+        ends_at: endsAtUtc,
         duration_minutes: formData.duration_minutes,
         capacity: formData.capacity,
         is_premium: formData.is_premium,
@@ -228,7 +232,9 @@ export default function EditSessionPage() {
 
     try {
       // Create a new session with the same data but next week
-      const startDateTime = new Date(`${formData.starts_at}T${formData.starts_time}:00`)
+      // First convert to UTC, then add 7 days
+      const startsAtUtc = localInputsToUtc(formData.starts_at, formData.starts_time)
+      const startDateTime = new Date(startsAtUtc)
       startDateTime.setDate(startDateTime.getDate() + 7) // Next week
       const endDateTime = new Date(startDateTime.getTime() + formData.duration_minutes * 60000)
 
@@ -675,7 +681,7 @@ export default function EditSessionPage() {
 
       {/* Modals */}
       {activeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setActiveModal(null)}

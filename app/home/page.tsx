@@ -175,7 +175,6 @@ export default function HomePage() {
     <MobileLayout
       topBarLeftContent={topBarLeftContent}
       notificationCount={unreadCount}
-      onFabClick={() => router.push('/schedule')}
     >
       {/* Hero Section */}
       <section className="flex flex-col gap-1">
