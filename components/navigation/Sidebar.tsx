@@ -5,14 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   Home,
   Calendar,
-  BarChart2,
   User,
   MessageCircle,
-  Settings,
   LogOut,
 } from "@/components/ui/icons";
 
-type IconKey = "home" | "messages" | "calendar" | "stats" | "profile" | "settings";
+type IconKey = "home" | "messages" | "calendar" | "profile";
 
 interface NavItem {
   href: string;
@@ -24,12 +22,10 @@ const mainNavItems: NavItem[] = [
   { href: "/home", iconKey: "home", label: "Home" },
   { href: "/chat", iconKey: "messages", label: "Messages" },
   { href: "/schedule", iconKey: "calendar", label: "Schedule" },
-  { href: "/stats", iconKey: "stats", label: "Stats" },
 ];
 
 const bottomNavItems: NavItem[] = [
   { href: "/profile", iconKey: "profile", label: "Profile" },
-  { href: "/settings", iconKey: "settings", label: "Settings" },
 ];
 
 function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: number; strokeWidth: number }) {
@@ -40,12 +36,8 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
       return <MessageCircle size={size} strokeWidth={strokeWidth} />;
     case "calendar":
       return <Calendar size={size} strokeWidth={strokeWidth} />;
-    case "stats":
-      return <BarChart2 size={size} strokeWidth={strokeWidth} />;
     case "profile":
       return <User size={size} strokeWidth={strokeWidth} />;
-    case "settings":
-      return <Settings size={size} strokeWidth={strokeWidth} />;
   }
 }
 

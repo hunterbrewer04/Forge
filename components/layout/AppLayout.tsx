@@ -14,7 +14,6 @@ interface AppLayoutProps {
   topBarLeftContent?: React.ReactNode;
   topBarRightContent?: React.ReactNode;
   notificationCount?: number;
-  onFabClick?: () => void;
   onSignOut?: () => void;
 }
 
@@ -28,7 +27,6 @@ export default function AppLayout({
   topBarLeftContent,
   topBarRightContent,
   notificationCount = 0,
-  onFabClick,
   onSignOut,
 }: AppLayoutProps) {
   return (
@@ -73,7 +71,7 @@ export default function AppLayout({
         {/* Bottom nav only shows on mobile/tablet, hidden on large screens */}
         {showBottomNav && (
           <div className="lg:hidden">
-            <BottomNav onFabClick={onFabClick} />
+            <BottomNav />
           </div>
         )}
       </div>

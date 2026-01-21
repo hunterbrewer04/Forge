@@ -36,8 +36,8 @@ export default function ChatLayout({
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-screen lg:max-h-screen overflow-hidden">
-        {/* Mobile Header - only on mobile */}
-        <div className="lg:hidden flex-none">{mobileHeader}</div>
+        {/* Mobile Header - only on mobile, hidden when chat is open */}
+        {!showActiveChat && <div className="lg:hidden flex-none">{mobileHeader}</div>}
 
         {/* Conversation List - always visible on desktop, hidden when chat open on mobile */}
         <div
@@ -118,7 +118,7 @@ export default function ChatLayout({
         </div>
 
         {/* Bottom nav only shows on mobile */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40">
           <BottomNav />
         </div>
       </div>
