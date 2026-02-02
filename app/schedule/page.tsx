@@ -268,6 +268,17 @@ export default function SchedulePage() {
           </button>
         </div>
 
+        {/* Create Session - Trainer Only */}
+        {profile?.is_trainer && (
+          <Link
+            href="/schedule/new"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-[#2a2a2a] border border-steel/30 rounded-xl text-white font-semibold text-sm active:bg-[#333] active:border-primary/50 transition-all active:scale-[0.98]"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+            New Session
+          </Link>
+        )}
+
         {/* Next Up Card */}
         {nextBookedSession && activeTab === 'upcoming' && (
           <NextUpCard
@@ -414,15 +425,6 @@ export default function SchedulePage() {
         />
       )}
 
-      {/* Floating Action Button - Trainer Only */}
-      {profile?.is_trainer && (
-        <Link
-          href="/schedule/new"
-          className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all hover:scale-110 z-40"
-        >
-          <Plus size={28} strokeWidth={2.5} />
-        </Link>
-      )}
     </MobileLayout>
   )
 }
