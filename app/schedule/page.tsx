@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import Link from 'next/link'
 import MobileLayout from '@/components/layout/MobileLayout'
 import { Bell, User, ChevronLeft, ChevronRight, Clock, Zap, Lock, Plus, Check, RefreshCw } from '@/components/ui/icons'
 import BookingModal from './components/BookingModal'
@@ -528,6 +529,16 @@ export default function SchedulePage() {
           }}
           onCancelSuccess={handleCancelSuccess}
         />
+      )}
+
+      {/* Floating Action Button - Trainer Only */}
+      {profile?.is_trainer && (
+        <Link
+          href="/schedule/new"
+          className="fixed bottom-24 right-6 w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all hover:scale-110 z-40"
+        >
+          <Plus size={28} strokeWidth={2.5} />
+        </Link>
       )}
     </MobileLayout>
   )

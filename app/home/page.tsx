@@ -9,7 +9,7 @@ import type { ProfileJoin } from '@/lib/types/database'
 import MobileLayout from '@/components/layout/MobileLayout'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
-import { User, Flame, Calendar, Mail, Dumbbell, CheckCircle, Trophy } from '@/components/ui/icons'
+import { User, Flame, Calendar, Mail, Dumbbell, CheckCircle, Trophy, Plus } from '@/components/ui/icons'
 
 interface Stats {
   totalConversations: number
@@ -222,6 +222,22 @@ export default function HomePage() {
             </p>
           </div>
         </Link>
+
+        {/* Create Session - Trainer Only */}
+        {profile.is_trainer && (
+          <Link
+            href="/schedule/new"
+            className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[160px] transition-all active:scale-95 text-left group"
+          >
+            <div className="bg-stone-800 p-2 rounded-lg text-white group-hover:text-primary transition-colors self-start">
+              <Plus size={28} strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className="text-white text-lg font-bold leading-tight">Create Session</h3>
+              <p className="text-stone-400 text-xs mt-1">New Class</p>
+            </div>
+          </Link>
+        )}
       </section>
 
       {/* Recent Activity Feed */}
