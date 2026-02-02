@@ -49,7 +49,7 @@ export default function EditProfilePage() {
     return null
   }
 
-  // Check if username is unique
+  // Check if username is unique (fail-closed: returns false on unexpected errors)
   const checkUsernameUnique = async (usernameToCheck: string): Promise<boolean> => {
     if (!usernameToCheck || usernameToCheck === profile?.username) return true
 
@@ -58,13 +58,15 @@ export default function EditProfilePage() {
       .select('id')
       .eq('username', usernameToCheck)
       .neq('id', user?.id)
-      .single()
+      .maybeSingle()
 
-    if (error && error.code === 'PGRST116') {
-      // No rows returned - username is unique
-      return true
+    if (error) {
+      // Fail-closed: treat unexpected errors as "not unique"
+      logger.error('Username uniqueness check failed:', error)
+      return false
     }
 
+    // If data is null, no matching row — username is unique
     return !data
   }
 
@@ -84,7 +86,8 @@ export default function EditProfilePage() {
       const { error: emailError } = await supabase.auth.updateUser({ email })
 
       if (emailError) {
-        if (emailError.message.includes('already registered')) {
+        // Check by status code (422) for "already registered" rather than message string
+        if ('status' in emailError && emailError.status === 422) {
           setError('This email is already in use by another account.')
         } else {
           setError(`Failed to update email: ${emailError.message}`)
@@ -115,6 +118,13 @@ export default function EditProfilePage() {
     setUsernameError(null)
 
     try {
+      const trimmedFullName = fullName.trim()
+      if (!trimmedFullName) {
+        setError('Full name cannot be empty.')
+        setSaving(false)
+        return
+      }
+
       // Check username uniqueness
       if (username && username !== profile?.username) {
         const isUnique = await checkUsernameUnique(username)
@@ -126,7 +136,7 @@ export default function EditProfilePage() {
       }
 
       // Update profile
-      const updates: { full_name: string; username?: string | null } = { full_name: fullName }
+      const updates: { full_name: string; username?: string | null } = { full_name: trimmedFullName }
       if (username !== profile?.username) {
         updates.username = username || null
       }
@@ -138,7 +148,7 @@ export default function EditProfilePage() {
 
       if (updateError) throw updateError
 
-      // Refresh session to get updated profile
+      // Refresh the session so AuthContext re-fetches the updated profile data
       await refreshSession()
 
       router.push('/profile')

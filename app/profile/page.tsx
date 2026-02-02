@@ -8,6 +8,10 @@ import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
 import { MoreVertical, User, Pencil, BadgeCheck, CreditCard, Bell, Settings2, HelpCircle, LogOut, ChevronRight, Lock } from '@/components/ui/icons'
+import { toast } from 'sonner'
+import ConfirmModal from '@/components/ui/ConfirmModal'
+
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 
 export default function ProfilePage() {
   const { user, profile, loading, signOut, refreshSession } = useAuth()
@@ -16,6 +20,7 @@ export default function ProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -31,6 +36,7 @@ export default function ProfilePage() {
   }
 
   const handleAvatarClick = () => {
+    if (uploadingAvatar) return
     fileInputRef.current?.click()
   }
 
@@ -39,44 +45,56 @@ export default function ProfilePage() {
       return
     }
 
+    if (uploadingAvatar) return
+
     const file = event.target.files[0]
 
-    // Validate file size (max 5MB)
-    const MAX_SIZE = 5 * 1024 * 1024 // 5MB
-    if (file.size > MAX_SIZE) {
-      alert('Image too large. Maximum size is 5MB.')
+    // File validation
+    const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error('Please upload a valid image file (JPEG, PNG, GIF, or WebP)')
       return
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Please use JPG, PNG, GIF, or WebP.')
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('Image must be less than 5MB')
+      return
+    }
+
+    // Validate and extract file extension
+    const rawExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
+    const fileExt = ALLOWED_EXTENSIONS.includes(rawExt) ? rawExt : 'bin'
+    if (fileExt === 'bin') {
+      toast.error('Invalid file extension')
       return
     }
 
     setUploadingAvatar(true)
 
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`
+
     try {
-      // Delete old avatar if exists
+      // Delete old avatar if exists, with ownership validation
       if (profile?.avatar_url) {
         const oldPath = profile.avatar_url.split('/avatars/')[1]
-        if (oldPath) {
-          await supabase.storage.from('avatars').remove([oldPath])
+        if (oldPath && oldPath.startsWith(`${user.id}-`)) {
+          const { error: deleteError } = await supabase.storage.from('avatars').remove([oldPath])
+          if (deleteError) {
+            logger.error('Failed to delete old avatar:', deleteError)
+          }
         }
       }
 
-      // Upload new avatar
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`
-
+      // Upload new avatar (no upsert — filenames are unique via timestamp)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, { upsert: true })
+        .upload(fileName, file)
 
       if (uploadError) {
         logger.error('Upload error:', uploadError)
-        alert(`Upload failed: ${uploadError.message}`)
+        toast.error(`Upload failed: ${uploadError.message}`)
         return
       }
 
@@ -91,16 +109,22 @@ export default function ProfilePage() {
         .eq('id', user.id)
 
       if (updateError) {
+        // Rollback: delete the newly uploaded file since profile update failed
         logger.error('Profile update error:', updateError)
-        alert(`Failed to save: ${updateError.message}`)
+        const { error: rollbackError } = await supabase.storage.from('avatars').remove([fileName])
+        if (rollbackError) {
+          logger.error('Rollback delete failed:', rollbackError)
+        }
+        toast.error(`Failed to save: ${updateError.message}`)
         return
       }
 
       await refreshSession()
+      toast.success('Avatar updated successfully')
       logger.debug('Avatar updated successfully')
     } catch (error) {
-      logger.error('Avatar error:', error)
-      alert('An unexpected error occurred. Please try again.')
+      logger.error('Error uploading avatar:', error)
+      toast.error('Error updating avatar!')
     } finally {
       setUploadingAvatar(false)
     }
@@ -108,19 +132,22 @@ export default function ProfilePage() {
 
   const handleResetPassword = async () => {
     if (!user?.email) return
+    setShowResetPasswordModal(true)
+  }
 
-    const confirmed = window.confirm(`Send password reset email to ${user.email}?`)
-    if (!confirmed) return
+  const confirmResetPassword = async () => {
+    setShowResetPasswordModal(false)
+    if (!user?.email) return
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
         redirectTo: `${window.location.origin}/auth/update-password`,
       })
       if (error) throw error
-      alert('Password reset email sent!')
+      toast.success('Password reset email sent!')
     } catch (error) {
       logger.error('Error sending reset password email:', error)
-      alert('Failed to send reset email.')
+      toast.error('Failed to send reset email.')
     }
   }
 
@@ -161,11 +188,26 @@ export default function ProfilePage() {
         onChange={handleAvatarChange}
         className="hidden"
         accept="image/*"
+        aria-label="Upload profile picture"
       />
-      
+
       {/* Profile Header */}
       <section className="flex flex-col items-center pt-2 pb-2">
-        <div className="relative mb-4 group cursor-pointer" onClick={handleAvatarClick}>
+        <div
+          className="relative mb-4 group cursor-pointer"
+          onClick={handleAvatarClick}
+          onKeyDown={(e) => {
+            if (e.key === ' ') {
+              e.preventDefault();
+              handleAvatarClick();
+            } else if (e.key === 'Enter') {
+              handleAvatarClick();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Click to change profile picture"
+        >
           {/* Molten Ring Effect */}
           <div className="absolute -inset-1 bg-gradient-to-tr from-primary via-orange-500 to-yellow-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
           <div
@@ -208,7 +250,7 @@ export default function ProfilePage() {
         <h3 className="py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Account</h3>
         <div className="flex flex-col -mx-4">
           {/* Personal Information */}
-          <button 
+          <button
             onClick={() => router.push('/profile/edit')}
             className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group"
           >
@@ -223,7 +265,7 @@ export default function ProfilePage() {
           </button>
 
           {/* Reset Password */}
-          <button 
+          <button
             onClick={handleResetPassword}
             className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group"
           >
@@ -313,6 +355,18 @@ export default function ProfilePage() {
           </div>
         </div>
       </section>
+
+      {/* Reset Password Confirmation Modal */}
+      {showResetPasswordModal && (
+        <ConfirmModal
+          title="Reset Password"
+          message={`Send password reset email to ${user?.email}?`}
+          confirmText="Send Email"
+          cancelText="Cancel"
+          onConfirm={confirmResetPassword}
+          onCancel={() => setShowResetPasswordModal(false)}
+        />
+      )}
     </MobileLayout>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 
@@ -31,6 +31,7 @@ export function useUnreadCount({ userId, isTrainer, isClient }: UseUnreadCountOp
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const conversationIdsRef = useRef<string[]>([])
 
   const fetchUnreadCount = useCallback(async () => {
     if (!userId) {
@@ -64,6 +65,9 @@ export function useUnreadCount({ userId, isTrainer, isClient }: UseUnreadCountOp
         if (convError) throw convError
         conversationIds = conversations?.map(c => c.id) || []
       }
+
+      // Store conversation IDs in ref for real-time subscription filtering
+      conversationIdsRef.current = conversationIds
 
       if (conversationIds.length === 0) {
         setUnreadCount(0)
@@ -116,8 +120,11 @@ export function useUnreadCount({ userId, isTrainer, isClient }: UseUnreadCountOp
           table: 'messages',
         },
         (payload) => {
-          // If the new message is not from the current user, increment count
-          if (payload.new.sender_id !== userId) {
+          // If the new message is not from the current user and belongs to user's conversations, increment count
+          if (
+            payload.new.sender_id !== userId &&
+            conversationIdsRef.current.includes(payload.new.conversation_id)
+          ) {
             setUnreadCount(prev => Math.min(prev + 1, 99))
           }
         }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -108,6 +109,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} font-[--font-space-grotesk] antialiased bg-background-dark text-white`}
       >
         <Providers>{children}</Providers>
+        <Toaster
+          theme="dark"
+          position="bottom-center"
+          toastOptions={{
+            style: {
+              background: '#2C2C2C',
+              border: '1px solid #3f3f46',
+              color: '#fff',
+            },
+          }}
+        />
         <InstallPrompt />
         <UpdatePrompt />
         <SpeedInsights />
