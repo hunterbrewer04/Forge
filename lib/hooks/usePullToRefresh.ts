@@ -25,7 +25,7 @@ export function usePullToRefresh({
 
     // Only activate when scrolled to top
     if (container.scrollTop === 0) {
-      startYRef.current = 'touches' in e ? e.touches[0].clientY : e.clientY
+      startYRef.current = e.touches[0].clientY
       isActiveRef.current = true
     }
   }, [isRefreshing])
@@ -36,7 +36,7 @@ export function usePullToRefresh({
     const container = containerRef.current
     if (!container) return
 
-    const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    const currentY = e.touches[0].clientY
     const delta = currentY - startYRef.current
 
     // Only pull down from top
