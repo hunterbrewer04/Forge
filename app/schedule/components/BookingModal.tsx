@@ -21,6 +21,8 @@ export default function BookingModal({
 }: BookingModalProps) {
   const [modalState, setModalState] = useState<ModalState>('confirm')
   const [errorMessage, setErrorMessage] = useState<string>('')
+  const [translateY, setTranslateY] = useState(0)
+  const [touchStartY, setTouchStartY] = useState(0)
 
   // Refs for cleanup - prevent state updates after unmount
   const mountedRef = useRef(true)
@@ -97,12 +99,35 @@ export default function BookingModal({
       onClose()
       setModalState('confirm')
       setErrorMessage('')
+      setTranslateY(0)
     }
   }
 
   const handleRetry = () => {
     setModalState('confirm')
     setErrorMessage('')
+  }
+
+  // Swipe-to-dismiss handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.touches[0].clientY)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const currentY = e.touches[0].clientY
+    const delta = currentY - touchStartY
+    // Only allow downward swipes
+    if (delta > 0) {
+      setTranslateY(delta)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (translateY > 100) {
+      handleClose()
+    } else {
+      setTranslateY(0)
+    }
   }
 
   return (
@@ -114,7 +139,27 @@ export default function BookingModal({
       />
 
       {/* Modal Content */}
-      <div className="relative w-full max-w-md bg-surface-dark rounded-t-2xl p-6 animate-slide-up safe-area-bottom">
+      <div
+        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl p-6 animate-slide-up safe-area-bottom overflow-hidden"
+        style={{
+          transform: `translateY(${translateY}px)`,
+          transition: translateY === 0 ? 'transform 0.3s ease-out' : 'none'
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Session Type Color Header Bar */}
+        <div
+          className="absolute top-0 left-0 right-0 h-1"
+          style={{ backgroundColor: session.session_type?.color || '#ff6714' }}
+        />
+
+        {/* Drag Handle */}
+        <div className="flex justify-center pt-2 pb-3">
+          <div className="w-10 h-1 bg-gray-600 rounded-full" />
+        </div>
+
         {/* Close Button */}
         <button
           onClick={handleClose}
@@ -183,7 +228,7 @@ export default function BookingModal({
 
             {/* Availability */}
             <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mb-3">
                 <span className="text-gray-400">Availability</span>
                 <span
                   className={`font-bold ${
@@ -196,6 +241,37 @@ export default function BookingModal({
                   {session.availability.capacity} {session.availability.spots_left === 1 ? 'spot' : 'spots'} left
                 </span>
               </div>
+
+              {/* Capacity Visual */}
+              {session.availability.capacity <= 10 ? (
+                <div className="flex gap-1.5 justify-center">
+                  {Array.from({ length: session.availability.capacity }).map((_, i) => {
+                    const bookedCount = session.availability.capacity - session.availability.spots_left
+                    const isFilled = i < bookedCount
+                    return (
+                      <div
+                        key={i}
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          isFilled ? 'bg-primary' : 'bg-gray-700'
+                        }`}
+                      />
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all"
+                    style={{
+                      width: `${
+                        ((session.availability.capacity - session.availability.spots_left) /
+                          session.availability.capacity) *
+                        100
+                      }%`,
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -227,9 +303,10 @@ export default function BookingModal({
         {/* Success State */}
         {modalState === 'success' && (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle size={40} className="text-green-500" />
-            </div>
+            <svg className="w-16 h-16 mb-4" viewBox="0 0 52 52">
+              <circle className="animate-checkmark-circle" cx="26" cy="26" r="25" fill="none" stroke="#22c55e" strokeWidth="2" />
+              <path className="animate-checkmark" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+            </svg>
             <h3 className="text-xl font-bold text-white mb-2">Booking Confirmed!</h3>
             <p className="text-gray-400 text-center">
               You&apos;re booked for {session.title}

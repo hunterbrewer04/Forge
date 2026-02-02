@@ -2,32 +2,23 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import MobileLayout from '@/components/layout/MobileLayout'
-import { User, ChevronLeft, ChevronRight, Clock, Zap, Lock, Plus, Check, RefreshCw } from '@/components/ui/icons'
+import { User, Plus, RefreshCw } from '@/components/ui/icons'
+import { useScheduleData } from '@/lib/hooks/useScheduleData'
+import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh'
+import { hapticLight } from '@/lib/utils/haptics'
+import CalendarStrip from './components/CalendarStrip'
+import SessionCard from './components/SessionCard'
+import NextUpCard from './components/NextUpCard'
+import SessionFilters from './components/SessionFilters'
+import EmptyState from './components/EmptyState'
 import BookingModal from './components/BookingModal'
 import CancelBookingModal from './components/CancelBookingModal'
-import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
-import { getLocalDateString } from '@/lib/utils/date'
+import type { SessionWithDetails } from '@/lib/types/sessions'
 
 type TabType = 'upcoming' | 'history'
-
-// Generate dates for the calendar strip
-function generateDates(baseDate: Date): { day: string; date: number; fullDate: Date; isoDate: string }[] {
-  const dates = []
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(baseDate)
-    date.setDate(baseDate.getDate() + i)
-    dates.push({
-      day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      date: date.getDate(),
-      fullDate: date,
-      isoDate: date.toISOString().split('T')[0],
-    })
-  }
-  return dates
-}
 
 export default function SchedulePage() {
   const { user, profile, loading: authLoading } = useAuth()
@@ -35,131 +26,38 @@ export default function SchedulePage() {
 
   const [activeTab, setActiveTab] = useState<TabType>('upcoming')
   const [activeFilter, setActiveFilter] = useState<string>('all')
-  const [selectedDateIndex, setSelectedDateIndex] = useState(0)
-  const [sessions, setSessions] = useState<SessionWithDetails[]>([])
-  const [sessionTypes, setSessionTypes] = useState<SessionType[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  })
 
   // Booking modal state
   const [selectedSession, setSelectedSession] = useState<SessionWithDetails | null>(null)
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
 
-  // Ref for aborting in-flight requests on navigation/unmount
-  const abortControllerRef = useRef<AbortController | null>(null)
+  // Data hook
+  const {
+    sessions,
+    loading,
+    error,
+    refreshing,
+    fetchSessions,
+    datesWithSessions,
+    filters,
+  } = useScheduleData({ userId: user?.id })
 
-  // Generate calendar dates starting from today
-  const baseDate = useMemo(() => new Date(), [])
-  const calendarDates = useMemo(() => generateDates(baseDate), [baseDate])
-  const currentMonth = baseDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-
-  // Fetch session types on mount
-  useEffect(() => {
-    async function fetchSessionTypes() {
-      try {
-        const response = await fetch('/api/sessions?status=scheduled&limit=1')
-        if (response.ok) {
-          // We'll extract types from sessions or fetch separately
-        }
-      } catch (err) {
-        console.error('Failed to fetch session types:', err)
-      }
-    }
-    fetchSessionTypes()
-  }, [])
-
-  // Fetch sessions for selected date or all upcoming
-  const fetchSessions = useCallback(async (isRefresh = false) => {
-    // Abort any in-flight request before starting a new one
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-    abortControllerRef.current = new AbortController()
-    const signal = abortControllerRef.current.signal
-
-    if (isRefresh) {
-      setRefreshing(true)
-    } else {
-      setLoading(true)
-    }
-    setError(null)
-
-    try {
-      // Fetch upcoming sessions from today for the next 2 weeks
-      const todayLocal = getLocalDateString()
-      const twoWeeksLater = new Date()
-      twoWeeksLater.setDate(twoWeeksLater.getDate() + 14)
-      const toDate = twoWeeksLater.toISOString().split('T')[0]
-      const url = `/api/sessions?from=${todayLocal}&to=${toDate}&status=scheduled`
-
-      const response = await fetch(url, { signal })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch sessions')
-      }
-
-      const data = await response.json()
-
-      // Check if request was aborted before updating state
-      if (signal.aborted) return
-
-      setSessions(data.sessions || [])
-
-      // Extract unique session types from sessions
-      const types = new Map<string, SessionType>()
-      data.sessions?.forEach((session: SessionWithDetails) => {
-        if (session.session_type) {
-          types.set(session.session_type.id, session.session_type)
-        }
-      })
-      setSessionTypes(Array.from(types.values()))
-    } catch (err) {
-      // Ignore abort errors - they're expected on navigation/unmount
-      if (err instanceof Error && err.name === 'AbortError') return
-
-      setError(err instanceof Error ? err.message : 'Failed to load sessions')
-      console.error('Failed to fetch sessions:', err)
-    } finally {
-      // Only update loading states if not aborted
-      if (!signal.aborted) {
-        setLoading(false)
-        setRefreshing(false)
-      }
-    }
-  }, [])
-
-  // Fetch sessions on mount
-  useEffect(() => {
-    if (user) {
-      fetchSessions()
-    }
-
-    // Cleanup: abort any in-flight requests on unmount or dependency change
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
-  }, [user, fetchSessions])
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!user) return
-
-    const interval = setInterval(() => {
-      fetchSessions(true)
-    }, 30000)
-
-    return () => {
-      clearInterval(interval)
-      // Also abort any in-flight refresh request
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
-  }, [user, fetchSessions])
+  // Pull-to-refresh
+  const {
+    pullDistance,
+    isRefreshing: ptrRefreshing,
+    handlers: ptrHandlers,
+    containerRef,
+  } = usePullToRefresh({
+    onRefresh: async () => {
+      await fetchSessions()
+    },
+  })
 
   // Filter sessions by type
   const filteredSessions = useMemo(() => {
@@ -167,15 +65,16 @@ export default function SchedulePage() {
     return sessions.filter((s) => s.session_type?.slug === activeFilter)
   }, [sessions, activeFilter])
 
-  // Compute dates that have sessions for dot indicators
-  const datesWithSessions = useMemo(() => {
-    const dateSet = new Set<string>()
-    filteredSessions.forEach((s) => {
-      const dateKey = s.starts_at.split('T')[0]
-      dateSet.add(dateKey)
+  // Compute booked dates for calendar
+  const bookedDates = useMemo(() => {
+    const dates = new Set<string>()
+    sessions.forEach((s) => {
+      if (s.user_booking) {
+        dates.add(s.starts_at.split('T')[0])
+      }
     })
-    return dateSet
-  }, [filteredSessions])
+    return dates
+  }, [sessions])
 
   // Filter sessions based on active tab
   const tabFilteredSessions = useMemo(() => {
@@ -188,13 +87,11 @@ export default function SchedulePage() {
     return filteredSessions.filter((s) => s.starts_at >= now)
   }, [filteredSessions, activeTab])
 
-  // Get sessions for the selected date in the calendar strip
+  // Get sessions for selected date in calendar strip
   const selectedDateSessions = useMemo(() => {
     if (activeTab === 'history') return []
-    const selectedIso = calendarDates[selectedDateIndex]?.isoDate
-    if (!selectedIso) return []
-    return tabFilteredSessions.filter((s) => s.starts_at.startsWith(selectedIso))
-  }, [tabFilteredSessions, selectedDateIndex, calendarDates, activeTab])
+    return tabFilteredSessions.filter((s) => s.starts_at.startsWith(selectedDate))
+  }, [tabFilteredSessions, selectedDate, activeTab])
 
   // Group sessions by date
   const groupedSessions = useMemo(() => {
@@ -207,7 +104,7 @@ export default function SchedulePage() {
     tabFilteredSessions.forEach((session) => {
       const sessionDate = new Date(session.starts_at)
       sessionDate.setHours(0, 0, 0, 0)
-      const dateKey = sessionDate.toISOString().split('T')[0]
+      const dateKey = session.starts_at.split('T')[0]
 
       if (!groups[dateKey]) {
         let label: string
@@ -227,7 +124,6 @@ export default function SchedulePage() {
       groups[dateKey].sessions.push(session)
     })
 
-    // Sort by date
     return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([dateKey, group]) => ({ dateKey, ...group }))
@@ -235,59 +131,38 @@ export default function SchedulePage() {
 
   // Get user's next booked session
   const nextBookedSession = useMemo(() => {
-    const booked = sessions.find((s) => s.user_booking)
-    if (booked) {
-      return {
-        name: booked.title,
-        time: new Date(booked.starts_at).toLocaleString('en-US', {
-          weekday: 'short',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        }),
-        coach: booked.trainer?.full_name || 'Trainer',
-        session: booked,
-      }
-    }
-    return null
+    const now = new Date().toISOString()
+    return sessions.find((s) => s.user_booking && s.starts_at >= now) || null
   }, [sessions])
 
-  // Build filter options from session types
-  const filters = useMemo(() => {
-    const baseFilters = [{ key: 'all', label: 'All Sessions' }]
-    const typeFilters = sessionTypes.map((t) => ({
-      key: t.slug,
-      label: t.name,
-    }))
-    return [...baseFilters, ...typeFilters]
-  }, [sessionTypes])
-
-  // Handle booking
-  const handleBookSession = (session: SessionWithDetails) => {
+  // Handlers
+  const handleBookSession = useCallback((session: SessionWithDetails) => {
+    hapticLight()
     setSelectedSession(session)
     setShowBookingModal(true)
-  }
+  }, [])
 
-  // Handle cancel booking
-  const handleCancelBooking = (session: SessionWithDetails) => {
+  const handleCancelBooking = useCallback((session: SessionWithDetails) => {
+    hapticLight()
     setSelectedSession(session)
     setShowCancelModal(true)
-  }
+  }, [])
 
-  // Handle booking success
-  const handleBookingSuccess = () => {
-    fetchSessions(true)
-  }
+  const handleTapSession = useCallback((session: SessionWithDetails) => {
+    router.push(`/schedule/${session.id}`)
+  }, [router])
 
-  // Handle cancel success
-  const handleCancelSuccess = () => {
-    fetchSessions(true)
-  }
+  const handleBookingSuccess = useCallback(() => {
+    fetchSessions()
+  }, [fetchSessions])
 
-  // Handle manual refresh
-  const handleRefresh = () => {
-    fetchSessions(true)
-  }
+  const handleCancelSuccess = useCallback(() => {
+    fetchSessions()
+  }, [fetchSessions])
+
+  const handleRefresh = useCallback(() => {
+    fetchSessions()
+  }, [fetchSessions])
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -308,7 +183,17 @@ export default function SchedulePage() {
     return null
   }
 
-  // Custom TopBar content for schedule page
+  // Get selected date label for empty state
+  const selectedDateLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
+
+  // Active filter label for empty state
+  const activeFilterLabel = filters.find((f) => f.key === activeFilter)?.label || ''
+
+  // TopBar right content
   const topBarRightContent = (
     <div className="flex gap-2 items-center">
       <button
@@ -333,204 +218,174 @@ export default function SchedulePage() {
       title="Schedule"
       topBarRightContent={topBarRightContent}
     >
-      {/* Navigation Tabs */}
-      <div className="flex gap-6 text-sm font-semibold uppercase tracking-wider -mt-2">
-        <button
-          onClick={() => setActiveTab('upcoming')}
-          className={`pb-3 border-b-2 transition-colors ${
-            activeTab === 'upcoming'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-400 hover:text-white'
-          }`}
+      {/* Pull-to-Refresh Indicator */}
+      {(pullDistance > 0 || ptrRefreshing) && (
+        <div
+          className="flex justify-center -mt-4 mb-2 overflow-hidden"
+          style={{ height: pullDistance > 0 ? pullDistance : 40 }}
         >
-          Upcoming
-        </button>
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`pb-3 border-b-2 transition-colors ${
-            activeTab === 'history'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-gray-400 hover:text-white'
-          }`}
-        >
-          History
-        </button>
-      </div>
-
-      {/* Next Up Card - Only show if user has a booking */}
-      {nextBookedSession && (
-        <div className="bg-surface-dark rounded-lg p-4 shadow-md border-l-4 border-primary flex justify-between items-center">
-          <div>
-            <p className="text-xs font-bold text-primary uppercase mb-1">Next Up</p>
-            <h3 className="text-lg font-bold leading-tight text-white">{nextBookedSession.name}</h3>
-            <p className="text-sm text-gray-400 mt-1">
-              {nextBookedSession.time} &bull; {nextBookedSession.coach}
-            </p>
-          </div>
-          <button
-            onClick={() => handleCancelBooking(nextBookedSession.session)}
-            className="bg-[#3a2e27] text-xs font-bold px-3 py-2 rounded uppercase tracking-wide hover:bg-[#4a3b32] transition-colors text-white"
-          >
-            Cancel
-          </button>
+          <div
+            className={`w-8 h-8 border-2 border-primary border-t-transparent rounded-full ${
+              ptrRefreshing ? 'ptr-spinner' : ''
+            }`}
+            style={{
+              transform: `scale(${Math.min(pullDistance / 80, 1)})`,
+              opacity: Math.min(pullDistance / 40, 1),
+            }}
+          />
         </div>
       )}
 
-      {/* Calendar Strip - Only show for upcoming tab */}
-      {activeTab === 'upcoming' && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-white">{currentMonth}</h3>
-            <div className="flex gap-2">
-              <button className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
-                <ChevronLeft size={16} strokeWidth={2} />
-              </button>
-              <button className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
-                <ChevronRight size={16} strokeWidth={2} />
-              </button>
-            </div>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar snap-x -mx-4 px-4">
-            {calendarDates.map((dateItem, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedDateIndex(index)}
-                className={`flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 rounded-lg transition-all ${
-                  selectedDateIndex === index
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105'
-                    : 'bg-surface-dark border border-gray-700 text-gray-400 hover:border-primary/50'
-                }`}
-              >
-                <span className={`text-xs font-medium ${selectedDateIndex === index ? 'opacity-80' : ''}`}>
-                  {dateItem.day}
-                </span>
-                <span className={`text-xl font-bold ${selectedDateIndex !== index ? 'text-white' : ''}`}>
-                  {dateItem.date}
-                </span>
-                {datesWithSessions.has(dateItem.isoDate) && selectedDateIndex !== index && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary mt-0.5" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Session Type Filters */}
-      <div className="overflow-x-auto no-scrollbar flex gap-3 -mx-4 px-4">
-        {filters.map((filter) => (
+      {/* Content with pull-to-refresh handlers */}
+      <div
+        ref={containerRef}
+        onTouchStart={ptrHandlers.onTouchStart as unknown as React.TouchEventHandler}
+        onTouchMove={ptrHandlers.onTouchMove as unknown as React.TouchEventHandler}
+        onTouchEnd={ptrHandlers.onTouchEnd}
+        className="flex flex-col gap-6"
+      >
+        {/* Navigation Tabs */}
+        <div className="flex gap-6 text-sm font-semibold uppercase tracking-wider -mt-2">
           <button
-            key={filter.key}
-            onClick={() => setActiveFilter(filter.key)}
-            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              activeFilter === filter.key
-                ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
-                : 'bg-surface-dark border border-gray-700 text-gray-300'
+            onClick={() => setActiveTab('upcoming')}
+            className={`pb-3 border-b-2 transition-colors ${
+              activeTab === 'upcoming'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
-            {filter.label}
+            Upcoming
           </button>
-        ))}
-      </div>
-
-      {/* Loading State */}
-      {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-gray-400">Loading sessions...</div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <div className="flex flex-col items-center justify-center py-12">
-          <p className="text-red-400 mb-4">{error}</p>
           <button
-            onClick={handleRefresh}
-            className="px-4 py-2 bg-primary text-white rounded-lg font-medium"
+            onClick={() => setActiveTab('history')}
+            className={`pb-3 border-b-2 transition-colors ${
+              activeTab === 'history'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
           >
-            Try Again
+            History
           </button>
         </div>
-      )}
 
-      {/* Empty State */}
-      {!loading && !error && filteredSessions.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-gray-400 mb-2">No sessions available</p>
-          <p className="text-gray-500 text-sm">
-            Try selecting a different filter
-          </p>
-        </div>
-      )}
+        {/* Next Up Card */}
+        {nextBookedSession && activeTab === 'upcoming' && (
+          <NextUpCard
+            session={nextBookedSession}
+            onCancel={() => handleCancelBooking(nextBookedSession)}
+            onViewDetails={() => handleTapSession(nextBookedSession)}
+          />
+        )}
 
-      {/* History Empty State */}
-      {!loading && !error && activeTab === 'history' && tabFilteredSessions.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-gray-400 mb-2">No past sessions yet</p>
-        </div>
-      )}
+        {/* Calendar Strip - Upcoming tab only */}
+        {activeTab === 'upcoming' && (
+          <CalendarStrip
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            datesWithSessions={datesWithSessions}
+            bookedDates={bookedDates}
+          />
+        )}
 
-      {/* Selected Date Sessions */}
-      {!loading && !error && activeTab === 'upcoming' && selectedDateSessions.length > 0 && (
-        <div className="space-y-4 pb-2">
-          <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
-              {calendarDates[selectedDateIndex]?.fullDate.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </h3>
-            <div className="space-y-3">
-              {selectedDateSessions.map((session) => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  onBook={() => handleBookSession(session)}
-                  onCancel={() => handleCancelBooking(session)}
-                />
-              ))}
-            </div>
+        {/* Session Type Filters */}
+        <SessionFilters
+          filters={filters}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-400">Loading sessions...</div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* No sessions on selected date */}
-      {!loading && !error && activeTab === 'upcoming' && selectedDateSessions.length === 0 && filteredSessions.length > 0 && (
-        <div className="text-center py-4 text-gray-500 text-sm border-b border-gray-800 mb-4">
-          No sessions on {calendarDates[selectedDateIndex]?.fullDate.toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'short',
-            day: 'numeric',
-          })}
-        </div>
-      )}
+        {/* Error State */}
+        {error && !loading && (
+          <div className="flex flex-col items-center justify-center py-12">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-primary text-white rounded-lg font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
 
-      {/* All Upcoming Sessions */}
-      {!loading && !error && tabFilteredSessions.length > 0 && (
-        <div className="space-y-4 pb-6">
-          <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-            {activeTab === 'history' ? 'Past Sessions' : 'All Upcoming'}
-          </h3>
-          {groupedSessions.map((group) => (
-            <div key={group.dateKey}>
-              <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">
-                {group.label}
-              </h3>
-              <div className="space-y-3">
-                {group.sessions.map((session) => (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    onBook={() => handleBookSession(session)}
-                    onCancel={() => handleCancelBooking(session)}
-                  />
+        {/* Empty States */}
+        {!loading && !error && (
+          <>
+            {/* No sessions at all */}
+            {filteredSessions.length === 0 && activeTab === 'upcoming' && (
+              activeFilter !== 'all' ? (
+                <EmptyState variant="filter-empty" filterLabel={activeFilterLabel} />
+              ) : (
+                <EmptyState variant="no-sessions" />
+              )
+            )}
+
+            {/* History empty */}
+            {activeTab === 'history' && tabFilteredSessions.length === 0 && (
+              <EmptyState variant="history-empty" />
+            )}
+
+            {/* Selected Date Sessions */}
+            {activeTab === 'upcoming' && filteredSessions.length > 0 && (
+              <>
+                {selectedDateSessions.length > 0 ? (
+                  <div className="space-y-4 pb-2">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                      {selectedDateLabel}
+                    </h3>
+                    <div className="space-y-3">
+                      {selectedDateSessions.map((session) => (
+                        <SessionCard
+                          key={session.id}
+                          session={session}
+                          onBook={() => handleBookSession(session)}
+                          onCancel={() => handleCancelBooking(session)}
+                          onTap={() => handleTapSession(session)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <EmptyState variant="no-sessions-date" dateLabel={selectedDateLabel} />
+                )}
+              </>
+            )}
+
+            {/* All Upcoming / History Sessions */}
+            {tabFilteredSessions.length > 0 && (
+              <div className="space-y-4 pb-6">
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {activeTab === 'history' ? 'Past Sessions' : 'All Upcoming'}
+                </h3>
+                {groupedSessions.map((group) => (
+                  <div key={group.dateKey}>
+                    <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">
+                      {group.label}
+                    </h3>
+                    <div className="space-y-3">
+                      {group.sessions.map((session) => (
+                        <SessionCard
+                          key={session.id}
+                          session={session}
+                          onBook={() => handleBookSession(session)}
+                          onCancel={() => handleCancelBooking(session)}
+                          onTap={() => handleTapSession(session)}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </>
+        )}
+      </div>
 
       {/* Booking Modal */}
       {selectedSession && (
@@ -569,186 +424,5 @@ export default function SchedulePage() {
         </Link>
       )}
     </MobileLayout>
-  )
-}
-
-interface SessionCardProps {
-  session: SessionWithDetails
-  onBook: () => void
-  onCancel: () => void
-}
-
-function SessionCard({ session, onBook, onCancel }: SessionCardProps) {
-  const startTime = new Date(session.starts_at)
-  const time = startTime.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: false,
-  })
-  const period = startTime.getHours() < 12 ? 'AM' : 'PM'
-  const dateLabel = startTime.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  })
-
-  const isBooked = !!session.user_booking
-  const isFull = session.availability.is_full
-  const spotsLeft = session.availability.spots_left
-
-  // Premium session style
-  if (session.is_premium) {
-    return (
-      <div className="group relative bg-gradient-to-r from-surface-dark to-[#3a3a1a] rounded-xl p-4 shadow-sm border border-gold/30 hover:border-gold transition-all">
-        <div className="absolute top-0 right-0 bg-gold text-black text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl uppercase tracking-wider">
-          Premium
-        </div>
-        <div className="flex items-start gap-4">
-          <div className="flex flex-col items-center gap-1 min-w-[3.5rem]">
-            <span className="text-lg font-bold text-gold">{time}</span>
-            <span className="text-xs text-gray-400 uppercase font-bold">{period}</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-xs text-gray-400 mb-1">{dateLabel}</p>
-            <h4 className="text-lg font-bold text-white leading-tight mb-1 group-hover:text-gold transition-colors">
-              {session.title}
-            </h4>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="flex items-center text-xs font-medium text-gray-400 bg-gray-800 px-2 py-0.5 rounded">
-                <Clock size={14} strokeWidth={2} className="mr-1" />
-                {session.duration_minutes} min
-              </span>
-              {isBooked ? (
-                <span className="text-xs font-medium text-green-500 uppercase">Booked</span>
-              ) : spotsLeft !== null && (
-                <span className="text-xs font-medium text-gold">
-                  {spotsLeft === 1 ? '1 spot left' : `${spotsLeft} spots left`}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gray-600 overflow-hidden flex items-center justify-center">
-                <User size={14} strokeWidth={2} className="text-gray-400" />
-              </div>
-              <span className="text-sm font-medium text-gray-300">
-                {session.trainer?.full_name || 'Trainer'}
-              </span>
-            </div>
-          </div>
-          {isBooked ? (
-            <button
-              onClick={onCancel}
-              className="self-center bg-green-500/20 border border-green-500 text-green-500 font-bold p-2 rounded-lg hover:bg-green-500 hover:text-white transition-colors"
-            >
-              <Check size={24} strokeWidth={2} />
-            </button>
-          ) : (
-            <button
-              onClick={onBook}
-              className="self-center bg-gold text-black font-bold p-2 rounded-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-gold/20"
-            >
-              <Zap size={24} strokeWidth={2} />
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // Full session style (not booked by user)
-  if (isFull && !isBooked) {
-    return (
-      <div className="group relative bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-800 opacity-70">
-        <div className="flex items-start gap-4">
-          <div className="flex flex-col items-center gap-1 min-w-[3.5rem]">
-            <span className="text-lg font-bold text-gray-500">{time}</span>
-            <span className="text-xs text-gray-600 uppercase font-bold">{period}</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-xs text-gray-500 mb-1">{dateLabel}</p>
-            <h4 className="text-lg font-bold text-gray-400 leading-tight mb-1">{session.title}</h4>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="flex items-center text-xs font-medium text-gray-600 bg-gray-800/50 px-2 py-0.5 rounded">
-                <Clock size={14} strokeWidth={2} className="mr-1" />
-                {session.duration_minutes} min
-              </span>
-              <span className="text-xs font-medium text-red-500 uppercase">Full</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gray-600 overflow-hidden grayscale opacity-50 flex items-center justify-center">
-                <User size={14} strokeWidth={2} className="text-gray-400" />
-              </div>
-              <span className="text-sm font-medium text-gray-500">
-                {session.trainer?.full_name || 'Trainer'}
-              </span>
-            </div>
-          </div>
-          <button className="self-center bg-transparent border border-gray-700 text-gray-600 font-bold p-2 rounded-lg cursor-not-allowed">
-            <Lock size={24} strokeWidth={2} />
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Regular session style (booked or available)
-  return (
-    <div className="group relative bg-surface-dark rounded-xl p-4 shadow-sm border border-gray-800 hover:border-primary/50 transition-all">
-      {isBooked && (
-        <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl uppercase tracking-wider">
-          Booked
-        </div>
-      )}
-      <div className="flex items-start gap-4">
-        <div className="flex flex-col items-center gap-1 min-w-[3.5rem]">
-          <span className={`text-lg font-bold ${isBooked ? 'text-green-500' : 'text-white'}`}>
-            {time}
-          </span>
-          <span className="text-xs text-gray-400 uppercase font-bold">{period}</span>
-        </div>
-        <div className="flex-1">
-          <p className="text-xs text-gray-400 mb-1">{dateLabel}</p>
-          <h4 className={`text-lg font-bold leading-tight mb-1 transition-colors ${
-            isBooked ? 'text-green-500' : 'text-white group-hover:text-primary'
-          }`}>
-            {session.title}
-          </h4>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="flex items-center text-xs font-medium text-gray-400 bg-gray-800 px-2 py-0.5 rounded">
-              <Clock size={14} strokeWidth={2} className="mr-1" />
-              {session.duration_minutes} min
-            </span>
-            {isBooked ? (
-              <span className="text-xs font-medium text-green-500">Your spot reserved</span>
-            ) : spotsLeft !== null && (
-              <span className="text-xs font-medium text-primary">{spotsLeft === 1 ? '1 spot left' : `${spotsLeft} spots left`}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-gray-600 overflow-hidden flex items-center justify-center">
-              <User size={14} strokeWidth={2} className="text-gray-400" />
-            </div>
-            <span className="text-sm font-medium text-gray-300">
-              {session.trainer?.full_name || 'Trainer'}
-            </span>
-          </div>
-        </div>
-        {isBooked ? (
-          <button
-            onClick={onCancel}
-            className="self-center bg-green-500/20 border border-green-500 text-green-500 font-bold p-2 rounded-lg hover:bg-green-500 hover:text-white transition-colors"
-          >
-            <Check size={24} strokeWidth={2} />
-          </button>
-        ) : (
-          <button
-            onClick={onBook}
-            className="self-center bg-white text-black font-bold p-2 rounded-lg hover:bg-primary hover:text-white transition-colors shadow-lg"
-          >
-            <Plus size={24} strokeWidth={2} />
-          </button>
-        )}
-      </div>
-    </div>
   )
 }

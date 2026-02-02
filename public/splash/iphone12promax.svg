@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1284" height="2778" viewBox="0 0 1284 2778" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1284" height="2778" fill="#1C1C1C"/>
+
+  <!-- Flame Logo (centered and scaled) -->
+  <g transform="translate(642, 1210) scale(6)">
+    <path d="M0 -10 C-4 -2, -10 2, -10 10 C-10 16, -6 20, 0 20 C6 20, 10 16, 10 10 C10 6, 8 2, 4 -2 C6 4, 4 8, 2 8 C0 8, -2 4, 0 -2 Z" fill="#ff6714"/>
+  </g>
+
+  <!-- Text -->
+  <text x="642" y="1520" text-anchor="middle" fill="#ff6714" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="72" letter-spacing="18">FORGE</text>
+</svg>

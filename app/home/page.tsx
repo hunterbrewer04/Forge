@@ -9,6 +9,7 @@ import type { ProfileJoin } from '@/lib/types/database'
 import MobileLayout from '@/components/layout/MobileLayout'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
+import Image from 'next/image'
 import { User, Calendar, Mail, Plus, Users, TrendingUp } from '@/components/ui/icons'
 
 interface Stats {
@@ -133,6 +134,14 @@ export default function HomePage() {
     >
       {/* Hero Section */}
       <section className="flex flex-col gap-1">
+        <Image
+          src="/forge-logo.png"
+          alt="Forge Sports Performance"
+          width={180}
+          height={120}
+          className="object-contain mb-2"
+          priority
+        />
         <h1 className="text-2xl font-bold uppercase tracking-tighter leading-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-stone-200 to-stone-400">
           Legends aren&apos;t born—they&apos;re <span className="text-primary">forged.</span>
         </h1>

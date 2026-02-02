@@ -45,10 +45,25 @@
   }
 }
 
+html, body {
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: "Space Grotesk", Arial, Helvetica, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, nav, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea, select {
+  -webkit-appearance: none;
+  font-size: 16px;
 }
 
 /* Animations */
@@ -134,4 +149,74 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #ff6714;
+}
+
+/* iOS Touch Active States */
+button:active, a:active, [role="button"]:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+
+/* View Transitions */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+::view-transition-old(root) {
+  animation: page-fade-out 0.15s ease-in forwards;
+}
+
+::view-transition-new(root) {
+  animation: page-fade-in 0.15s ease-out forwards;
+}
+
+/* Pull-to-refresh spinner */
+@keyframes ptr-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ptr-spinner {
+  animation: ptr-spin 0.8s linear infinite;
+}
+
+/* Animated success checkmark */
+@keyframes checkmark-draw {
+  from { stroke-dashoffset: 48; }
+  to { stroke-dashoffset: 0; }
+}
+
+.animate-checkmark {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: checkmark-draw 0.4s ease-out 0.2s forwards;
+}
+
+@keyframes checkmark-circle {
+  from { stroke-dashoffset: 166; }
+  to { stroke-dashoffset: 0; }
+}
+
+.animate-checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: checkmark-circle 0.6s ease-out forwards;
 }
