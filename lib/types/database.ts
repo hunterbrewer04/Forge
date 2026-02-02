@@ -2,6 +2,8 @@
 export interface Profile {
   id: string
   full_name: string | null
+  avatar_url: string | null
+  username: string | null
   is_trainer: boolean
   is_client: boolean
   is_admin: boolean

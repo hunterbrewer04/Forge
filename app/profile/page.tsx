@@ -8,9 +8,10 @@ import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
 import { MoreVertical, User, Pencil, BadgeCheck, CreditCard, Bell, Settings2, HelpCircle, LogOut, ChevronRight, Lock } from '@/components/ui/icons'
-import { useToast } from '@/lib/hooks/useToast'
-import Toast from '@/components/ui/Toast'
+import { toast } from 'sonner'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 
 export default function ProfilePage() {
   const { user, profile, loading, signOut, refreshSession } = useAuth()
@@ -19,7 +20,6 @@ export default function ProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
-  const { toasts, showToast, removeToast } = useToast()
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
 
   // Redirect to login if not authenticated
@@ -54,49 +54,77 @@ export default function ProfilePage() {
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      showToast('Please upload a valid image file (JPEG, PNG, GIF, or WebP)', 'error')
+      toast.error('Please upload a valid image file (JPEG, PNG, GIF, or WebP)')
       return
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      showToast('Image must be less than 5MB', 'error')
+      toast.error('Image must be less than 5MB')
+      return
+    }
+
+    // Validate and extract file extension
+    const rawExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
+    const fileExt = ALLOWED_EXTENSIONS.includes(rawExt) ? rawExt : 'bin'
+    if (fileExt === 'bin') {
+      toast.error('Invalid file extension')
       return
     }
 
     setUploadingAvatar(true)
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}-${Math.random()}.${fileExt}`
-    const filePath = `${fileName}`
+
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
     try {
-      // Upload image to avatars bucket with upsert
+      // Delete old avatar if exists, with ownership validation
+      if (profile?.avatar_url) {
+        const oldPath = profile.avatar_url.split('/avatars/')[1]
+        if (oldPath && oldPath.startsWith(`${user.id}-`)) {
+          const { error: deleteError } = await supabase.storage.from('avatars').remove([oldPath])
+          if (deleteError) {
+            logger.error('Failed to delete old avatar:', deleteError)
+          }
+        }
+      }
+
+      // Upload new avatar (no upsert — filenames are unique via timestamp)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true })
+        .upload(fileName, file)
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        logger.error('Upload error:', uploadError)
+        toast.error(`Upload failed: ${uploadError.message}`)
+        return
+      }
 
-      // Get public URL
+      // Get public URL and update profile
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath)
+        .getPublicUrl(fileName)
 
-      // Update profile
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
         .eq('id', user.id)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        // Rollback: delete the newly uploaded file since profile update failed
+        logger.error('Profile update error:', updateError)
+        const { error: rollbackError } = await supabase.storage.from('avatars').remove([fileName])
+        if (rollbackError) {
+          logger.error('Rollback delete failed:', rollbackError)
+        }
+        toast.error(`Failed to save: ${updateError.message}`)
+        return
+      }
 
-      // Refresh local state
       await refreshSession()
-
-      showToast('Avatar updated successfully', 'success')
+      toast.success('Avatar updated successfully')
       logger.debug('Avatar updated successfully')
     } catch (error) {
       logger.error('Error uploading avatar:', error)
-      showToast('Error updating avatar!', 'error')
+      toast.error('Error updating avatar!')
     } finally {
       setUploadingAvatar(false)
     }
@@ -116,10 +144,10 @@ export default function ProfilePage() {
         redirectTo: `${window.location.origin}/auth/update-password`,
       })
       if (error) throw error
-      showToast('Password reset email sent!', 'success')
+      toast.success('Password reset email sent!')
     } catch (error) {
       logger.error('Error sending reset password email:', error)
-      showToast('Failed to send reset email.', 'error')
+      toast.error('Failed to send reset email.')
     }
   }
 
@@ -206,6 +234,9 @@ export default function ProfilePage() {
         </div>
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-white uppercase">{displayName}</h1>
+          {profile?.username && (
+            <p className="text-gray-400 text-sm">@{profile.username}</p>
+          )}
           <div className="flex items-center justify-center gap-2">
             <BadgeCheck size={18} strokeWidth={2} className="text-gold" />
             <p className="text-gold text-sm font-bold tracking-wider uppercase">Elite Member</p>
@@ -219,7 +250,7 @@ export default function ProfilePage() {
         <h3 className="py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Account</h3>
         <div className="flex flex-col -mx-4">
           {/* Personal Information */}
-          <button 
+          <button
             onClick={() => router.push('/profile/edit')}
             className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group"
           >
@@ -234,7 +265,7 @@ export default function ProfilePage() {
           </button>
 
           {/* Reset Password */}
-          <button 
+          <button
             onClick={handleResetPassword}
             className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group"
           >
@@ -324,17 +355,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </section>
-
-      {/* Toast Notifications */}
-      {toasts.map((toast, index) => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          index={index}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
 
       {/* Reset Password Confirmation Modal */}
       {showResetPasswordModal && (
