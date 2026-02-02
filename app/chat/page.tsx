@@ -200,10 +200,10 @@ export default function ChatPage() {
     return (
       <div className="min-h-screen bg-background-dark flex flex-col">
         {/* Show skeleton loading with optional refresh after timeout */}
-        <header className="flex-none bg-background-dark border-b border-white/10 px-4 pt-safe-top pb-4">
+        <header className="flex-none bg-background-dark border-b border-white/10 px-4 pt-safe-top pb-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="size-11 rounded-full bg-stone-700 animate-pulse" />
+              <div className="size-10 rounded-xl bg-white/5 animate-pulse" />
               <div className="h-7 w-24 bg-stone-700 rounded animate-pulse" />
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function ChatPage() {
         </div>
         {loadingTimeout && (
           <div className="fixed bottom-20 left-0 right-0 px-4 z-50">
-            <div className="bg-[#2C2C2C] border border-steel/30 rounded-xl p-4 shadow-xl max-w-md mx-auto">
+            <div className="bg-[#232323] border border-white/10 rounded-2xl p-4 shadow-xl max-w-md mx-auto">
               <p className="text-stone-300 text-sm mb-3 text-center">
                 Taking longer than expected...
               </p>
@@ -242,13 +242,13 @@ export default function ChatPage() {
   if (user && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-dark">
-        <div className="text-center max-w-md px-6">
+        <div className="bg-[#232323] rounded-2xl border border-white/5 p-8 text-center max-w-md mx-6">
           <div className="text-red-500 text-lg font-semibold mb-4">Profile Not Found</div>
           <p className="text-stone-400 mb-6">{error || 'Your user profile could not be loaded. Please contact support.'}</p>
           <div className="space-y-3">
             <button
               onClick={() => signOut().then(() => router.push('/login'))}
-              className="w-full px-6 py-3 text-white bg-red-600 rounded-lg hover:bg-red-500 font-medium"
+              className="w-full px-6 py-3 text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 font-medium"
             >
               Sign Out
             </button>
@@ -273,31 +273,31 @@ export default function ChatPage() {
 
   // Mobile header component
   const mobileHeader = (
-    <header className="flex-none bg-background-dark sticky top-0 z-50 border-b border-white/10 px-4 pt-safe-top pb-4">
+    <header className="flex-none bg-background-dark sticky top-0 z-50 border-b border-white/10 px-4 pt-safe-top pb-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/home')}
-            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] -ml-2 rounded-full hover:bg-white/5 transition-colors text-white active:scale-95"
+            className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-white active:scale-95"
             aria-label="Go back"
           >
-            <ArrowLeft size={28} strokeWidth={2} />
+            <ArrowLeft size={24} strokeWidth={2} />
           </button>
-          <h1 className="text-2xl font-bold uppercase tracking-wider text-white">Comms</h1>
+          <h1 className="text-xl font-extrabold uppercase tracking-[0.2em] text-white">Comms</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full hover:bg-white/5 transition-colors relative active:scale-95"
+            className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 transition-colors relative active:scale-95"
             aria-label="Notifications"
           >
-            <Bell size={24} strokeWidth={2} className="text-primary" />
+            <Bell size={22} strokeWidth={2} className="text-primary" />
             <span className="absolute top-1.5 right-1.5 size-2.5 bg-gold rounded-full ring-2 ring-background-dark"></span>
           </button>
           <button
-            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] bg-primary hover:bg-orange-600 transition-colors rounded-full shadow-lg shadow-primary/20 active:scale-95"
+            className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] bg-primary hover:bg-orange-600 transition-colors rounded-xl shadow-lg shadow-primary/20 active:scale-95"
             aria-label="New conversation"
           >
-            <Plus size={24} strokeWidth={2} className="text-white" />
+            <Plus size={22} strokeWidth={2} className="text-white" />
           </button>
         </div>
       </div>
@@ -312,7 +312,7 @@ export default function ChatPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-3 py-3 border-none rounded-lg leading-5 bg-[#2C2C2C] text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm"
+            className="block w-full pl-10 pr-3 py-3 border border-white/5 rounded-xl leading-5 bg-[#2C2C2C] text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm shadow-inner"
             placeholder="Search conversations..."
           />
         </div>
@@ -341,7 +341,7 @@ export default function ChatPage() {
     if (error) {
       return (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md px-6">
+          <div className="bg-[#232323] rounded-2xl border border-white/5 p-8 text-center max-w-md mx-6">
             <div className="text-red-500 text-lg font-semibold mb-4">Error</div>
             <p className="text-stone-400 mb-6">{error}</p>
             <button

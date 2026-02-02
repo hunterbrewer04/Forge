@@ -45,15 +45,15 @@ export default function ChatLayout({
             ${showActiveChat ? "hidden" : "flex"}
             lg:flex flex-col
             w-full lg:w-80 xl:w-96
-            lg:border-r lg:border-steel/20
+            lg:border-r lg:border-white/5
             bg-background-dark
             overflow-hidden
           `}
         >
           {/* Desktop List Header */}
-          <div className="hidden lg:block px-4 py-4 border-b border-steel/20 space-y-4">
+          <div className="hidden lg:block px-4 py-4 border-b border-white/5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Messages</h2>
+              <h2 className="text-xl font-extrabold text-white">Messages</h2>
               <button
                 className="flex items-center justify-center size-10 bg-primary hover:bg-orange-600 transition-colors rounded-full shadow-lg shadow-primary/20 active:scale-95"
                 aria-label="New conversation"
@@ -91,7 +91,7 @@ export default function ChatLayout({
           {activeChat || (
             <div className="hidden lg:flex flex-1 items-center justify-center">
               <div className="text-center">
-                <div className="size-24 rounded-full bg-stone-800 flex items-center justify-center mx-auto mb-4">
+                <div className="size-24 rounded-2xl bg-[#232323] flex items-center justify-center mx-auto mb-4">
                   <svg
                     className="size-12 text-stone-600"
                     fill="none"

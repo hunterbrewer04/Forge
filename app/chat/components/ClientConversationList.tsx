@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { fetchClientConversation } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
-import { AlertCircle, RefreshCw } from '@/components/ui/icons'
+import { AlertCircle, RefreshCw, User } from '@/components/ui/icons'
 
 interface Conversation {
   id: string
@@ -72,7 +72,7 @@ export default function ClientConversationList({
       <div className="h-full flex items-center justify-center bg-background-dark p-4">
         <button
           onClick={loadConversation}
-          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-white/5 rounded-xl transition-colors group"
+          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-white/5 rounded-2xl transition-colors group"
         >
           <div className="size-14 rounded-full bg-red-500/10 flex items-center justify-center mb-3 group-hover:bg-red-500/20 transition-colors">
             <AlertCircle size={28} strokeWidth={2} className="text-red-400" />
@@ -100,22 +100,29 @@ export default function ClientConversationList({
   return (
     <div className="h-full bg-background-dark overflow-y-auto">
       <div className="p-4 border-b border-white/10">
-        <h2 className="text-lg font-semibold text-white">Messages</h2>
+        <h2 className="text-lg font-bold text-white">Messages</h2>
       </div>
-      <div className="divide-y divide-white/5">
+      <div className="mx-4 mt-4">
         <button
           onClick={() => onSelectConversation(conversation.id)}
-          className={`w-full p-4 text-left hover:bg-white/5 transition-colors ${
+          className={`w-full rounded-2xl bg-[#232323] border p-4 text-left hover:bg-white/5 transition-colors ${
             selectedConversationId === conversation.id
-              ? 'bg-white/10 border-l-4 border-primary'
-              : 'border-l-4 border-transparent'
+              ? 'border-primary/30 bg-primary/5'
+              : 'border-white/5'
           }`}
         >
-          <div className="font-medium text-white">
-            {conversation.trainer_name}
-          </div>
-          <div className="text-xs text-stone-500 mt-1">
-            Your Trainer
+          <div className="flex items-center gap-3">
+            <div className="size-12 rounded-xl bg-stone-700 flex items-center justify-center shrink-0">
+              <User size={24} strokeWidth={2} className="text-stone-400" />
+            </div>
+            <div>
+              <div className="text-base font-bold text-white">
+                {conversation.trainer_name}
+              </div>
+              <div className="text-xs text-primary font-medium mt-0.5">
+                Your Trainer
+              </div>
+            </div>
           </div>
         </button>
       </div>

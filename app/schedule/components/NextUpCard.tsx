@@ -60,91 +60,91 @@ export default function NextUpCard({ session, onCancel, onViewDetails }: NextUpC
     return () => clearInterval(interval)
   }, [session.starts_at])
 
-  const borderColor = session.session_type?.color || '#ff6714'
   const trainerName = session.trainer?.full_name || 'Trainer TBD'
   const trainerAvatar = session.trainer?.avatar_url
 
   return (
-    <div
-      className="bg-[#2a2a2a] rounded-xl p-4 shadow-md"
-      style={{ borderLeft: `4px solid ${borderColor}` }}
-    >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <p className="text-xs font-medium text-primary uppercase tracking-wide mb-1">
-            NEXT UP
-          </p>
-          <h3 className="text-white font-bold text-lg leading-tight mb-2">
-            {session.title}
-          </h3>
-
-          {/* Session details */}
-          <div className="space-y-1.5">
-            {/* Time */}
-            <div className="flex items-center gap-2 text-sm text-stone-400">
-              <Clock size={16} className="text-stone-500" />
-              <span>
-                {new Date(session.starts_at).toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                })}
-              </span>
+    <div className="relative rounded-2xl p-[1px] bg-gradient-to-br from-primary via-orange-500 to-amber-500">
+      <div className="bg-[#1e1e1e] rounded-2xl p-5">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="bg-primary/15 text-primary text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full w-fit mb-3">
+              NEXT UP
             </div>
+            <h3 className="text-white font-bold text-lg leading-tight mb-3">
+              {session.title}
+            </h3>
 
-            {/* Trainer */}
-            <div className="flex items-center gap-2 text-sm text-stone-400">
-              {trainerAvatar ? (
-                <div className="relative w-4 h-4 rounded-full overflow-hidden">
-                  <Image
-                    src={trainerAvatar}
-                    alt={trainerName}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              ) : (
-                <User size={16} className="text-stone-500" />
-              )}
-              <span>{trainerName}</span>
+            {/* Session details */}
+            <div className="space-y-2">
+              {/* Time */}
+              <div className="flex items-center gap-2 text-sm text-stone-400">
+                <Clock size={16} className="text-stone-500" />
+                <span>
+                  {new Date(session.starts_at).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </span>
+              </div>
+
+              {/* Trainer */}
+              <div className="flex items-center gap-2 text-sm text-stone-400">
+                {trainerAvatar ? (
+                  <div className="relative w-4 h-4 rounded-full overflow-hidden">
+                    <Image
+                      src={trainerAvatar}
+                      alt={trainerName}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <User size={16} className="text-stone-500" />
+                )}
+                <span>{trainerName}</span>
+              </div>
             </div>
+          </div>
+
+          {/* Countdown badge */}
+          <div className={`
+            px-3 py-2 rounded-lg font-semibold whitespace-nowrap ml-3
+            ${status === 'in-progress'
+              ? 'bg-green-500/15 text-green-400 shadow-lg shadow-green-500/20'
+              : status === 'soon'
+              ? 'bg-orange-500/15 text-orange-400 animate-pulse'
+              : 'bg-stone-700/50 text-stone-300'}
+          `}>
+            <div className="text-3xl font-bold">{countdown || '...'}</div>
           </div>
         </div>
 
-        {/* Countdown badge */}
-        <div className={`
-          px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap ml-3
-          ${status === 'in-progress' ? 'bg-green-500/10 text-green-400' :
-            status === 'soon' ? 'bg-primary/10 text-primary' :
-            'bg-stone-700/50 text-stone-300'}
-        `}>
-          {countdown || 'Loading...'}
-        </div>
-      </div>
+        {/* Location if available */}
+        {session.location && (
+          <div className="mb-4 text-sm text-stone-500">
+            {session.location}
+          </div>
+        )}
 
-      {/* Location if available */}
-      {session.location && (
-        <div className="mb-3 text-sm text-stone-500">
-          {session.location}
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <button
+            onClick={onViewDetails}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg font-medium text-sm hover:bg-white/10 transition-colors"
+          >
+            Details
+            <ChevronRight size={16} />
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg font-medium text-sm hover:bg-red-500/20 transition-colors"
+          >
+            Cancel
+          </button>
         </div>
-      )}
-
-      {/* Action buttons */}
-      <div className="flex gap-2 mt-4">
-        <button
-          onClick={onViewDetails}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-transparent border border-stone-600 text-white rounded-lg font-medium text-sm hover:bg-stone-800/50 transition-colors"
-        >
-          Details
-          <ChevronRight size={16} />
-        </button>
-        <button
-          onClick={onCancel}
-          className="flex-1 px-4 py-2.5 bg-red-500/10 text-red-400 rounded-lg font-medium text-sm hover:bg-red-500/20 transition-colors"
-        >
-          Cancel
-        </button>
       </div>
     </div>
   )

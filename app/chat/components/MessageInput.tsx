@@ -256,9 +256,9 @@ export default function MessageInput({
             </span>
             <span className="text-sm text-stone-400">{uploadProgress}%</span>
           </div>
-          <div className="w-full bg-stone-700 rounded-full h-1.5">
+          <div className="w-full bg-[#232323] rounded-full h-1.5">
             <div
-              className="bg-primary h-1.5 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-primary to-orange-400 h-1.5 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -279,7 +279,7 @@ export default function MessageInput({
             key={reply}
             onClick={() => handleQuickReply(reply)}
             disabled={sending || uploading}
-            className="shrink-0 bg-[#2C2C2C] border border-white/5 hover:bg-white/10 text-xs font-medium text-white px-3 py-1.5 rounded-full transition-colors whitespace-nowrap disabled:opacity-50"
+            className="shrink-0 bg-[#232323] border border-white/10 hover:border-primary/30 hover:bg-primary/5 text-xs font-medium text-stone-300 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap disabled:opacity-50"
           >
             {reply}
           </button>
@@ -302,14 +302,14 @@ export default function MessageInput({
           type="button"
           onClick={handleUploadButtonClick}
           disabled={sending || uploading}
-          className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-[#2C2C2C] text-stone-500 hover:text-primary transition-colors shrink-0 mb-0.5 disabled:opacity-50 active:scale-95"
+          className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-xl bg-[#232323] border border-white/5 text-stone-500 hover:text-primary transition-colors shrink-0 mb-0.5 disabled:opacity-50 active:scale-95"
           aria-label="Upload photo or video"
         >
           <Plus size={20} strokeWidth={2} />
         </button>
 
         {/* Text input */}
-        <div className="flex-1 bg-[#2C2C2C] rounded-[1.25rem] min-h-[44px] flex items-center px-4 py-2 border border-transparent focus-within:border-primary/50 transition-colors">
+        <div className="flex-1 bg-[#232323] rounded-2xl border border-white/5 focus-within:border-primary/40 min-h-[44px] flex items-center px-4 py-2 transition-colors">
           <textarea
             ref={textareaRef}
             value={message}
@@ -332,7 +332,7 @@ export default function MessageInput({
         <button
           type="submit"
           disabled={!message.trim() || sending || uploading}
-          className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-primary hover:bg-orange-600 text-white shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0 mb-0.5 disabled:opacity-50 disabled:bg-stone-600 disabled:shadow-none"
+          className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-xl bg-primary hover:bg-orange-600 text-white shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0 mb-0.5 disabled:opacity-50 disabled:bg-[#232323] disabled:border disabled:border-white/5 disabled:text-stone-600 disabled:shadow-none"
           aria-label="Send message"
         >
           <Send size={20} strokeWidth={2} className="ml-0.5" />

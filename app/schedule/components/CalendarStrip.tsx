@@ -83,15 +83,15 @@ export default function CalendarStrip({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="bg-[#232323] rounded-2xl p-4 border border-white/5">
       {/* Header: Month/Year + Navigation */}
-      <div className="flex items-center justify-between px-4">
-        <h2 className="text-lg font-semibold text-white">{monthYear}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-bold text-white">{monthYear}</h2>
         <div className="flex items-center gap-2">
           {showTodayButton && (
             <button
               onClick={handleTodayClick}
-              className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+              className="bg-primary/15 text-primary border border-primary/30 px-3 py-1.5 text-xs font-medium rounded-full hover:bg-primary/20 transition-colors"
             >
               Today
             </button>
@@ -99,14 +99,14 @@ export default function CalendarStrip({
           <button
             onClick={handlePrevWeek}
             disabled={weekOffset === 0}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="size-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             aria-label="Previous week"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={handleNextWeek}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="size-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
             aria-label="Next week"
           >
             <ChevronRight className="w-5 h-5" />
@@ -114,10 +114,13 @@ export default function CalendarStrip({
         </div>
       </div>
 
+      {/* Separator */}
+      <div className="h-px bg-white/5 my-3" />
+
       {/* Calendar Strip */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-2 px-4 overflow-x-auto snap-x snap-mandatory no-scrollbar"
+        className="flex gap-2 overflow-x-auto snap-x snap-mandatory no-scrollbar"
       >
         {weekDates.map((dateItem) => {
           const isSelected = dateItem.isoDate === selectedDate
@@ -131,13 +134,13 @@ export default function CalendarStrip({
               ref={isSelected ? selectedRef : null}
               onClick={() => onSelectDate(dateItem.isoDate)}
               className={`
-                flex-shrink-0 snap-start w-14 h-20 rounded-lg flex flex-col items-center justify-center gap-1
+                flex-shrink-0 snap-start flex-1 min-w-[44px] h-[72px] rounded-xl flex flex-col items-center justify-center gap-1
                 transition-all duration-200
                 ${
                   isSelected
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105'
+                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
                     : isToday
-                    ? 'bg-surface-dark border border-primary/30 text-gray-300 ring-1 ring-primary/20'
+                    ? 'bg-surface-dark border border-gray-700 text-gray-300 ring-1 ring-primary/40'
                     : 'bg-surface-dark border border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300'
                 }
               `}
@@ -148,10 +151,10 @@ export default function CalendarStrip({
               {/* Dot indicators */}
               <div className="flex gap-1 h-1.5">
                 {hasSessions && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <div className={`w-1.5 h-1.5 rounded-full bg-primary ${hasBooking ? 'animate-pulse' : ''}`} />
                 )}
                 {hasBooking && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 )}
               </div>
             </button>

@@ -45,11 +45,18 @@ export default function EmptyState({ variant, dateLabel, filterLabel }: EmptySta
 
   return (
     <div className="flex flex-col items-center justify-center py-12">
-      <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center mb-3">
-        <Icon className="w-6 h-6 text-gray-500" />
+      <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center mb-4">
+        <Icon className="w-7 h-7 text-stone-500" />
       </div>
-      <p className="text-gray-400 font-medium">{content.title}</p>
-      <p className="text-gray-500 text-sm mt-1">{content.subtitle}</p>
+      <p className="text-base font-medium text-stone-300 mb-2">{content.title}</p>
+      <p className="text-sm text-stone-500 max-w-[250px] text-center">{content.subtitle}</p>
+
+      {/* Decorative dots */}
+      <div className="flex gap-1.5 mt-4">
+        <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+        <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+        <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+      </div>
     </div>
   )
 }

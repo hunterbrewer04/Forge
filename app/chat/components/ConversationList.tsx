@@ -94,7 +94,7 @@ export default function ConversationList({
       <div className="h-full flex items-center justify-center bg-background-dark p-4">
         <button
           onClick={loadConversations}
-          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-white/5 rounded-xl transition-colors group"
+          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-white/5 rounded-2xl transition-colors group"
         >
           <div className="size-14 rounded-full bg-red-500/10 flex items-center justify-center mb-3 group-hover:bg-red-500/20 transition-colors">
             <AlertCircle size={28} strokeWidth={2} className="text-red-400" />
@@ -122,17 +122,17 @@ export default function ConversationList({
   const ConversationItem = ({ conversation, isPinned = false }: { conversation: Conversation; isPinned?: boolean }) => (
     <button
       onClick={() => onSelectConversation(conversation.id)}
-      className={`group relative flex items-center p-3 w-full text-left transition-all cursor-pointer active:scale-[0.98] ${
+      className={`group relative flex items-center w-full text-left transition-all cursor-pointer active:scale-[0.98] ${
         isPinned
-          ? 'rounded-xl bg-[#262626] hover:bg-[#333] border border-white/5 shadow-sm mb-3'
-          : 'rounded-xl hover:bg-white/5 border-b border-white/5'
-      } ${selectedConversationId === conversation.id ? 'bg-white/10' : ''}`}
+          ? 'rounded-2xl bg-[#262626] border border-gold/10 hover:border-gold/20 p-4'
+          : 'rounded-xl hover:bg-white/5 p-3'
+      } ${selectedConversationId === conversation.id ? 'bg-primary/10 border-l-3 border-primary' : ''}`}
     >
       {/* Avatar */}
       <div className="relative shrink-0">
         <div
-          className={`rounded-full bg-center bg-cover bg-stone-700 flex items-center justify-center ${
-            isPinned ? 'size-14 border-2 border-gold' : 'size-12'
+          className={`bg-center bg-cover bg-stone-700 flex items-center justify-center ${
+            isPinned ? 'size-14 rounded-xl ring-2 ring-gold/30' : 'size-11 rounded-xl'
           }`}
           style={conversation.avatar_url ? { backgroundImage: `url('${conversation.avatar_url}')` } : undefined}
         >
@@ -141,8 +141,8 @@ export default function ConversationList({
           )}
         </div>
         {conversation.is_online && (
-          <span className={`absolute bottom-0 right-0 bg-green-500 rounded-full border-2 border-background-dark ${
-            isPinned ? 'size-3.5' : 'size-3'
+          <span className={`absolute bottom-0 right-0 bg-emerald-400 rounded-full ring-2 ring-[#262626] ${
+            isPinned ? 'size-3' : 'size-3'
           }`} />
         )}
       </div>
@@ -156,12 +156,12 @@ export default function ConversationList({
               <BadgeCheck size={14} strokeWidth={2} className="text-gold" aria-label="Certified" />
             )}
           </h4>
-          <span className="text-xs font-medium text-stone-500">
+          <span className="text-[11px] font-medium text-stone-600">
             {conversation.last_message_time}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <p className="text-sm truncate text-stone-500">
+          <p className="text-sm truncate text-stone-500 line-clamp-1">
             {conversation.last_message}
           </p>
         </div>
@@ -169,7 +169,7 @@ export default function ConversationList({
 
       {/* Chevron on hover */}
       <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronRight size={20} strokeWidth={2} className="text-stone-500" />
+        <ChevronRight size={20} strokeWidth={2} className="text-stone-600" />
       </div>
     </button>
   )
@@ -179,7 +179,7 @@ export default function ConversationList({
       {/* Pinned Section */}
       {pinnedConversations.length > 0 && (
         <div className="px-4 py-4">
-          <h3 className="text-xs font-bold text-gold uppercase tracking-widest mb-3 flex items-center gap-1">
+          <h3 className="text-[11px] font-bold text-gold/80 uppercase tracking-[0.15em] mb-3 flex items-center gap-1">
             <Pin size={14} strokeWidth={2} /> Pinned
           </h3>
           <div className="space-y-3">
@@ -193,7 +193,7 @@ export default function ConversationList({
       {/* Recent Section */}
       {recentConversations.length > 0 && (
         <div className="px-4 pb-20">
-          <h3 className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-3">Recent</h3>
+          <h3 className="text-[11px] font-bold text-stone-600 uppercase tracking-[0.15em] mb-3">Recent</h3>
           <div className="space-y-1">
             {recentConversations.map((conversation) => (
               <ConversationItem key={conversation.id} conversation={conversation} />

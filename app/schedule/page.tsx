@@ -174,7 +174,10 @@ export default function SchedulePage() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-dark">
-        <div className="text-stone-400">Loading...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <div className="text-stone-400 text-sm">Loading...</div>
+        </div>
       </div>
     )
   }
@@ -225,7 +228,7 @@ export default function SchedulePage() {
           style={{ height: pullDistance > 0 ? pullDistance : 40 }}
         >
           <div
-            className={`w-8 h-8 border-2 border-primary border-t-transparent rounded-full ${
+            className={`w-8 h-8 border-2 border-primary/50 border-t-primary rounded-full ${
               ptrRefreshing ? 'ptr-spinner' : ''
             }`}
             style={{
@@ -248,7 +251,7 @@ export default function SchedulePage() {
         <div className="flex gap-6 text-sm font-semibold uppercase tracking-wider -mt-2">
           <button
             onClick={() => setActiveTab('upcoming')}
-            className={`pb-3 border-b-2 transition-colors ${
+            className={`pb-3 border-b-[3px] transition-colors active:scale-95 ${
               activeTab === 'upcoming'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-gray-400 hover:text-white'
@@ -258,7 +261,7 @@ export default function SchedulePage() {
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`pb-3 border-b-2 transition-colors ${
+            className={`pb-3 border-b-[3px] transition-colors active:scale-95 ${
               activeTab === 'history'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-gray-400 hover:text-white'
@@ -272,7 +275,7 @@ export default function SchedulePage() {
         {profile?.is_trainer && (
           <Link
             href="/schedule/new"
-            className="flex items-center justify-center gap-2 w-full py-3 bg-[#2a2a2a] border border-steel/30 rounded-xl text-white font-semibold text-sm active:bg-[#333] active:border-primary/50 transition-all active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all active:scale-[0.98]"
           >
             <Plus size={18} strokeWidth={2.5} />
             New Session
@@ -308,17 +311,20 @@ export default function SchedulePage() {
         {/* Loading State */}
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <div className="text-gray-400">Loading sessions...</div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <div className="text-stone-400 text-sm">Loading sessions...</div>
+            </div>
           </div>
         )}
 
         {/* Error State */}
         {error && !loading && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <p className="text-red-400 mb-4">{error}</p>
+          <div className="flex flex-col items-center justify-center py-12 bg-[#232323] rounded-2xl border border-red-500/20 p-6">
+            <p className="text-red-400 mb-4 text-center">{error}</p>
             <button
               onClick={handleRefresh}
-              className="px-4 py-2 bg-primary text-white rounded-lg font-medium"
+              className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
             >
               Try Again
             </button>
@@ -371,7 +377,7 @@ export default function SchedulePage() {
             {/* All Upcoming / History Sessions */}
             {tabFilteredSessions.length > 0 && (
               <div className="space-y-4 pb-6">
-                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-widest">
                   {activeTab === 'history' ? 'Past Sessions' : 'All Upcoming'}
                 </h3>
                 {groupedSessions.map((group) => (
