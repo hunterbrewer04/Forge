@@ -106,18 +106,22 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#1C1C1C] px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+          {/* Forge logo placeholder */}
+          <div className="w-12 h-12 bg-[#ff6714] rounded-xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white text-2xl font-bold">F</span>
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-white">
             Create your account
           </h2>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSignup}>
+        <form className="mt-8 space-y-6 bg-[#2a2a2a] border border-stone-700 rounded-2xl p-6" onSubmit={handleSignup}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="rounded-md bg-red-500/10 border border-red-500/20 p-4">
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
 
@@ -134,7 +138,7 @@ export default function SignupPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="relative block w-full rounded-lg border-0 py-3 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                className="relative block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset ring-stone-700 placeholder:text-stone-500 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-[#ff6714] sm:text-sm sm:leading-6"
                 placeholder="Full name"
               />
             </div>
@@ -151,7 +155,7 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="relative block w-full rounded-lg border-0 py-3 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                className="relative block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset ring-stone-700 placeholder:text-stone-500 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-[#ff6714] sm:text-sm sm:leading-6"
                 placeholder="Email address"
               />
             </div>
@@ -170,19 +174,19 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setShowPasswordRequirements(true)}
                 onBlur={() => setShowPasswordRequirements(false)}
-                className={`relative block w-full rounded-lg border-0 py-3 px-4 text-gray-900 ring-1 ring-inset placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
+                className={`relative block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset placeholder:text-stone-500 focus:z-10 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
                   password.length > 0
                     ? passwordStatus.allMet
                       ? 'ring-green-500 focus:ring-green-600'
                       : 'ring-amber-500 focus:ring-amber-600'
-                    : 'ring-gray-300 focus:ring-blue-600'
+                    : 'ring-stone-700 focus:ring-[#ff6714]'
                 }`}
                 placeholder="Password"
               />
               {/* Password requirements indicator */}
               {(showPasswordRequirements || password.length > 0) && (
-                <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs font-medium text-gray-700 mb-2">
+                <div className="mt-2 p-3 bg-[#1C1C1C] rounded-lg">
+                  <p className="text-xs font-medium text-stone-300 mb-2">
                     Password requirements:
                   </p>
                   <ul className="space-y-1">
@@ -190,7 +194,7 @@ export default function SignupPage() {
                       <li
                         key={req.label}
                         className={`text-xs flex items-center gap-2 ${
-                          req.met ? 'text-green-600' : 'text-gray-500'
+                          req.met ? 'text-green-600' : 'text-stone-500'
                         }`}
                       >
                         <span className="flex-shrink-0">
@@ -236,12 +240,12 @@ export default function SignupPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`relative block w-full rounded-lg border-0 py-3 px-4 text-gray-900 ring-1 ring-inset placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
+                className={`relative block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset placeholder:text-stone-500 focus:z-10 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
                   confirmPassword.length > 0
                     ? passwordsMatch
                       ? 'ring-green-500 focus:ring-green-600'
                       : 'ring-red-500 focus:ring-red-600'
-                    : 'ring-gray-300 focus:ring-blue-600'
+                    : 'ring-stone-700 focus:ring-[#ff6714]'
                 }`}
                 placeholder="Confirm password"
               />
@@ -257,17 +261,17 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading || !passwordStatus.allMet || !passwordsMatch}
-              className="group relative flex w-full justify-center rounded-lg bg-blue-600 py-3 px-4 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative flex w-full justify-center rounded-lg bg-[#ff6714] py-3 px-4 text-sm font-semibold text-white hover:bg-orange-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff6714] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Sign up'}
             </button>
           </div>
 
           <div className="text-center text-sm">
-            <span className="text-gray-600">Already have an account? </span>
+            <span className="text-stone-400">Already have an account? </span>
             <Link
               href="/login"
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-[#ff6714] hover:text-orange-400"
             >
               Sign in
             </Link>

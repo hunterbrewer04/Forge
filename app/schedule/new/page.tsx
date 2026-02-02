@@ -177,7 +177,7 @@ export default function NewSessionPage() {
 
   return (
     <MobileLayout title="Create Session" showBack showNotifications={false}>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {error && (
           <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
             <AlertCircle size={20} className="text-red-500 flex-shrink-0" />
