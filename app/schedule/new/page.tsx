@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/icons'
 import type { SessionType } from '@/lib/types/sessions'
 import { getLocalDateString, localInputsToUtc } from '@/lib/utils/date'
+import { toast } from 'sonner'
 
 interface FormData {
   title: string
@@ -36,6 +37,19 @@ export default function NewSessionPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  // Form state
+  const [formData, setFormData] = useState<FormData>({
+    title: '',
+    description: '',
+    session_type_id: '',
+    location: '',
+    starts_at: getLocalDateString(),
+    starts_time: '09:00',
+    duration_minutes: 60,
+    capacity: 8,
+    is_premium: false,
+  })
+
   // Redirect non-trainers
   useEffect(() => {
     if (!authLoading && profile && !profile.is_trainer) {
@@ -49,19 +63,6 @@ export default function NewSessionPage() {
       router.push('/login')
     }
   }, [user, authLoading, router])
-
-  // Form state
-  const [formData, setFormData] = useState<FormData>({
-    title: '',
-    description: '',
-    session_type_id: '',
-    location: '',
-    starts_at: getLocalDateString(),
-    starts_time: '09:00',
-    duration_minutes: 60,
-    capacity: 8,
-    is_premium: false,
-  })
 
   // Fetch session types
   useEffect(() => {
@@ -132,11 +133,13 @@ export default function NewSessionPage() {
       }
 
       setSuccess(true)
+      toast.success('Session created successfully!')
       setTimeout(() => {
-        router.push('/admin/sessions')
+        router.push('/schedule')
       }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create session')
+      toast.error(err instanceof Error ? err.message : 'Failed to create session')
     } finally {
       setIsLoading(false)
     }
@@ -166,7 +169,7 @@ export default function NewSessionPage() {
             <CheckCircle size={40} className="text-green-500" />
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Session Created!</h2>
-          <p className="text-stone-400">Redirecting to sessions...</p>
+          <p className="text-stone-400">Redirecting to schedule...</p>
         </div>
       </MobileLayout>
     )
