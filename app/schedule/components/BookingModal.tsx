@@ -193,7 +193,7 @@ export default function BookingModal({
                   }`}
                 >
                   {session.availability.spots_left} of{' '}
-                  {session.availability.capacity} spots left
+                  {session.availability.capacity} {session.availability.spots_left === 1 ? 'spot' : 'spots'} left
                 </span>
               </div>
             </div>

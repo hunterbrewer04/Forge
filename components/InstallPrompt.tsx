@@ -29,7 +29,7 @@ export default function InstallPrompt() {
     }
 
     // Check if user previously dismissed
-    const dismissed = localStorage.getItem('pwa-install-dismissed')
+    const dismissed = document.cookie.includes('forge-pwa-dismissed')
     if (dismissed) {
       return
     }
@@ -79,7 +79,7 @@ export default function InstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false)
-    localStorage.setItem('pwa-install-dismissed', 'true')
+    document.cookie = 'forge-pwa-dismissed=true; max-age=31536000; path=/'
   }
 
   if (!showPrompt) {
@@ -89,16 +89,16 @@ export default function InstallPrompt() {
   // iOS Install Instructions
   if (isIOS) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-[60] animate-slide-up">
+      <div className="fixed top-0 mt-16 left-0 right-0 bg-[#2a2a2a] border-t border-stone-700 shadow-lg p-4 z-50 animate-slide-up">
         <div className="max-w-md mx-auto">
           <div className="flex items-start gap-3 mb-3">
             <div className="text-3xl">📱</div>
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-1">Install Forge Trainer</h3>
-              <p className="text-sm text-gray-600 mb-2">
+              <h3 className="font-semibold text-white mb-1">Install Forge Trainer</h3>
+              <p className="text-sm text-stone-400 mb-2">
                 Install this app on your iPhone for a better experience:
               </p>
-              <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
+              <ol className="text-xs text-stone-300 space-y-1 list-decimal list-inside">
                 <li>Tap the Share button <span className="inline-block">⬆️</span> in Safari</li>
                 <li>Scroll down and tap "Add to Home Screen"</li>
                 <li>Tap "Add" in the top right corner</li>
@@ -107,7 +107,7 @@ export default function InstallPrompt() {
           </div>
           <button
             onClick={handleDismiss}
-            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-4 py-2 rounded-lg transition-colors"
+            className="w-full bg-stone-700 hover:bg-stone-600 text-stone-300 font-medium px-4 py-2 rounded-lg transition-colors"
           >
             Dismiss
           </button>
@@ -118,25 +118,25 @@ export default function InstallPrompt() {
 
   // Chrome/Edge Android Install Prompt
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-[60] animate-slide-up">
+    <div className="fixed top-0 mt-16 left-0 right-0 bg-[#2a2a2a] border-t border-stone-700 shadow-lg p-4 z-50 animate-slide-up">
       <div className="max-w-md mx-auto flex items-center gap-4">
         <div className="text-3xl">📱</div>
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">Install Forge Trainer</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="font-semibold text-white">Install Forge Trainer</h3>
+          <p className="text-sm text-stone-400">
             Install this app on your device for a better experience
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleInstall}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+            className="bg-[#ff6714] hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
           >
             Install
           </button>
           <button
             onClick={handleDismiss}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+            className="bg-stone-700 hover:bg-stone-600 text-stone-300 font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
           >
             Dismiss
           </button>

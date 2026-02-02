@@ -9,36 +9,12 @@ import type { ProfileJoin } from '@/lib/types/database'
 import MobileLayout from '@/components/layout/MobileLayout'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
-import { User, Flame, Calendar, Mail, Dumbbell, CheckCircle, Trophy, Plus } from '@/components/ui/icons'
+import { User, Calendar, Mail, Plus, Users, TrendingUp } from '@/components/ui/icons'
 
 interface Stats {
   totalConversations: number
   trainerName?: string
   clientsCount?: number
-}
-
-type ActivityIconKey = "checkCircle" | "trophy" | "dumbbell" | "flame"
-
-interface ActivityItem {
-  id: string
-  title: string
-  timestamp: string
-  iconKey: ActivityIconKey
-  iconColor: string
-  xp?: number
-}
-
-function ActivityIcon({ iconKey, size, strokeWidth }: { iconKey: ActivityIconKey; size: number; strokeWidth: number }) {
-  switch (iconKey) {
-    case "checkCircle":
-      return <CheckCircle size={size} strokeWidth={strokeWidth} />;
-    case "trophy":
-      return <Trophy size={size} strokeWidth={strokeWidth} />;
-    case "dumbbell":
-      return <Dumbbell size={size} strokeWidth={strokeWidth} />;
-    case "flame":
-      return <Flame size={size} strokeWidth={strokeWidth} />;
-  }
 }
 
 export default function HomePage() {
@@ -54,24 +30,6 @@ export default function HomePage() {
     isTrainer: profile?.is_trainer,
     isClient: profile?.is_client,
   })
-
-  const [recentActivity] = useState<ActivityItem[]>([
-    {
-      id: '1',
-      title: 'Upper Body Hypertrophy',
-      timestamp: 'Yesterday, 5:30 PM • 1h 15m',
-      iconKey: 'checkCircle',
-      iconColor: 'text-white',
-      xp: 350,
-    },
-    {
-      id: '2',
-      title: 'New PR: Deadlift',
-      timestamp: 'Oct 24 • 405 lbs',
-      iconKey: 'trophy',
-      iconColor: 'text-gold',
-    },
-  ])
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -175,12 +133,34 @@ export default function HomePage() {
     >
       {/* Hero Section */}
       <section className="flex flex-col gap-1">
-        <h1 className="text-4xl font-bold uppercase tracking-tighter leading-[0.9] text-transparent bg-clip-text bg-gradient-to-br from-white via-stone-200 to-stone-500">
-          Legends aren&apos;t<br /> born—they&apos;re<br /> <span className="text-primary">forged.</span>
+        <h1 className="text-2xl font-bold uppercase tracking-tighter leading-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-stone-200 to-stone-400">
+          Legends aren&apos;t born—they&apos;re <span className="text-primary">forged.</span>
         </h1>
         <p className="text-stone-400 text-sm font-medium mt-2 max-w-[80%]">
           Push past your limits. Your next level awaits.
         </p>
+      </section>
+
+      {/* Dashboard Stats */}
+      <section className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4">
+        <div className="flex-shrink-0 flex-1 min-w-[120px] bg-[#2a2a2a] rounded-xl p-3 border border-stone-700/50">
+          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Next Session</p>
+          <p className="text-white font-bold text-sm mt-1 truncate">
+            {loadingStats ? '...' : 'View Schedule'}
+          </p>
+        </div>
+        <div className="flex-shrink-0 flex-1 min-w-[120px] bg-[#2a2a2a] rounded-xl p-3 border border-stone-700/50">
+          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Unread</p>
+          <p className="text-white font-bold text-sm mt-1">
+            {unreadCount > 0 ? `${unreadCount} message${unreadCount !== 1 ? 's' : ''}` : 'All caught up'}
+          </p>
+        </div>
+        <div className="flex-shrink-0 flex-1 min-w-[120px] bg-[#2a2a2a] rounded-xl p-3 border border-stone-700/50">
+          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Clients</p>
+          <p className="text-white font-bold text-sm mt-1">
+            {loadingStats ? '...' : profile.is_trainer ? `${stats.clientsCount || 0} active` : stats.trainerName || 'Coach'}
+          </p>
+        </div>
       </section>
 
       {/* Quick Actions Grid */}
@@ -238,37 +218,38 @@ export default function HomePage() {
             </div>
           </Link>
         )}
-      </section>
 
-      {/* Recent Activity Feed */}
-      <section className="flex flex-col gap-3 pb-6">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-lg font-bold text-white tracking-tight">Recent Activity</h3>
-          <Link href="/activity" className="text-primary text-sm font-medium hover:text-orange-400">
-            View All
-          </Link>
-        </div>
-        <div className="flex flex-col gap-3">
-          {recentActivity.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-center gap-4 bg-[#23160f] border border-steel/20 p-4 rounded-xl"
-            >
-              <div className={`size-12 rounded-full bg-stone-800 flex items-center justify-center shrink-0 ${activity.iconColor}`}>
-                <ActivityIcon iconKey={activity.iconKey} size={24} strokeWidth={2} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-white font-bold truncate">{activity.title}</h4>
-                <p className="text-stone-500 text-xs mt-0.5">{activity.timestamp}</p>
-              </div>
-              {activity.xp && (
-                <div className="text-primary font-bold text-sm">
-                  +{activity.xp} XP
-                </div>
-              )}
+        {/* My Clients - Trainer Only */}
+        {profile.is_trainer && (
+          <Link
+            href="/chat"
+            className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[160px] transition-all active:scale-95 text-left group"
+          >
+            <div className="bg-stone-800 p-2 rounded-lg text-white group-hover:text-primary transition-colors self-start">
+              <Users size={28} strokeWidth={2} />
             </div>
-          ))}
-        </div>
+            <div>
+              <h3 className="text-white text-lg font-bold leading-tight">My Clients</h3>
+              <p className="text-stone-400 text-xs mt-1">{stats.clientsCount || 0} active</p>
+            </div>
+          </Link>
+        )}
+
+        {/* My Progress - Client Only */}
+        {profile.is_client && (
+          <Link
+            href="/profile"
+            className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[160px] transition-all active:scale-95 text-left group"
+          >
+            <div className="bg-stone-800 p-2 rounded-lg text-white group-hover:text-primary transition-colors self-start">
+              <TrendingUp size={28} strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className="text-white text-lg font-bold leading-tight">My Progress</h3>
+              <p className="text-stone-400 text-xs mt-1">View Stats</p>
+            </div>
+          </Link>
+        )}
       </section>
     </MobileLayout>
   )

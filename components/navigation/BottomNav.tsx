@@ -3,16 +3,19 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Calendar, User } from "@/components/ui/icons";
+import { Home, Calendar, User, MessageCircle } from "@/components/ui/icons";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUnreadCount } from "@/lib/hooks/useUnreadCount";
 
 interface NavItem {
   href: string;
-  iconKey: "home" | "calendar" | "profile";
+  iconKey: "home" | "messages" | "calendar" | "profile";
   label: string;
 }
 
 const navItems: NavItem[] = [
   { href: "/home", iconKey: "home", label: "Home" },
+  { href: "/chat", iconKey: "messages", label: "Messages" },
   { href: "/schedule", iconKey: "calendar", label: "Schedule" },
   { href: "/profile", iconKey: "profile", label: "Profile" },
 ];
@@ -21,6 +24,8 @@ function NavIcon({ iconKey, size, strokeWidth }: { iconKey: NavItem["iconKey"]; 
   switch (iconKey) {
     case "home":
       return <Home size={size} strokeWidth={strokeWidth} />;
+    case "messages":
+      return <MessageCircle size={size} strokeWidth={strokeWidth} />;
     case "calendar":
       return <Calendar size={size} strokeWidth={strokeWidth} />;
     case "profile":
@@ -31,14 +36,18 @@ function NavIcon({ iconKey, size, strokeWidth }: { iconKey: NavItem["iconKey"]; 
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, profile } = useAuth();
+  const { unreadCount } = useUnreadCount({
+    userId: user?.id,
+    isTrainer: profile?.is_trainer,
+    isClient: profile?.is_client,
+  });
 
   // Prefetch all nav routes on mount for instant navigation
   useEffect(() => {
     navItems.forEach((item) => {
       router.prefetch(item.href);
     });
-    // Also prefetch chat since it's a common destination
-    router.prefetch("/chat");
   }, [router]);
 
   const isActive = (href: string) => {
@@ -58,10 +67,15 @@ export default function BottomNav() {
             className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${
               isActive(item.href)
                 ? "text-primary"
-                : "text-stone-500 hover:text-stone-300"
+                : "text-stone-400 hover:text-stone-300"
             }`}
           >
-            <NavIcon iconKey={item.iconKey} size={26} strokeWidth={2} />
+            <div className="relative">
+              <NavIcon iconKey={item.iconKey} size={26} strokeWidth={2} />
+              {item.iconKey === "messages" && unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+              )}
+            </div>
             <span
               className={`text-[10px] tracking-wide ${
                 isActive(item.href) ? "font-bold" : "font-medium"

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import MobileLayout from '@/components/layout/MobileLayout'
-import { Bell, User, ChevronLeft, ChevronRight, Clock, Zap, Lock, Plus, Check, RefreshCw } from '@/components/ui/icons'
+import { User, ChevronLeft, ChevronRight, Clock, Zap, Lock, Plus, Check, RefreshCw } from '@/components/ui/icons'
 import BookingModal from './components/BookingModal'
 import CancelBookingModal from './components/CancelBookingModal'
 import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
@@ -167,12 +167,34 @@ export default function SchedulePage() {
     return sessions.filter((s) => s.session_type?.slug === activeFilter)
   }, [sessions, activeFilter])
 
+  // Compute dates that have sessions for dot indicators
+  const datesWithSessions = useMemo(() => {
+    const dateSet = new Set<string>()
+    filteredSessions.forEach((s) => {
+      const dateKey = s.starts_at.split('T')[0]
+      dateSet.add(dateKey)
+    })
+    return dateSet
+  }, [filteredSessions])
+
+  // Filter sessions based on active tab
+  const tabFilteredSessions = useMemo(() => {
+    const now = new Date().toISOString()
+    if (activeTab === 'history') {
+      return filteredSessions
+        .filter((s) => s.starts_at < now)
+        .sort((a, b) => b.starts_at.localeCompare(a.starts_at))
+    }
+    return filteredSessions.filter((s) => s.starts_at >= now)
+  }, [filteredSessions, activeTab])
+
   // Get sessions for the selected date in the calendar strip
   const selectedDateSessions = useMemo(() => {
+    if (activeTab === 'history') return []
     const selectedIso = calendarDates[selectedDateIndex]?.isoDate
     if (!selectedIso) return []
-    return filteredSessions.filter((s) => s.starts_at.startsWith(selectedIso))
-  }, [filteredSessions, selectedDateIndex, calendarDates])
+    return tabFilteredSessions.filter((s) => s.starts_at.startsWith(selectedIso))
+  }, [tabFilteredSessions, selectedDateIndex, calendarDates, activeTab])
 
   // Group sessions by date
   const groupedSessions = useMemo(() => {
@@ -182,7 +204,7 @@ export default function SchedulePage() {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    filteredSessions.forEach((session) => {
+    tabFilteredSessions.forEach((session) => {
       const sessionDate = new Date(session.starts_at)
       sessionDate.setHours(0, 0, 0, 0)
       const dateKey = sessionDate.toISOString().split('T')[0]
@@ -209,7 +231,7 @@ export default function SchedulePage() {
     return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([dateKey, group]) => ({ dateKey, ...group }))
-  }, [filteredSessions])
+  }, [tabFilteredSessions])
 
   // Get user's next booked session
   const nextBookedSession = useMemo(() => {
@@ -298,10 +320,6 @@ export default function SchedulePage() {
       >
         <RefreshCw size={20} strokeWidth={2} />
       </button>
-      <button className="relative p-2 text-gray-300 hover:text-primary transition-colors">
-        <Bell size={24} strokeWidth={2} />
-        <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
-      </button>
       <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden border border-gray-600 flex items-center justify-center">
         <User size={16} strokeWidth={2} className="text-gray-400" />
       </div>
@@ -312,9 +330,7 @@ export default function SchedulePage() {
     <MobileLayout
       showBottomNav={true}
       showNotifications={false}
-      topBarLeftContent={
-        <h2 className="text-xl font-bold uppercase tracking-wide text-white">Session Booking</h2>
-      }
+      title="Schedule"
       topBarRightContent={topBarRightContent}
     >
       {/* Navigation Tabs */}
@@ -360,40 +376,45 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* Calendar Strip */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-bold text-white">{currentMonth}</h3>
-          <div className="flex gap-2">
-            <button className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
-              <ChevronLeft size={16} strokeWidth={2} />
-            </button>
-            <button className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
-              <ChevronRight size={16} strokeWidth={2} />
-            </button>
+      {/* Calendar Strip - Only show for upcoming tab */}
+      {activeTab === 'upcoming' && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-white">{currentMonth}</h3>
+            <div className="flex gap-2">
+              <button className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
+                <ChevronLeft size={16} strokeWidth={2} />
+              </button>
+              <button className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">
+                <ChevronRight size={16} strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar snap-x -mx-4 px-4">
+            {calendarDates.map((dateItem, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedDateIndex(index)}
+                className={`flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 rounded-lg transition-all ${
+                  selectedDateIndex === index
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105'
+                    : 'bg-surface-dark border border-gray-700 text-gray-400 hover:border-primary/50'
+                }`}
+              >
+                <span className={`text-xs font-medium ${selectedDateIndex === index ? 'opacity-80' : ''}`}>
+                  {dateItem.day}
+                </span>
+                <span className={`text-xl font-bold ${selectedDateIndex !== index ? 'text-white' : ''}`}>
+                  {dateItem.date}
+                </span>
+                {datesWithSessions.has(dateItem.isoDate) && selectedDateIndex !== index && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary mt-0.5" />
+                )}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar snap-x -mx-4 px-4">
-          {calendarDates.map((dateItem, index) => (
-            <button
-              key={index}
-              onClick={() => setSelectedDateIndex(index)}
-              className={`flex-shrink-0 snap-start flex flex-col items-center justify-center w-14 h-20 rounded-lg transition-all ${
-                selectedDateIndex === index
-                  ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105'
-                  : 'bg-surface-dark border border-gray-700 text-gray-400 hover:border-primary/50'
-              }`}
-            >
-              <span className={`text-xs font-medium ${selectedDateIndex === index ? 'opacity-80' : ''}`}>
-                {dateItem.day}
-              </span>
-              <span className={`text-xl font-bold ${selectedDateIndex !== index ? 'text-white' : ''}`}>
-                {dateItem.date}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Session Type Filters */}
       <div className="overflow-x-auto no-scrollbar flex gap-3 -mx-4 px-4">
@@ -442,8 +463,15 @@ export default function SchedulePage() {
         </div>
       )}
 
+      {/* History Empty State */}
+      {!loading && !error && activeTab === 'history' && tabFilteredSessions.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-gray-400 mb-2">No past sessions yet</p>
+        </div>
+      )}
+
       {/* Selected Date Sessions */}
-      {!loading && !error && selectedDateSessions.length > 0 && (
+      {!loading && !error && activeTab === 'upcoming' && selectedDateSessions.length > 0 && (
         <div className="space-y-4 pb-2">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
@@ -468,7 +496,7 @@ export default function SchedulePage() {
       )}
 
       {/* No sessions on selected date */}
-      {!loading && !error && selectedDateSessions.length === 0 && filteredSessions.length > 0 && (
+      {!loading && !error && activeTab === 'upcoming' && selectedDateSessions.length === 0 && filteredSessions.length > 0 && (
         <div className="text-center py-4 text-gray-500 text-sm border-b border-gray-800 mb-4">
           No sessions on {calendarDates[selectedDateIndex]?.fullDate.toLocaleDateString('en-US', {
             weekday: 'long',
@@ -479,10 +507,10 @@ export default function SchedulePage() {
       )}
 
       {/* All Upcoming Sessions */}
-      {!loading && !error && filteredSessions.length > 0 && (
+      {!loading && !error && tabFilteredSessions.length > 0 && (
         <div className="space-y-4 pb-6">
           <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-            All Upcoming
+            {activeTab === 'history' ? 'Past Sessions' : 'All Upcoming'}
           </h3>
           {groupedSessions.map((group) => (
             <div key={group.dateKey}>
@@ -594,7 +622,7 @@ function SessionCard({ session, onBook, onCancel }: SessionCardProps) {
                 <span className="text-xs font-medium text-green-500 uppercase">Booked</span>
               ) : spotsLeft !== null && (
                 <span className="text-xs font-medium text-gold">
-                  {spotsLeft === 1 ? 'Only 1 slot' : `${spotsLeft} spots left`}
+                  {spotsLeft === 1 ? '1 spot left' : `${spotsLeft} spots left`}
                 </span>
               )}
             </div>
@@ -693,7 +721,7 @@ function SessionCard({ session, onBook, onCancel }: SessionCardProps) {
             {isBooked ? (
               <span className="text-xs font-medium text-green-500">Your spot reserved</span>
             ) : spotsLeft !== null && (
-              <span className="text-xs font-medium text-primary">{spotsLeft} spots left</span>
+              <span className="text-xs font-medium text-primary">{spotsLeft === 1 ? '1 spot left' : `${spotsLeft} spots left`}</span>
             )}
           </div>
           <div className="flex items-center gap-2">

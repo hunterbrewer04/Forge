@@ -64,7 +64,7 @@ export default function AppLayout({
         </header>
 
         {/* Main content area - responsive max-width */}
-        <main className="flex-1 w-full max-w-md lg:max-w-none mx-auto lg:mx-0 flex flex-col gap-6 px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-8 lg:overflow-y-auto">
+        <main className="flex-1 w-full max-w-md lg:max-w-4xl mx-auto flex flex-col gap-6 px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-8 lg:overflow-y-auto">
           {children}
         </main>
 
