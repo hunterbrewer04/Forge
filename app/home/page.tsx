@@ -132,44 +132,16 @@ export default function HomePage() {
       topBarLeftContent={topBarLeftContent}
       notificationCount={unreadCount}
     >
-      {/* Hero Section */}
-      <section className="flex flex-col gap-1">
+      {/* Brand Logo */}
+      <section className="flex justify-center mb-2">
         <Image
-          src="/forge-logo.png"
+          src="/Forge-Full-Logo.PNG"
           alt="Forge Sports Performance"
-          width={180}
-          height={120}
-          className="object-contain mb-2"
+          width={260}
+          height={160}
+          className="object-contain"
           priority
         />
-        <h1 className="text-2xl font-bold uppercase tracking-tighter leading-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-stone-200 to-stone-400">
-          Legends aren&apos;t born—they&apos;re <span className="text-primary">forged.</span>
-        </h1>
-        <p className="text-stone-400 text-sm font-medium mt-2 max-w-[80%]">
-          Push past your limits. Your next level awaits.
-        </p>
-      </section>
-
-      {/* Dashboard Stats */}
-      <section className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4">
-        <div className="flex-shrink-0 flex-1 min-w-[120px] bg-[#2a2a2a] rounded-xl p-3 border border-stone-700/50">
-          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Next Session</p>
-          <p className="text-white font-bold text-sm mt-1 truncate">
-            {loadingStats ? '...' : 'View Schedule'}
-          </p>
-        </div>
-        <div className="flex-shrink-0 flex-1 min-w-[120px] bg-[#2a2a2a] rounded-xl p-3 border border-stone-700/50">
-          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Unread</p>
-          <p className="text-white font-bold text-sm mt-1">
-            {unreadCount > 0 ? `${unreadCount} message${unreadCount !== 1 ? 's' : ''}` : 'All caught up'}
-          </p>
-        </div>
-        <div className="flex-shrink-0 flex-1 min-w-[120px] bg-[#2a2a2a] rounded-xl p-3 border border-stone-700/50">
-          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Clients</p>
-          <p className="text-white font-bold text-sm mt-1">
-            {loadingStats ? '...' : profile.is_trainer ? `${stats.clientsCount || 0} active` : stats.trainerName || 'Coach'}
-          </p>
-        </div>
       </section>
 
       {/* Quick Actions Grid */}
