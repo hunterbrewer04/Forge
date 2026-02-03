@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
+import type { PostgrestError } from '@supabase/supabase-js'
 
 interface NextSession {
   id: string
@@ -24,6 +25,24 @@ interface HomeData {
   recentActivity: RecentActivity[]
   loading: boolean
   error: string | null
+}
+
+// Type definitions for Supabase relation queries
+interface TrainerRelation {
+  full_name: string | null
+}
+
+interface SessionRelation {
+  id: string
+  title: string
+  starts_at: string
+  location?: string | null
+  trainer: TrainerRelation | TrainerRelation[] | null
+}
+
+interface BookingWithSession {
+  id: string
+  session: SessionRelation | SessionRelation[] | null
 }
 
 export function useHomeData(): HomeData {
@@ -63,7 +82,7 @@ export function useHomeData(): HomeData {
           .gte('session.starts_at', new Date().toISOString())
           .order('session(starts_at)', { ascending: true })
           .limit(1)
-          .single()
+          .single() as { data: BookingWithSession | null; error: PostgrestError | null }
 
         if (nextError && nextError.code !== 'PGRST116') {
           console.error('Error fetching next booking:', nextError)
@@ -87,7 +106,7 @@ export function useHomeData(): HomeData {
           .in('status', ['attended', 'confirmed'])
           .lte('session.starts_at', new Date().toISOString())
           .order('session(starts_at)', { ascending: false })
-          .limit(5)
+          .limit(5) as { data: BookingWithSession[] | null; error: PostgrestError | null }
 
         if (recentError) {
           console.error('Error fetching recent bookings:', recentError)
