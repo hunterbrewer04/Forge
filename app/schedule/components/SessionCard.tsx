@@ -2,6 +2,7 @@
 
 import type { SessionWithDetails } from '@/lib/types/sessions'
 import { Plus, Check, Lock, User, Clock } from '@/components/ui/icons'
+import Image from 'next/image'
 
 interface SessionCardProps {
   session: SessionWithDetails
@@ -28,19 +29,17 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
 
   // Format time
   const startTime = new Date(session.starts_at)
-  const hours12 = startTime.getHours() % 12 || 12
-  const mins = String(startTime.getMinutes()).padStart(2, '0')
-  const timeHour = `${hours12}:${mins}`
-  const timePeriod = startTime.getHours() < 12 ? 'AM' : 'PM'
+  const timeString = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  const [timeHour, timePeriod] = timeString.split(' ')
 
   return (
     <div
       className={`
-        relative bg-[#232323] rounded-2xl overflow-hidden border border-white/5 hover:border-white/10 transition-all
+        relative bg-surface-mid rounded-2xl overflow-hidden border border-white/5 hover:border-white/10 transition-all
         active:scale-[0.98] duration-100
         ${isFull ? 'opacity-60' : ''}
         ${isBooked ? 'bg-green-500/5' : ''}
-        ${is_premium ? 'bg-gradient-to-br from-yellow-500/10 to-[#232323]' : ''}
+        ${is_premium ? 'bg-gradient-to-br from-yellow-500/10 to-surface-mid' : ''}
       `}
     >
       {/* Left color indicator */}
@@ -121,11 +120,15 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
           {trainer && (
             <div className="flex items-center gap-2 bg-white/5 rounded-lg px-2.5 py-1.5 w-fit">
               {trainer.avatar_url ? (
-                <img
-                  src={trainer.avatar_url}
-                  alt={trainer.full_name || 'Trainer'}
-                  className="w-6 h-6 rounded-full object-cover"
-                />
+                <div className="relative w-6 h-6 rounded-full overflow-hidden">
+                  <Image
+                    src={trainer.avatar_url}
+                    alt={trainer.full_name || 'Trainer'}
+                    width={24}
+                    height={24}
+                    className="object-cover"
+                  />
+                </div>
               ) : (
                 <div className="w-6 h-6 rounded-full bg-stone-800 flex items-center justify-center">
                   <User size={14} className="text-stone-400" />

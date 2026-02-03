@@ -86,7 +86,7 @@ export default function HomePage() {
     }
 
     fetchStats()
-  }, [user, profile])
+  }, [user, profile, supabase])
 
   if (loading) {
     return (
@@ -107,16 +107,18 @@ export default function HomePage() {
   const topBarLeftContent = (
     <div className="flex items-center gap-3">
       <div className="relative group cursor-pointer">
-        <div
-          className="size-11 rounded-full bg-center bg-cover border-[2.5px] border-primary ring-2 ring-primary/20 bg-stone-700"
-          style={{
-            backgroundImage: profile.avatar_url
-              ? `url('${profile.avatar_url}')`
-              : undefined
-          }}
-        >
-          {!profile.avatar_url && (
-            <div className="size-full rounded-full flex items-center justify-center text-stone-300">
+        <div className="size-11 rounded-full border-[2.5px] border-primary ring-2 ring-primary/20 bg-stone-700 overflow-hidden">
+          {profile.avatar_url ? (
+            <div className="relative size-full">
+              <Image
+                src={profile.avatar_url}
+                alt={profile.full_name || 'User'}
+                fill
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <div className="size-full flex items-center justify-center text-stone-300">
               <User size={22} strokeWidth={2} />
             </div>
           )}
@@ -137,7 +139,12 @@ export default function HomePage() {
     >
       {/* Brand Logo with Glow */}
       <section className="flex justify-center mb-1 relative">
-        <div className="absolute inset-0 bg-gradient-radial from-primary/5 to-transparent pointer-events-none"></div>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgb(255 103 20 / 0.05) 0%, transparent 70%)'
+          }}
+        ></div>
         <Image
           src="/Forge-Full-Logo.PNG"
           alt="Forge Sports Performance"
@@ -155,7 +162,7 @@ export default function HomePage() {
           href="/schedule"
           className="bg-gradient-to-br from-primary via-orange-500 to-amber-600 active:brightness-90 rounded-xl p-5 flex flex-col justify-between min-h-[170px] shadow-lg shadow-orange-900/20 transition-transform active:scale-95 text-left group relative overflow-hidden"
         >
-          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+          <div className="absolute inset-0 opacity-10 bg-[url('/patterns/carbon-fibre.png')]"></div>
           <div className="bg-black/20 self-start p-2.5 rounded-xl text-white mb-2 z-10 group-hover:bg-black/30 transition-colors w-12 h-12 flex items-center justify-center">
             <Calendar size={32} strokeWidth={2} />
           </div>
@@ -255,7 +262,7 @@ export default function HomePage() {
 
       {/* Stats Summary Section */}
       {!loadingStats && (
-        <section className="flex items-center justify-around py-4 bg-[#232323] rounded-xl border border-white/5">
+        <section className="flex items-center justify-around py-4 bg-surface-mid rounded-xl border border-white/5">
           {profile.is_trainer ? (
             <>
               <div className="text-center">

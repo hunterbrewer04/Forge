@@ -78,13 +78,13 @@ export default function SchedulePage() {
 
   // Filter sessions based on active tab
   const tabFilteredSessions = useMemo(() => {
-    const now = new Date().toISOString()
+    const now = Date.now()
     if (activeTab === 'history') {
       return filteredSessions
-        .filter((s) => s.starts_at < now)
+        .filter((s) => new Date(s.starts_at).getTime() < now)
         .sort((a, b) => b.starts_at.localeCompare(a.starts_at))
     }
-    return filteredSessions.filter((s) => s.starts_at >= now)
+    return filteredSessions.filter((s) => new Date(s.starts_at).getTime() >= now)
   }, [filteredSessions, activeTab])
 
   // Get sessions for selected date in calendar strip
@@ -175,7 +175,7 @@ export default function SchedulePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-dark">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <div className="w-12 h-12 border-[3px] border-primary/30 border-t-primary rounded-full animate-spin" />
           <div className="text-stone-400 text-sm">Loading...</div>
         </div>
       </div>
@@ -242,8 +242,8 @@ export default function SchedulePage() {
       {/* Content with pull-to-refresh handlers */}
       <div
         ref={containerRef}
-        onTouchStart={ptrHandlers.onTouchStart as unknown as React.TouchEventHandler}
-        onTouchMove={ptrHandlers.onTouchMove as unknown as React.TouchEventHandler}
+        onTouchStart={ptrHandlers.onTouchStart}
+        onTouchMove={ptrHandlers.onTouchMove}
         onTouchEnd={ptrHandlers.onTouchEnd}
         className="flex flex-col gap-6"
       >
@@ -312,7 +312,7 @@ export default function SchedulePage() {
         {loading && (
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <div className="w-10 h-10 border-[3px] border-primary/30 border-t-primary rounded-full animate-spin" />
               <div className="text-stone-400 text-sm">Loading sessions...</div>
             </div>
           </div>
@@ -320,7 +320,7 @@ export default function SchedulePage() {
 
         {/* Error State */}
         {error && !loading && (
-          <div className="flex flex-col items-center justify-center py-12 bg-[#232323] rounded-2xl border border-red-500/20 p-6">
+          <div className="flex flex-col items-center justify-center py-12 bg-surface-mid rounded-2xl border border-red-500/20 p-6">
             <p className="text-red-400 mb-4 text-center">{error}</p>
             <button
               onClick={handleRefresh}

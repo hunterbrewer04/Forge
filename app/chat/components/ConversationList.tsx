@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import Image from 'next/image'
 import { fetchTrainerConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
@@ -43,7 +44,7 @@ export default function ConversationList({
     try {
       const data = await fetchTrainerConversations(currentUserId)
 
-      const conversationsWithNames: Conversation[] = data.map((conv, index) => ({
+      const conversationsWithNames: Conversation[] = data.map((conv) => ({
         id: conv.id,
         client_id: conv.client_id,
         trainer_id: conv.trainer_id,
@@ -51,22 +52,20 @@ export default function ConversationList({
         avatar_url: conv.profiles?.avatar_url,
         last_message: 'Tap to view messages',
         last_message_time: 'Recently',
-        is_online: index === 0, // Online status (future: real-time presence)
-        is_pinned: index === 0, // First conversation is pinned
+        is_online: false,
+        is_pinned: false,
       }))
 
       setConversations(conversationsWithNames)
 
-      if (!selectedConversationId && conversationsWithNames.length > 0) {
-        // Don't auto-select, let user tap
-      }
+      // Don't auto-select conversation, let user tap
     } catch (err) {
       logger.error('Error fetching conversations:', err)
       setError('Failed to load conversations. Tap to retry.')
     } finally {
       setLoading(false)
     }
-  }, [currentUserId, selectedConversationId])
+  }, [currentUserId])
 
   useEffect(() => {
     loadConversations()
@@ -122,35 +121,40 @@ export default function ConversationList({
   const ConversationItem = ({ conversation, isPinned = false }: { conversation: Conversation; isPinned?: boolean }) => (
     <button
       onClick={() => onSelectConversation(conversation.id)}
+      aria-label={`Conversation with ${conversation.client_name}`}
       className={`group relative flex items-center w-full text-left transition-all cursor-pointer active:scale-[0.98] ${
         isPinned
           ? 'rounded-2xl bg-[#262626] border border-gold/10 hover:border-gold/20 p-4'
           : 'rounded-xl hover:bg-white/5 p-3'
-      } ${selectedConversationId === conversation.id ? 'bg-primary/10 border-l-3 border-primary' : ''}`}
+      } ${selectedConversationId === conversation.id ? 'bg-primary/10 border-l-[3px] border-primary' : ''}`}
     >
       {/* Avatar */}
       <div className="relative shrink-0">
         <div
-          className={`bg-center bg-cover bg-stone-700 flex items-center justify-center ${
+          className={`relative bg-stone-700 flex items-center justify-center overflow-hidden ${
             isPinned ? 'size-14 rounded-xl ring-2 ring-gold/30' : 'size-11 rounded-xl'
           }`}
-          style={conversation.avatar_url ? { backgroundImage: `url('${conversation.avatar_url}')` } : undefined}
         >
-          {!conversation.avatar_url && (
+          {conversation.avatar_url ? (
+            <Image
+              src={conversation.avatar_url}
+              alt={conversation.client_name || 'Client avatar'}
+              fill
+              className="object-cover"
+            />
+          ) : (
             <User size={24} strokeWidth={2} className="text-stone-400" />
           )}
         </div>
         {conversation.is_online && (
-          <span className={`absolute bottom-0 right-0 bg-emerald-400 rounded-full ring-2 ring-[#262626] ${
-            isPinned ? 'size-3' : 'size-3'
-          }`} />
+          <span className="absolute bottom-0 right-0 bg-emerald-400 rounded-full ring-2 ring-[#262626] size-3" />
         )}
       </div>
 
       {/* Content */}
       <div className="ml-4 flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          <h4 className={`font-bold text-white truncate flex items-center gap-1 ${isPinned ? 'text-base' : 'text-base'}`}>
+          <h4 className="font-bold text-white truncate flex items-center gap-1 text-base">
             {conversation.client_name}
             {isPinned && (
               <BadgeCheck size={14} strokeWidth={2} className="text-gold" aria-label="Certified" />

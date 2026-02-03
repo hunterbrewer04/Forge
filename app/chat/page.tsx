@@ -10,7 +10,7 @@ import ChatLayout from '@/components/layout/ChatLayout'
 import { logger } from '@/lib/utils/logger'
 import { fetchClientConversation, fetchConversationById } from '@/lib/services/conversations'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
-import { ArrowLeft, Bell, Plus, Search, RefreshCw } from '@/components/ui/icons'
+import { ArrowLeft, Search, RefreshCw } from '@/components/ui/icons'
 
 interface ConversationInfo {
   id: string
@@ -213,7 +213,7 @@ export default function ChatPage() {
         </div>
         {loadingTimeout && (
           <div className="fixed bottom-20 left-0 right-0 px-4 z-50">
-            <div className="bg-[#232323] border border-white/10 rounded-2xl p-4 shadow-xl max-w-md mx-auto">
+            <div className="bg-surface-mid border border-white/10 rounded-2xl p-4 shadow-xl max-w-md mx-auto">
               <p className="text-stone-300 text-sm mb-3 text-center">
                 Taking longer than expected...
               </p>
@@ -242,7 +242,7 @@ export default function ChatPage() {
   if (user && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-dark">
-        <div className="bg-[#232323] rounded-2xl border border-white/5 p-8 text-center max-w-md mx-6">
+        <div className="bg-surface-mid rounded-2xl border border-white/5 p-8 text-center max-w-md mx-6">
           <div className="text-red-500 text-lg font-semibold mb-4">Profile Not Found</div>
           <p className="text-stone-400 mb-6">{error || 'Your user profile could not be loaded. Please contact support.'}</p>
           <div className="space-y-3">
@@ -285,21 +285,6 @@ export default function ChatPage() {
           </button>
           <h1 className="text-xl font-extrabold uppercase tracking-[0.2em] text-white">Comms</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 transition-colors relative active:scale-95"
-            aria-label="Notifications"
-          >
-            <Bell size={22} strokeWidth={2} className="text-primary" />
-            <span className="absolute top-1.5 right-1.5 size-2.5 bg-gold rounded-full ring-2 ring-background-dark"></span>
-          </button>
-          <button
-            className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] bg-primary hover:bg-orange-600 transition-colors rounded-xl shadow-lg shadow-primary/20 active:scale-95"
-            aria-label="New conversation"
-          >
-            <Plus size={22} strokeWidth={2} className="text-white" />
-          </button>
-        </div>
       </div>
 
       {/* Search Bar */}
@@ -312,7 +297,7 @@ export default function ChatPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-3 py-3 border border-white/5 rounded-xl leading-5 bg-[#2C2C2C] text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm shadow-inner"
+            className="block w-full pl-10 pr-3 py-3 border border-white/5 rounded-xl leading-5 bg-surface-elevated text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm shadow-inner"
             placeholder="Search conversations..."
           />
         </div>
@@ -333,6 +318,7 @@ export default function ChatPage() {
       currentUserId={user.id}
       selectedConversationId={selectedConversationId}
       onSelectConversation={handleSelectConversation}
+      searchQuery={searchQuery}
     />
   ) : null
 
@@ -341,7 +327,7 @@ export default function ChatPage() {
     if (error) {
       return (
         <div className="flex-1 flex items-center justify-center">
-          <div className="bg-[#232323] rounded-2xl border border-white/5 p-8 text-center max-w-md mx-6">
+          <div className="bg-surface-mid rounded-2xl border border-white/5 p-8 text-center max-w-md mx-6">
             <div className="text-red-500 text-lg font-semibold mb-4">Error</div>
             <p className="text-stone-400 mb-6">{error}</p>
             <button
@@ -400,7 +386,6 @@ export default function ChatPage() {
       conversationList={conversationListComponent}
       activeChat={activeChatComponent}
       showActiveChat={showThread}
-      onCloseActiveChat={handleBackToList}
       onSignOut={() => signOut().then(() => router.push('/login'))}
     />
   )

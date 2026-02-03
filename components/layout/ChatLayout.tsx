@@ -1,9 +1,9 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import Sidebar from "@/components/navigation/Sidebar";
 import BottomNav from "@/components/navigation/BottomNav";
-import { Search, Plus } from "@/components/ui/icons";
+import { Plus } from "@/components/ui/icons";
 
 interface ChatLayoutProps {
   /** The conversation list component */
@@ -14,8 +14,6 @@ interface ChatLayoutProps {
   mobileHeader: ReactNode;
   /** Whether to show the active chat (on mobile, this controls slide-over) */
   showActiveChat: boolean;
-  /** Callback to close active chat on mobile */
-  onCloseActiveChat?: () => void;
   /** Sign out handler */
   onSignOut?: () => void;
 }
@@ -27,8 +25,6 @@ export default function ChatLayout({
   showActiveChat,
   onSignOut,
 }: ChatLayoutProps) {
-  const [desktopSearch, setDesktopSearch] = useState("");
-
   return (
     <div className="min-h-screen h-screen bg-background-dark flex overflow-hidden">
       {/* Sidebar - only visible on large screens */}
@@ -51,7 +47,7 @@ export default function ChatLayout({
           `}
         >
           {/* Desktop List Header */}
-          <div className="hidden lg:block px-4 py-4 border-b border-white/5 space-y-4">
+          <div className="hidden lg:block px-4 py-4 border-b border-white/5">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-extrabold text-white">Messages</h2>
               <button
@@ -60,19 +56,6 @@ export default function ChatLayout({
               >
                 <Plus size={20} strokeWidth={2} className="text-white" />
               </button>
-            </div>
-            {/* Desktop Search */}
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search size={18} strokeWidth={2} className="text-stone-500 group-focus-within:text-primary transition-colors" />
-              </div>
-              <input
-                type="text"
-                value={desktopSearch}
-                onChange={(e) => setDesktopSearch(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2.5 border-none rounded-lg leading-5 bg-[#2C2C2C] text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm"
-                placeholder="Search..."
-              />
             </div>
           </div>
           {/* Conversation List */}
@@ -91,7 +74,7 @@ export default function ChatLayout({
           {activeChat || (
             <div className="hidden lg:flex flex-1 items-center justify-center">
               <div className="text-center">
-                <div className="size-24 rounded-2xl bg-[#232323] flex items-center justify-center mx-auto mb-4">
+                <div className="size-24 rounded-2xl bg-surface-mid flex items-center justify-center mx-auto mb-4">
                   <svg
                     className="size-12 text-stone-600"
                     fill="none"

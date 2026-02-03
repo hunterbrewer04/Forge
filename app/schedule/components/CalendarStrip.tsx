@@ -83,7 +83,7 @@ export default function CalendarStrip({
   }
 
   return (
-    <div className="bg-[#232323] rounded-2xl p-4 border border-white/5">
+    <div className="bg-surface-mid rounded-2xl p-4 border border-white/5">
       {/* Header: Month/Year + Navigation */}
       <div className="flex items-center justify-between">
         <h2 className="text-base font-bold text-white">{monthYear}</h2>
@@ -91,7 +91,7 @@ export default function CalendarStrip({
           {showTodayButton && (
             <button
               onClick={handleTodayClick}
-              className="bg-primary/15 text-primary border border-primary/30 px-3 py-1.5 text-xs font-medium rounded-full hover:bg-primary/20 transition-colors"
+              className="bg-primary/15 text-primary border border-primary/30 px-3 py-1.5 min-h-[44px] text-xs font-medium rounded-full hover:bg-primary/20 transition-colors"
             >
               Today
             </button>
@@ -99,14 +99,14 @@ export default function CalendarStrip({
           <button
             onClick={handlePrevWeek}
             disabled={weekOffset === 0}
-            className="size-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="size-8 min-w-[44px] min-h-[44px] rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             aria-label="Previous week"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={handleNextWeek}
-            className="size-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+            className="size-8 min-w-[44px] min-h-[44px] rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
             aria-label="Next week"
           >
             <ChevronRight className="w-5 h-5" />

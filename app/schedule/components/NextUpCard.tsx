@@ -65,7 +65,7 @@ export default function NextUpCard({ session, onCancel, onViewDetails }: NextUpC
 
   return (
     <div className="relative rounded-2xl p-[1px] bg-gradient-to-br from-primary via-orange-500 to-amber-500">
-      <div className="bg-[#1e1e1e] rounded-2xl p-5">
+      <div className="bg-surface-deep rounded-2xl p-5">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">

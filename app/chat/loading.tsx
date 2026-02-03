@@ -20,7 +20,7 @@ export default function ChatLoading() {
 
           {/* Search bar skeleton */}
           <div className="mt-4">
-            <div className="h-12 bg-[#2C2C2C] rounded-lg" />
+            <div className="h-12 bg-surface-elevated rounded-lg" />
           </div>
         </header>
 

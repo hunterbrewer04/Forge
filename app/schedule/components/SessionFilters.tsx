@@ -26,7 +26,7 @@ export default function SessionFilters({
               ${
                 isActive
                   ? 'bg-primary text-white shadow-md shadow-primary/25 font-bold'
-                  : 'bg-[#232323] border border-white/10 text-stone-400 hover:text-white hover:border-white/20'
+                  : 'bg-surface-mid border border-white/10 text-stone-400 hover:text-white hover:border-white/20'
               }
             `}
           >

@@ -16,12 +16,14 @@ interface ClientConversationListProps {
   currentUserId: string
   selectedConversationId: string | null
   onSelectConversation: (conversationId: string) => void
+  searchQuery?: string
 }
 
 export default function ClientConversationList({
   currentUserId,
   selectedConversationId,
   onSelectConversation,
+  searchQuery = '',
 }: ClientConversationListProps) {
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [loading, setLoading] = useState(true)
@@ -53,7 +55,7 @@ export default function ClientConversationList({
     } finally {
       setLoading(false)
     }
-  }, [currentUserId, selectedConversationId, onSelectConversation])
+  }, [currentUserId, onSelectConversation])
 
   useEffect(() => {
     loadConversation()
@@ -97,35 +99,46 @@ export default function ClientConversationList({
     )
   }
 
+  // Filter conversation based on search query
+  const matchesSearch = conversation.trainer_name
+    ?.toLowerCase()
+    .includes(searchQuery.toLowerCase()) ?? true
+
   return (
     <div className="h-full bg-background-dark overflow-y-auto">
       <div className="p-4 border-b border-white/10">
         <h2 className="text-lg font-bold text-white">Messages</h2>
       </div>
-      <div className="mx-4 mt-4">
-        <button
-          onClick={() => onSelectConversation(conversation.id)}
-          className={`w-full rounded-2xl bg-[#232323] border p-4 text-left hover:bg-white/5 transition-colors ${
-            selectedConversationId === conversation.id
-              ? 'border-primary/30 bg-primary/5'
-              : 'border-white/5'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="size-12 rounded-xl bg-stone-700 flex items-center justify-center shrink-0">
-              <User size={24} strokeWidth={2} className="text-stone-400" />
-            </div>
-            <div>
-              <div className="text-base font-bold text-white">
-                {conversation.trainer_name}
+      {matchesSearch ? (
+        <div className="mx-4 mt-4">
+          <button
+            onClick={() => onSelectConversation(conversation.id)}
+            className={`w-full rounded-2xl bg-surface-mid border p-4 text-left hover:bg-white/5 transition-colors ${
+              selectedConversationId === conversation.id
+                ? 'border-primary/30 bg-primary/5'
+                : 'border-white/5'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="size-12 rounded-xl bg-stone-700 flex items-center justify-center shrink-0">
+                <User size={24} strokeWidth={2} className="text-stone-400" />
               </div>
-              <div className="text-xs text-primary font-medium mt-0.5">
-                Your Trainer
+              <div>
+                <div className="text-base font-bold text-white">
+                  {conversation.trainer_name}
+                </div>
+                <div className="text-xs text-primary font-medium mt-0.5">
+                  Your Trainer
+                </div>
               </div>
             </div>
-          </div>
-        </button>
-      </div>
+          </button>
+        </div>
+      ) : (
+        <div className="px-4 py-8 text-center">
+          <p className="text-stone-500 text-sm">No conversations matching &quot;{searchQuery}&quot;</p>
+        </div>
+      )}
     </div>
   )
 }
