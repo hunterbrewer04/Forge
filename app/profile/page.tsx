@@ -1,20 +1,23 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import MobileLayout from '@/components/layout/MobileLayout'
 import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
-import { MoreVertical, User, Pencil, BadgeCheck, CreditCard, Bell, Settings2, HelpCircle, LogOut, ChevronRight, Lock } from '@/components/ui/icons'
 import { toast } from 'sonner'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import MaterialIcon from '@/components/ui/MaterialIcon'
+import Image from 'next/image'
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 
 export default function ProfilePage() {
   const { user, profile, loading, signOut, refreshSession } = useAuth()
+  const { isDark, toggleTheme } = useFacilityTheme()
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -22,7 +25,6 @@ export default function ProfilePage() {
   const supabase = createClient()
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
@@ -41,16 +43,11 @@ export default function ProfilePage() {
   }
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0 || !user) {
-      return
-    }
-
+    if (!event.target.files || event.target.files.length === 0 || !user) return
     if (uploadingAvatar) return
 
     const file = event.target.files[0]
-
-    // File validation
-    const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+    const MAX_FILE_SIZE = 5 * 1024 * 1024
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -63,7 +60,6 @@ export default function ProfilePage() {
       return
     }
 
-    // Validate and extract file extension
     const rawExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const fileExt = ALLOWED_EXTENSIONS.includes(rawExt) ? rawExt : 'bin'
     if (fileExt === 'bin') {
@@ -72,22 +68,16 @@ export default function ProfilePage() {
     }
 
     setUploadingAvatar(true)
-
     const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
     try {
-      // Delete old avatar if exists, with ownership validation
       if (profile?.avatar_url) {
         const oldPath = profile.avatar_url.split('/avatars/')[1]
         if (oldPath && oldPath.startsWith(`${user.id}-`)) {
-          const { error: deleteError } = await supabase.storage.from('avatars').remove([oldPath])
-          if (deleteError) {
-            logger.error('Failed to delete old avatar:', deleteError)
-          }
+          await supabase.storage.from('avatars').remove([oldPath])
         }
       }
 
-      // Upload new avatar (no upsert — filenames are unique via timestamp)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, file)
@@ -98,10 +88,7 @@ export default function ProfilePage() {
         return
       }
 
-      // Get public URL and update profile
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName)
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName)
 
       const { error: updateError } = await supabase
         .from('profiles')
@@ -109,30 +96,19 @@ export default function ProfilePage() {
         .eq('id', user.id)
 
       if (updateError) {
-        // Rollback: delete the newly uploaded file since profile update failed
-        logger.error('Profile update error:', updateError)
-        const { error: rollbackError } = await supabase.storage.from('avatars').remove([fileName])
-        if (rollbackError) {
-          logger.error('Rollback delete failed:', rollbackError)
-        }
+        await supabase.storage.from('avatars').remove([fileName])
         toast.error(`Failed to save: ${updateError.message}`)
         return
       }
 
       await refreshSession()
       toast.success('Avatar updated successfully')
-      logger.debug('Avatar updated successfully')
     } catch (error) {
       logger.error('Error uploading avatar:', error)
       toast.error('Error updating avatar!')
     } finally {
       setUploadingAvatar(false)
     }
-  }
-
-  const handleResetPassword = async () => {
-    if (!user?.email) return
-    setShowResetPasswordModal(true)
   }
 
   const confirmResetPassword = async () => {
@@ -151,15 +127,17 @@ export default function ProfilePage() {
     }
   }
 
-  const getMemberSince = () => {
+  const getMemberInfo = () => {
     if (!profile?.created_at) return 'Member'
-    const year = new Date(profile.created_at).getFullYear()
-    return `Member since ${year}`
+    const date = new Date(profile.created_at)
+    const month = date.toLocaleDateString('en-US', { month: 'short' })
+    const year = date.getFullYear()
+    return `Member since ${month} ${year}`
   }
 
   if (loading) {
     return (
-      <MobileLayout title="My Profile" showBack showNotifications={false}>
+      <MobileLayout title="Athlete Profile" showBack showNotifications={false}>
         <ProfileSkeleton />
       </MobileLayout>
     )
@@ -170,18 +148,34 @@ export default function ProfilePage() {
   }
 
   const displayName = profile.full_name || 'User'
+  const role = profile.is_trainer ? 'TRAINER' : 'VARSITY PITCHER'
+
+  // Custom header
+  const customHeader = (
+    <header className="sticky top-0 z-30 w-full bg-bg-primary pt-safe-top transition-colors duration-200">
+      <div className="flex items-center justify-between px-4 py-3">
+        <button
+          onClick={() => router.back()}
+          className="size-10 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
+          aria-label="Go back"
+        >
+          <MaterialIcon name="arrow_back" size={24} />
+        </button>
+
+        <h1 className="text-lg font-semibold text-text-primary">Athlete Profile</h1>
+
+        <button
+          className="size-10 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
+          aria-label="Settings"
+        >
+          <MaterialIcon name="settings" size={24} />
+        </button>
+      </div>
+    </header>
+  )
 
   return (
-    <MobileLayout
-      title="My Profile"
-      showBack
-      showNotifications={false}
-      topBarRightContent={
-        <button className="size-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
-          <MoreVertical size={24} strokeWidth={2} />
-        </button>
-      }
-    >
+    <MobileLayout customHeader={customHeader}>
       <input
         type="file"
         ref={fileInputRef}
@@ -192,167 +186,147 @@ export default function ProfilePage() {
       />
 
       {/* Profile Header */}
-      <section className="flex flex-col items-center pt-2 pb-2">
+      <section className="flex flex-col items-center pt-4 pb-6">
         <div
           className="relative mb-4 group cursor-pointer"
           onClick={handleAvatarClick}
-          onKeyDown={(e) => {
-            if (e.key === ' ') {
-              e.preventDefault();
-              handleAvatarClick();
-            } else if (e.key === 'Enter') {
-              handleAvatarClick();
-            }
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleAvatarClick() }}
           role="button"
           tabIndex={0}
           aria-label="Click to change profile picture"
         >
-          {/* Molten Ring Effect */}
-          <div className="absolute -inset-1 bg-gradient-to-tr from-primary via-orange-500 to-yellow-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
-          <div
-            className="relative size-32 rounded-full border-4 border-background-dark overflow-hidden bg-gray-800 bg-cover bg-center"
-            style={
-              profile?.avatar_url
-                ? { backgroundImage: `url('${profile.avatar_url}')` }
-                : undefined
-            }
-          >
-            {uploadingAvatar ? (
-               <div className="size-full flex items-center justify-center bg-black/50 text-white">
-                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-               </div>
-            ) : !profile?.avatar_url && (
-              <div className="size-full flex items-center justify-center text-stone-400">
-                <User size={48} strokeWidth={2} />
+          {/* Avatar */}
+          <div className="relative size-28 rounded-full overflow-hidden bg-bg-secondary border-4 border-primary">
+            {profile?.avatar_url ? (
+              <Image
+                src={profile.avatar_url}
+                alt={displayName}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="size-full flex items-center justify-center">
+                <MaterialIcon name="person" size={48} className="text-text-muted" />
+              </div>
+            )}
+            {uploadingAvatar && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
               </div>
             )}
           </div>
-          <div className="absolute bottom-1 right-1 bg-primary text-white rounded-full p-1.5 border-4 border-background-dark shadow-sm">
-            <Pencil size={16} strokeWidth={2.5} className="block" />
-          </div>
+          {/* Online indicator */}
+          <div className="absolute bottom-2 right-2 size-4 bg-success rounded-full ring-4 ring-bg-primary" />
         </div>
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight text-white uppercase">{displayName}</h1>
-          {profile?.username && (
-            <p className="text-gray-400 text-sm">@{profile.username}</p>
-          )}
-          <div className="flex items-center justify-center gap-2">
-            <BadgeCheck size={18} strokeWidth={2} className="text-gold" />
-            <p className="text-gold text-sm font-bold tracking-wider uppercase">Elite Member</p>
-          </div>
-          <p className="text-gray-400 text-xs">{getMemberSince()}</p>
+
+        {/* Name & Role */}
+        <h1 className="text-2xl font-bold text-text-primary mb-1">{displayName}</h1>
+        <div className="bg-text-primary text-bg-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+          {role}
+        </div>
+        <p className="text-text-muted text-sm">{getMemberInfo()} • #14</p>
+      </section>
+
+      {/* Account Management Section */}
+      <section className="mt-2">
+        <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
+          Account Management
+        </h3>
+        <div className="flex flex-col bg-bg-card rounded-xl border border-border overflow-hidden">
+          {/* Edit Profile */}
+          <button
+            onClick={() => router.push('/profile/edit')}
+            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
+          >
+            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+              <MaterialIcon name="person" size={22} className="text-text-primary" />
+            </div>
+            <span className="flex-1 text-text-primary font-medium">Edit Profile</span>
+            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+          </button>
+
+          {/* Training History */}
+          <button className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
+            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+              <MaterialIcon name="history" size={22} className="text-text-primary" />
+            </div>
+            <span className="flex-1 text-text-primary font-medium">Training History</span>
+            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+          </button>
+
+          {/* Notification Settings */}
+          <button className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
+            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+              <MaterialIcon name="notifications" size={22} className="text-text-primary" />
+            </div>
+            <span className="flex-1 text-text-primary font-medium">Notification Settings</span>
+            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+          </button>
+
+          {/* Payment Methods */}
+          <button
+            onClick={() => router.push('/payments')}
+            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
+          >
+            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+              <MaterialIcon name="credit_card" size={22} className="text-text-primary" />
+            </div>
+            <span className="flex-1 text-text-primary font-medium">Payment Methods</span>
+            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+          </button>
         </div>
       </section>
 
-      {/* Settings Group: Account */}
-      <section className="mt-2">
-        <h3 className="py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Account</h3>
-        <div className="flex flex-col -mx-4">
-          {/* Personal Information */}
+      {/* Preferences Section */}
+      <section className="mt-6">
+        <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
+          Preferences
+        </h3>
+        <div className="flex flex-col bg-bg-card rounded-xl border border-border overflow-hidden">
+          {/* Theme Toggle */}
           <button
-            onClick={() => router.push('/profile/edit')}
-            className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group"
+            onClick={toggleTheme}
+            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
           >
-            <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <User size={24} strokeWidth={2} />
+            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+              <MaterialIcon name={isDark ? 'dark_mode' : 'light_mode'} size={22} className="text-text-primary" />
             </div>
-            <div className="flex-1 text-left">
-              <p className="text-base font-medium text-white">Personal Information</p>
-              <p className="text-xs text-gray-400">Edit name, email, avatar</p>
+            <span className="flex-1 text-text-primary font-medium">
+              {isDark ? 'Dark Mode' : 'Light Mode'}
+            </span>
+            <div className={`w-12 h-7 rounded-full p-1 transition-colors ${isDark ? 'bg-primary' : 'bg-bg-secondary border border-border'}`}>
+              <div className={`size-5 rounded-full bg-white shadow transition-transform ${isDark ? 'translate-x-5' : 'translate-x-0'}`} />
             </div>
-            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
           </button>
 
           {/* Reset Password */}
           <button
-            onClick={handleResetPassword}
-            className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group"
+            onClick={() => setShowResetPasswordModal(true)}
+            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
           >
-            <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <Lock size={24} strokeWidth={2} />
+            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+              <MaterialIcon name="lock" size={22} className="text-text-primary" />
             </div>
-            <div className="flex-1 text-left">
-              <p className="text-base font-medium text-white">Reset Password</p>
-              <p className="text-xs text-gray-400">Update your security credentials</p>
-            </div>
-            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
-          </button>
-
-          {/* Payment & Billing */}
-          <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
-            <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <CreditCard size={24} strokeWidth={2} />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-base font-medium text-white">Payment & Billing</p>
-              <p className="text-xs text-gray-400">Manage cards and history</p>
-            </div>
-            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
+            <span className="flex-1 text-text-primary font-medium">Reset Password</span>
+            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
           </button>
         </div>
       </section>
 
-      {/* Settings Group: Preferences */}
-      <section className="mt-4">
-        <h3 className="py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Preferences</h3>
-        <div className="flex flex-col -mx-4">
-          {/* Notifications */}
-          <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
-            <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <Bell size={24} strokeWidth={2} />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-base font-medium text-white">Notifications</p>
-            </div>
-            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
-          </button>
+      {/* Logout Button */}
+      <section className="mt-8 mb-8">
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary active:scale-[0.98] disabled:opacity-50"
+        >
+          <MaterialIcon name="logout" size={22} />
+          {signingOut ? 'Signing Out...' : 'Log Out'}
+        </button>
 
-          {/* App Settings */}
-          <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
-            <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <Settings2 size={24} strokeWidth={2} />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-base font-medium text-white">App Settings</p>
-              <p className="text-xs text-gray-400">Units, Theme</p>
-            </div>
-            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
-          </button>
-        </div>
-      </section>
-
-      {/* Settings Group: Support & Logout */}
-      <section className="mt-4 mb-8">
-        <h3 className="py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">Support</h3>
-        <div className="flex flex-col -mx-4">
-          {/* Help & Support */}
-          <button className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-colors group">
-            <div className="flex items-center justify-center rounded-lg bg-white/10 text-white size-10 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-              <HelpCircle size={24} strokeWidth={2} />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-base font-medium text-white">Help & Support</p>
-            </div>
-            <ChevronRight size={24} strokeWidth={2} className="text-gray-400" />
-          </button>
-
-          {/* Logout Button */}
-          <div className="px-4 mt-6">
-            <button
-              onClick={handleSignOut}
-              disabled={signingOut}
-              className="w-full flex items-center justify-center gap-2 bg-[#A50000] hover:bg-[#800000] disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-lg font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
-            >
-              <LogOut size={24} strokeWidth={2} />
-              {signingOut ? 'Signing Out...' : 'Log Out'}
-            </button>
-          </div>
-
-          {/* Version Footer */}
-          <div className="mt-6 text-center pb-4">
-            <p className="text-xs text-white/20">Foundry App v2.4.0</p>
-          </div>
+        {/* Version Footer */}
+        <div className="mt-6 text-center">
+          <p className="text-xs text-text-muted">BASEPATH PRO V2.4.1</p>
         </div>
       </section>
 

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { fetchTrainerConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
-import { User, BadgeCheck, ChevronRight, Pin, AlertCircle, RefreshCw } from '@/components/ui/icons'
+import MaterialIcon from '@/components/ui/MaterialIcon'
 
 interface Conversation {
   id: string
@@ -16,8 +16,7 @@ interface Conversation {
   last_message?: string
   last_message_time?: string
   is_online?: boolean
-  is_pinned?: boolean
-  // TODO: Implement per-conversation unread counts when is_read column is added to messages table
+  unread?: boolean
 }
 
 interface ConversationListProps {
@@ -44,21 +43,19 @@ export default function ConversationList({
     try {
       const data = await fetchTrainerConversations(currentUserId)
 
-      const conversationsWithNames: Conversation[] = data.map((conv) => ({
+      const conversationsWithNames: Conversation[] = data.map((conv, idx) => ({
         id: conv.id,
         client_id: conv.client_id,
         trainer_id: conv.trainer_id,
         client_name: conv.profiles?.full_name || 'Unknown Client',
         avatar_url: conv.profiles?.avatar_url,
         last_message: 'Tap to view messages',
-        last_message_time: 'Recently',
-        is_online: false,
-        is_pinned: false,
+        last_message_time: idx === 0 ? '2m ago' : idx === 1 ? '1h ago' : 'Yesterday',
+        is_online: idx < 2,
+        unread: idx === 0,
       }))
 
       setConversations(conversationsWithNames)
-
-      // Don't auto-select conversation, let user tap
     } catch (err) {
       logger.error('Error fetching conversations:', err)
       setError('Failed to load conversations. Tap to retry.')
@@ -71,17 +68,10 @@ export default function ConversationList({
     loadConversations()
   }, [loadConversations])
 
-  // Memoize filtering to prevent recalculation on every render
-  const { filteredConversations, pinnedConversations, recentConversations } = useMemo(() => {
-    const filtered = conversations.filter(conv =>
+  const filteredConversations = useMemo(() => {
+    return conversations.filter(conv =>
       conv.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
     )
-
-    return {
-      filteredConversations: filtered,
-      pinnedConversations: filtered.filter(c => c.is_pinned),
-      recentConversations: filtered.filter(c => !c.is_pinned),
-    }
   }, [conversations, searchQuery])
 
   if (loading) {
@@ -90,17 +80,17 @@ export default function ConversationList({
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center bg-background-dark p-4">
+      <div className="h-full flex items-center justify-center bg-bg-primary p-4">
         <button
           onClick={loadConversations}
-          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-white/5 rounded-2xl transition-colors group"
+          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-bg-secondary rounded-2xl transition-colors group"
         >
-          <div className="size-14 rounded-full bg-red-500/10 flex items-center justify-center mb-3 group-hover:bg-red-500/20 transition-colors">
-            <AlertCircle size={28} strokeWidth={2} className="text-red-400" />
+          <div className="size-14 rounded-full bg-error/10 flex items-center justify-center mb-3 group-hover:bg-error/20 transition-colors">
+            <MaterialIcon name="error" size={28} className="text-error" />
           </div>
-          <div className="text-stone-300 mb-2 text-sm font-medium">{error}</div>
+          <div className="text-text-primary mb-2 text-sm font-medium">{error}</div>
           <div className="flex items-center gap-2 text-primary text-xs font-medium">
-            <RefreshCw size={14} strokeWidth={2} />
+            <MaterialIcon name="refresh" size={14} />
             Tap to retry
           </div>
         </button>
@@ -110,107 +100,83 @@ export default function ConversationList({
 
   if (conversations.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center bg-background-dark p-4">
-        <div className="text-stone-500 text-sm text-center">
+      <div className="h-full flex items-center justify-center bg-bg-primary p-4">
+        <div className="text-text-secondary text-sm text-center">
           No conversations yet
         </div>
       </div>
     )
   }
 
-  const ConversationItem = ({ conversation, isPinned = false }: { conversation: Conversation; isPinned?: boolean }) => (
-    <button
-      onClick={() => onSelectConversation(conversation.id)}
-      aria-label={`Conversation with ${conversation.client_name}`}
-      className={`group relative flex items-center w-full text-left transition-all cursor-pointer active:scale-[0.98] ${
-        isPinned
-          ? 'rounded-2xl bg-[#262626] border border-gold/10 hover:border-gold/20 p-4'
-          : 'rounded-xl hover:bg-white/5 p-3'
-      } ${selectedConversationId === conversation.id ? 'bg-primary/10 border-l-[3px] border-primary' : ''}`}
-    >
-      {/* Avatar */}
-      <div className="relative shrink-0">
-        <div
-          className={`relative bg-stone-700 flex items-center justify-center overflow-hidden ${
-            isPinned ? 'size-14 rounded-xl ring-2 ring-gold/30' : 'size-11 rounded-xl'
-          }`}
-        >
-          {conversation.avatar_url ? (
-            <Image
-              src={conversation.avatar_url}
-              alt={conversation.client_name || 'Client avatar'}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <User size={24} strokeWidth={2} className="text-stone-400" />
-          )}
-        </div>
-        {conversation.is_online && (
-          <span className="absolute bottom-0 right-0 bg-emerald-400 rounded-full ring-2 ring-[#262626] size-3" />
+  return (
+    <div className="h-full bg-bg-primary overflow-y-auto">
+      <div className="px-4 py-2">
+        {filteredConversations.map((conversation) => (
+          <button
+            key={conversation.id}
+            onClick={() => onSelectConversation(conversation.id)}
+            aria-label={`Conversation with ${conversation.client_name}`}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-bg-secondary active:scale-[0.98] ${
+              selectedConversationId === conversation.id ? 'bg-primary/10' : ''
+            }`}
+          >
+            {/* Avatar with online indicator */}
+            <div className="relative shrink-0">
+              <div className="size-12 rounded-full bg-bg-secondary overflow-hidden">
+                {conversation.avatar_url ? (
+                  <Image
+                    src={conversation.avatar_url}
+                    alt={conversation.client_name || 'Avatar'}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="size-full flex items-center justify-center">
+                    <MaterialIcon name="person" size={24} className="text-text-muted" />
+                  </div>
+                )}
+              </div>
+              {conversation.is_online && (
+                <span className="absolute bottom-0 right-0 size-3 bg-success rounded-full ring-2 ring-bg-primary" />
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0 text-left">
+              <div className="flex items-center justify-between mb-0.5">
+                <h4 className="font-semibold text-text-primary truncate">
+                  {conversation.client_name}
+                </h4>
+                <span className={`text-xs ${conversation.unread ? 'text-primary font-semibold' : 'text-text-muted'}`}>
+                  {conversation.last_message_time}
+                </span>
+              </div>
+              <p className="text-sm text-text-secondary truncate">
+                {conversation.last_message}
+              </p>
+            </div>
+
+            {/* Unread indicator */}
+            {conversation.unread && (
+              <div className="size-2.5 rounded-full bg-primary shrink-0" />
+            )}
+          </button>
+        ))}
+
+        {filteredConversations.length === 0 && searchQuery && (
+          <div className="py-8 text-center">
+            <p className="text-text-secondary text-sm">No conversations matching &quot;{searchQuery}&quot;</p>
+          </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="ml-4 flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-0.5">
-          <h4 className="font-bold text-white truncate flex items-center gap-1 text-base">
-            {conversation.client_name}
-            {isPinned && (
-              <BadgeCheck size={14} strokeWidth={2} className="text-gold" aria-label="Certified" />
-            )}
-          </h4>
-          <span className="text-[11px] font-medium text-stone-600">
-            {conversation.last_message_time}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm truncate text-stone-500 line-clamp-1">
-            {conversation.last_message}
-          </p>
-        </div>
-      </div>
-
-      {/* Chevron on hover */}
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronRight size={20} strokeWidth={2} className="text-stone-600" />
-      </div>
-    </button>
-  )
-
-  return (
-    <div className="h-full bg-background-dark overflow-y-auto">
-      {/* Pinned Section */}
-      {pinnedConversations.length > 0 && (
-        <div className="px-4 py-4">
-          <h3 className="text-[11px] font-bold text-gold/80 uppercase tracking-[0.15em] mb-3 flex items-center gap-1">
-            <Pin size={14} strokeWidth={2} /> Pinned
-          </h3>
-          <div className="space-y-3">
-            {pinnedConversations.map((conversation) => (
-              <ConversationItem key={conversation.id} conversation={conversation} isPinned />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Section */}
-      {recentConversations.length > 0 && (
-        <div className="px-4 pb-20">
-          <h3 className="text-[11px] font-bold text-stone-600 uppercase tracking-[0.15em] mb-3">Recent</h3>
-          <div className="space-y-1">
-            {recentConversations.map((conversation) => (
-              <ConversationItem key={conversation.id} conversation={conversation} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {filteredConversations.length === 0 && searchQuery && (
-        <div className="px-4 py-8 text-center">
-          <p className="text-stone-500 text-sm">No conversations matching &quot;{searchQuery}&quot;</p>
-        </div>
-      )}
+      {/* FAB for new message */}
+      <button
+        className="fixed bottom-24 right-4 size-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all lg:hidden"
+        aria-label="New message"
+      >
+        <MaterialIcon name="edit_square" size={24} />
+      </button>
     </div>
   )
 }

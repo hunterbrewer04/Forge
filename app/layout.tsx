@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono, Lexend, Manrope } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -24,10 +24,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const lexend = Lexend({
+  variable: "--font-lexend",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -47,7 +53,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#ff6714",
+  themeColor: "#1973f0",
 };
 
 export default function RootLayout({
@@ -130,7 +136,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} font-[--font-space-grotesk] antialiased bg-background-dark text-white`}
+        className={`${geistSans.variable} ${geistMono.variable} ${lexend.variable} ${manrope.variable} font-[--font-lexend] antialiased`}
       >
         <Providers>{children}</Providers>
         <Toaster

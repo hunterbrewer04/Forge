@@ -1,166 +1,134 @@
 'use client'
 
 import type { SessionWithDetails } from '@/lib/types/sessions'
-import { Plus, Check, Lock, User, Clock } from '@/components/ui/icons'
+import MaterialIcon from '@/components/ui/MaterialIcon'
 import Image from 'next/image'
 
 interface SessionCardProps {
   session: SessionWithDetails
   onBook: () => void
   onCancel: () => void
-  onTap: () => void // navigates to detail page
+  onTap: () => void
 }
 
 export default function SessionCard({ session, onBook, onCancel, onTap }: SessionCardProps) {
-  const { session_type, trainer, availability, user_booking, is_premium } = session
+  const { session_type, trainer, availability, user_booking } = session
 
-  // Determine color
-  const getColor = () => {
-    if (user_booking) return '#22c55e' // green for booked
-    if (is_premium) return '#fbbf24' // gold for premium
-    return session_type?.color || '#ff6714' // type color or default orange
-  }
-
-  const color = getColor()
-
-  // Determine card variant
+  // Determine card state
   const isBooked = !!user_booking
   const isFull = availability.is_full && !user_booking
 
   // Format time
   const startTime = new Date(session.starts_at)
-  const timeString = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-  const [timeHour, timePeriod] = timeString.split(' ')
+  const endTime = new Date(startTime.getTime() + session.duration_minutes * 60000)
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    })
+  }
+
+  const timeRange = `${formatTime(startTime)} - ${formatTime(endTime)}`
+
+  // Get session icon based on type
+  const getSessionIcon = () => {
+    const slug = session_type?.slug || ''
+    if (slug.includes('crossfit') || slug.includes('strength')) return 'fitness_center'
+    if (slug.includes('yoga') || slug.includes('vinyasa')) return 'self_improvement'
+    if (slug.includes('hitting') || slug.includes('baseball')) return 'sports_baseball'
+    return 'sports'
+  }
+
+  // Spots display
+  const spotsText = isFull
+    ? 'Full'
+    : availability.spots_left === 1
+    ? 'LAST SPOT!'
+    : `${availability.spots_left} SPOTS LEFT`
+
+  const spotsColor = isFull
+    ? 'text-error'
+    : availability.spots_left <= 2
+    ? 'text-warning'
+    : 'text-primary'
 
   return (
     <div
       className={`
-        relative bg-surface-mid rounded-2xl overflow-hidden border border-white/5 hover:border-white/10 transition-all
-        active:scale-[0.98] duration-100
+        bg-bg-card border border-border rounded-xl p-4 transition-all
         ${isFull ? 'opacity-60' : ''}
-        ${isBooked ? 'bg-green-500/5' : ''}
-        ${is_premium ? 'bg-gradient-to-br from-yellow-500/10 to-surface-mid' : ''}
+        ${isBooked ? 'border-success/30 bg-success/5' : ''}
       `}
     >
-      {/* Left color indicator */}
-      <div
-        className="absolute left-0 top-3 bottom-3 w-1 rounded-full"
-        style={{ backgroundColor: color }}
-      />
-
-      {/* Badges */}
-      {isBooked && (
-        <div className="absolute top-3 right-3 px-2.5 py-1 bg-green-500/15 border border-green-500/30 text-green-400 text-xs font-medium rounded-full">
-          Booked
-        </div>
-      )}
-      {is_premium && !isBooked && (
-        <div className="absolute top-3 right-3 px-2.5 py-1 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold rounded-full">
-          Premium
-        </div>
-      )}
-
-      {/* Card content */}
-      <div className="flex items-start gap-3 p-4 pl-5">
-        {/* Time block */}
-        <div
-          className="min-w-[3.5rem] flex flex-col items-center cursor-pointer"
-          onClick={onTap}
-        >
-          <div className="text-2xl font-bold text-white leading-tight">
-            {timeHour}
-          </div>
-          <div className="text-xs text-stone-500 uppercase">
-            {timePeriod}
-          </div>
+      <div className="flex items-start gap-3">
+        {/* Session Type Icon */}
+        <div className="bg-bg-secondary p-3 rounded-xl shrink-0">
+          <MaterialIcon name={getSessionIcon()} size={24} className="text-primary" />
         </div>
 
-        {/* Main content */}
-        <div
-          className="flex-1 flex flex-col gap-2 cursor-pointer"
-          onClick={onTap}
-        >
+        {/* Content */}
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onTap}>
           {/* Title */}
-          <h3 className="text-base font-bold text-white leading-tight">
+          <h3 className="text-text-primary font-semibold text-base truncate">
             {session.title}
           </h3>
 
-          {/* Duration & Spots */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Duration pill */}
-            <div className="flex items-center gap-1 bg-white/5 text-stone-400 text-xs px-2.5 py-1 rounded-full">
-              <Clock size={12} />
-              <span>{session.duration_minutes}min</span>
-            </div>
+          {/* Time */}
+          <p className="text-text-secondary text-sm mt-0.5">{timeRange}</p>
 
-            {/* Spots indicator - dots for capacity <= 10 */}
-            {availability.capacity <= 10 ? (
-              <div className="flex gap-1">
-                {Array.from({ length: availability.capacity }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      i < availability.booked_count ? 'bg-primary' : 'bg-white/15'
-                    }`}
-                  />
-                ))}
-              </div>
-            ) : (
-              <span className={`text-xs ${
-                isFull ? 'text-red-400' :
-                availability.spots_left <= 2 ? 'text-yellow-400' :
-                'text-stone-400'
-              }`}>
-                {isFull ? 'Full' : `${availability.spots_left} spot${availability.spots_left !== 1 ? 's' : ''} left`}
-              </span>
-            )}
-          </div>
-
-          {/* Trainer */}
-          {trainer && (
-            <div className="flex items-center gap-2 bg-white/5 rounded-lg px-2.5 py-1.5 w-fit">
-              {trainer.avatar_url ? (
-                <div className="relative w-6 h-6 rounded-full overflow-hidden">
+          {/* Trainer & Spots */}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {trainer && (
+              <div className="flex items-center gap-1.5">
+                {trainer.avatar_url ? (
                   <Image
                     src={trainer.avatar_url}
                     alt={trainer.full_name || 'Trainer'}
-                    width={24}
-                    height={24}
-                    className="object-cover"
+                    width={20}
+                    height={20}
+                    className="rounded-full object-cover"
                   />
-                </div>
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-stone-800 flex items-center justify-center">
-                  <User size={14} className="text-stone-400" />
-                </div>
-              )}
-              <span className="text-sm text-stone-300">
-                {trainer.full_name || 'Trainer'}
-              </span>
-            </div>
-          )}
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-bg-secondary flex items-center justify-center">
+                    <MaterialIcon name="person" size={14} className="text-text-muted" />
+                  </div>
+                )}
+                <span className="text-text-secondary text-sm">
+                  {trainer.full_name?.split(' ')[0] || 'Coach'}
+                </span>
+              </div>
+            )}
+
+            <span className="text-text-muted">•</span>
+
+            <span className={`text-xs font-semibold ${spotsColor}`}>
+              {spotsText}
+            </span>
+          </div>
         </div>
 
-        {/* Action button */}
-        <div className="self-center">
+        {/* Action Button */}
+        <div className="shrink-0">
           {isBooked ? (
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 onCancel()
               }}
-              className="w-11 h-11 rounded-xl bg-green-500/15 border border-green-500/30 flex items-center justify-center hover:bg-green-500/25 transition-colors"
+              className="px-4 py-2 bg-success/10 border border-success/30 text-success rounded-full text-sm font-semibold hover:bg-success/20 transition-colors"
               aria-label="Cancel booking"
             >
-              <Check size={20} className="text-green-500" />
+              Booked
             </button>
           ) : isFull ? (
             <button
               disabled
-              className="w-11 h-11 rounded-xl bg-stone-800 flex items-center justify-center cursor-not-allowed"
+              className="px-4 py-2 bg-bg-secondary text-text-muted rounded-full text-sm font-semibold cursor-not-allowed"
               aria-label="Session full"
             >
-              <Lock size={20} className="text-stone-500" />
+              Full
             </button>
           ) : (
             <button
@@ -168,10 +136,10 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
                 e.stopPropagation()
                 onBook()
               }}
-              className="w-11 h-11 rounded-xl bg-primary hover:bg-primary/90 flex items-center justify-center transition-colors active:scale-95"
+              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary/90 transition-colors active:scale-95"
               aria-label="Book session"
             >
-              <Plus size={20} className="text-white" />
+              Book
             </button>
           )}
         </div>

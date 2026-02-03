@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bell, Menu } from "@/components/ui/icons";
+import MaterialIcon from "@/components/ui/MaterialIcon";
 
 interface TopBarProps {
   title?: string;
@@ -26,57 +26,53 @@ export default function TopBar({
 
   // Safe back navigation - check if there's history to go back to
   const handleBack = () => {
-    // Check if we have history to go back to
-    // window.history.length > 1 means there's at least one entry to go back to
-    // Also check if the referrer is from our own domain (not external navigation)
     if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back();
     } else {
-      // No history - navigate to home as fallback
       router.push('/home');
     }
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-background-dark/95 backdrop-blur-md border-b border-steel/20 pt-safe-top">
-      <div className="flex items-center justify-between px-5 py-4">
+    <header className="sticky top-0 z-30 w-full bg-bg-primary/95 dark:bg-bg-primary/95 backdrop-blur-md border-b border-border pt-safe-top transition-colors duration-200">
+      <div className="flex items-center justify-between px-4 py-3">
         {/* Left Section */}
         <div className="flex items-center gap-3">
           {showBack && (
             <button
               onClick={handleBack}
-              className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+              className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-full text-text-secondary transition-colors hover:bg-bg-secondary hover:text-text-primary active:scale-95"
               aria-label="Go back"
             >
-              <ArrowLeft size={24} strokeWidth={2} />
+              <MaterialIcon name="arrow_back" size={24} />
             </button>
           )}
           {leftContent}
           {title && !leftContent && (
-            <h1 className="text-lg font-bold tracking-tight">{title}</h1>
+            <h1 className="text-lg font-semibold text-text-primary">{title}</h1>
           )}
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {rightContent}
           {showNotifications && !rightContent && (
             <button
-              className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95 relative"
+              className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-full text-text-secondary transition-colors hover:bg-bg-secondary hover:text-text-primary active:scale-95 relative"
               aria-label="Notifications"
             >
-              <Bell size={24} strokeWidth={2} />
+              <MaterialIcon name="notifications" size={24} />
               {notificationCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-primary ring-2 ring-background-dark" />
+                <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-primary ring-2 ring-bg-primary" />
               )}
             </button>
           )}
           {showMenu && (
             <button
-              className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+              className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-full text-text-secondary transition-colors hover:bg-bg-secondary hover:text-text-primary active:scale-95"
               aria-label="Menu"
             >
-              <Menu size={24} strokeWidth={2} />
+              <MaterialIcon name="more_vert" size={24} />
             </button>
           )}
         </div>

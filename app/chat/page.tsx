@@ -10,7 +10,7 @@ import ChatLayout from '@/components/layout/ChatLayout'
 import { logger } from '@/lib/utils/logger'
 import { fetchClientConversation, fetchConversationById } from '@/lib/services/conversations'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
-import { ArrowLeft, Search, RefreshCw } from '@/components/ui/icons'
+import MaterialIcon from '@/components/ui/MaterialIcon'
 
 interface ConversationInfo {
   id: string
@@ -36,67 +36,40 @@ export default function ChatPage() {
     logger.debug('[ChatPage] Component mounted')
   }, [])
 
-  useEffect(() => {
-    logger.debug('[ChatPage] Auth state:', {
-      loading,
-      hasUser: !!user,
-      hasProfile: !!profile,
-      userId: user?.id,
-      profileData: profile,
-    })
-  }, [loading, user, profile])
-
   // Extended timeout (15 seconds) with graceful degradation
-  // Shows skeleton loading first, then offers manual refresh option
   useEffect(() => {
     if (loading) {
-      logger.debug('[ChatPage] Setting loading timeout')
       const timeout = setTimeout(() => {
-        logger.debug('[ChatPage] Loading timeout reached after 15s')
         setLoadingTimeout(true)
-        // Don't set error immediately - just show the timeout UI with refresh option
       }, 15000)
-
-      return () => {
-        logger.debug('[ChatPage] Clearing loading timeout')
-        clearTimeout(timeout)
-      }
+      return () => clearTimeout(timeout)
     } else {
       setLoadingTimeout(false)
     }
   }, [loading])
 
   useEffect(() => {
-    logger.debug('[ChatPage] Checking auth for redirect:', { loading, hasUser: !!user, hasProfile: !!profile })
     if (!loading && !user) {
-      logger.debug('[ChatPage] No user found, redirecting to login')
       setError('No user found. Redirecting to login...')
       router.push('/login')
     } else if (!loading && user && !profile) {
-      logger.debug('[ChatPage] User exists but no profile found')
       setError('Profile not found. Please contact support.')
     }
-  }, [user, profile, loading])
+  }, [user, profile, loading, router])
 
   useEffect(() => {
     let mounted = true
 
     const loadClientConversation = async () => {
-      logger.debug('[ChatPage] Fetching client conversation for:', user?.id)
-      if (!profile || !profile.is_client || profile.is_trainer || !user?.id) {
-        logger.debug('[ChatPage] Skipping client conversation fetch - not a client-only user')
-        return
-      }
+      if (!profile || !profile.is_client || profile.is_trainer || !user?.id) return
 
       setLoadingConversation(true)
       setError(null)
 
       try {
         const data = await fetchClientConversation(user.id)
-        // Check if still mounted before updating state
         if (!mounted) return
 
-        logger.debug('[ChatPage] Client conversation loaded:', data.id)
         const convInfo: ConversationInfo = {
           id: data.id,
           client_id: data.client_id,
@@ -108,10 +81,7 @@ export default function ChatPage() {
         setConversationInfo(convInfo)
         setSelectedConversationId(data.id)
       } catch (err) {
-        // Check if still mounted before updating state
         if (!mounted) return
-
-        logger.error('[ChatPage] Error fetching client conversation:', err)
         const error = err as { code?: string; message?: string }
         if (error.code === 'PGRST116') {
           setError('No conversation found. Please contact support to set up your trainer.')
@@ -119,41 +89,30 @@ export default function ChatPage() {
           setError(`Failed to load conversation: ${error.message || 'Unknown error'}`)
         }
       } finally {
-        if (mounted) {
-          setLoadingConversation(false)
-        }
+        if (mounted) setLoadingConversation(false)
       }
     }
 
     if (profile && profile.is_client && !profile.is_trainer) {
-      logger.debug('[ChatPage] Profile is client-only, fetching conversation')
       loadClientConversation()
     }
 
-    return () => {
-      mounted = false
-    }
+    return () => { mounted = false }
   }, [profile, user?.id])
 
   useEffect(() => {
     let mounted = true
 
     const loadConversationInfo = async () => {
-      logger.debug('[ChatPage] Fetching conversation info for trainer:', selectedConversationId)
-      if (!selectedConversationId || !profile?.is_trainer) {
-        logger.debug('[ChatPage] Skipping trainer conversation fetch')
-        return
-      }
+      if (!selectedConversationId || !profile?.is_trainer) return
 
       setLoadingConversation(true)
       setError(null)
 
       try {
         const data = await fetchConversationById(selectedConversationId, true)
-        // Check if still mounted before updating state
         if (!mounted) return
 
-        logger.debug('[ChatPage] Trainer conversation loaded:', data.id)
         const convInfo: ConversationInfo = {
           id: data.id,
           client_id: data.client_id,
@@ -164,27 +123,19 @@ export default function ChatPage() {
         }
         setConversationInfo(convInfo)
       } catch (err) {
-        // Check if still mounted before updating state
         if (!mounted) return
-
-        logger.error('[ChatPage] Error fetching conversation info:', err)
         const error = err as { message?: string }
         setError(`Failed to load conversation: ${error.message || 'Unknown error'}`)
       } finally {
-        if (mounted) {
-          setLoadingConversation(false)
-        }
+        if (mounted) setLoadingConversation(false)
       }
     }
 
     if (selectedConversationId && profile?.is_trainer) {
-      logger.debug('[ChatPage] Selected conversation changed, fetching info')
       loadConversationInfo()
     }
 
-    return () => {
-      mounted = false
-    }
+    return () => { mounted = false }
   }, [selectedConversationId, profile])
 
   const handleSelectConversation = (conversationId: string) => {
@@ -198,14 +149,10 @@ export default function ChatPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background-dark flex flex-col">
-        {/* Show skeleton loading with optional refresh after timeout */}
-        <header className="flex-none bg-background-dark border-b border-white/10 px-4 pt-safe-top pb-5">
+      <div className="min-h-screen bg-bg-primary flex flex-col">
+        <header className="flex-none bg-bg-primary border-b border-border px-4 pt-safe-top pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-white/5 animate-pulse" />
-              <div className="h-7 w-24 bg-stone-700 rounded animate-pulse" />
-            </div>
+            <div className="h-7 w-24 bg-bg-secondary rounded animate-pulse" />
           </div>
         </header>
         <div className="flex-1">
@@ -213,21 +160,21 @@ export default function ChatPage() {
         </div>
         {loadingTimeout && (
           <div className="fixed bottom-20 left-0 right-0 px-4 z-50">
-            <div className="bg-surface-mid border border-white/10 rounded-2xl p-4 shadow-xl max-w-md mx-auto">
-              <p className="text-stone-300 text-sm mb-3 text-center">
+            <div className="bg-bg-card border border-border rounded-2xl p-4 shadow-xl max-w-md mx-auto">
+              <p className="text-text-secondary text-sm mb-3 text-center">
                 Taking longer than expected...
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => window.location.reload()}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-white bg-primary rounded-lg hover:bg-orange-600 font-medium text-sm transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-white bg-primary rounded-lg font-medium text-sm transition-colors"
                 >
-                  <RefreshCw size={16} strokeWidth={2} />
+                  <MaterialIcon name="refresh" size={16} />
                   Refresh
                 </button>
                 <button
                   onClick={() => router.push('/login')}
-                  className="flex-1 px-4 py-2.5 text-stone-300 bg-stone-700 rounded-lg hover:bg-stone-600 font-medium text-sm transition-colors"
+                  className="flex-1 px-4 py-2.5 text-text-secondary bg-bg-secondary rounded-lg font-medium text-sm transition-colors"
                 >
                   Re-login
                 </button>
@@ -241,20 +188,20 @@ export default function ChatPage() {
 
   if (user && !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-dark">
-        <div className="bg-surface-mid rounded-2xl border border-white/5 p-8 text-center max-w-md mx-6">
-          <div className="text-red-500 text-lg font-semibold mb-4">Profile Not Found</div>
-          <p className="text-stone-400 mb-6">{error || 'Your user profile could not be loaded. Please contact support.'}</p>
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <div className="bg-bg-card rounded-2xl border border-border p-8 text-center max-w-md mx-6">
+          <div className="text-error text-lg font-semibold mb-4">Profile Not Found</div>
+          <p className="text-text-secondary mb-6">{error || 'Your user profile could not be loaded.'}</p>
           <div className="space-y-3">
             <button
               onClick={() => signOut().then(() => router.push('/login'))}
-              className="w-full px-6 py-3 text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 font-medium"
+              className="w-full px-6 py-3 text-error bg-error/10 border border-error/20 rounded-lg font-medium"
             >
               Sign Out
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="w-full px-6 py-3 text-primary bg-transparent border border-primary rounded-lg hover:bg-primary/10 font-medium"
+              className="w-full px-6 py-3 text-primary bg-transparent border border-primary rounded-lg font-medium"
             >
               Try Again
             </button>
@@ -273,32 +220,38 @@ export default function ChatPage() {
 
   // Mobile header component
   const mobileHeader = (
-    <header className="flex-none bg-background-dark sticky top-0 z-50 border-b border-white/10 px-4 pt-safe-top pb-5">
+    <header className="flex-none bg-bg-primary sticky top-0 z-50 border-b border-border px-4 pt-safe-top pb-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/home')}
-            className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-white active:scale-95"
+            className="flex items-center justify-center size-10 rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
             aria-label="Go back"
           >
-            <ArrowLeft size={24} strokeWidth={2} />
+            <MaterialIcon name="arrow_back" size={24} />
           </button>
-          <h1 className="text-xl font-extrabold uppercase tracking-[0.2em] text-white">Comms</h1>
+          <h1 className="text-xl font-bold text-text-primary">Messages</h1>
         </div>
+        <button
+          className="flex items-center justify-center size-10 text-text-secondary"
+          aria-label="More options"
+        >
+          <MaterialIcon name="more_horiz" size={24} />
+        </button>
       </div>
 
       {/* Search Bar */}
       <div className="mt-4">
-        <div className="relative group">
+        <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={20} strokeWidth={2} className="text-stone-500 group-focus-within:text-primary transition-colors" />
+            <MaterialIcon name="search" size={20} className="text-text-muted" />
           </div>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-3 py-3 border border-white/5 rounded-xl leading-5 bg-surface-elevated text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-[#333] transition-all text-sm shadow-inner"
-            placeholder="Search conversations..."
+            className="block w-full pl-10 pr-3 py-3 border border-border rounded-xl bg-bg-input text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
+            placeholder="Search coaches and staff"
           />
         </div>
       </div>
@@ -327,12 +280,12 @@ export default function ChatPage() {
     if (error) {
       return (
         <div className="flex-1 flex items-center justify-center">
-          <div className="bg-surface-mid rounded-2xl border border-white/5 p-8 text-center max-w-md mx-6">
-            <div className="text-red-500 text-lg font-semibold mb-4">Error</div>
-            <p className="text-stone-400 mb-6">{error}</p>
+          <div className="bg-bg-card rounded-2xl border border-border p-8 text-center max-w-md mx-6">
+            <div className="text-error text-lg font-semibold mb-4">Error</div>
+            <p className="text-text-secondary mb-6">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-3 text-white bg-primary rounded-lg hover:bg-orange-600 font-medium"
+              className="px-6 py-3 text-white bg-primary rounded-lg font-medium"
             >
               Retry
             </button>
@@ -344,7 +297,7 @@ export default function ChatPage() {
     if (loadingConversation) {
       return (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-stone-500 text-center">Loading conversation...</div>
+          <div className="text-text-secondary text-center">Loading conversation...</div>
         </div>
       )
     }
@@ -371,8 +324,8 @@ export default function ChatPage() {
   // Access denied state
   if (!isTrainer && !isClient) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-dark">
-        <div className="text-stone-500 text-center">
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <div className="text-text-secondary text-center">
           <p className="text-lg mb-2">Access Denied</p>
           <p className="text-sm">You need to be a trainer or client to access chat.</p>
         </div>

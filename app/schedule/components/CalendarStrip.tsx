@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { ChevronLeft, ChevronRight } from '@/components/ui/icons'
+import { useState, useMemo } from 'react'
+import MaterialIcon from '@/components/ui/MaterialIcon'
 
 interface CalendarStripProps {
   selectedDate: string // ISO date string YYYY-MM-DD
@@ -10,27 +10,47 @@ interface CalendarStripProps {
   bookedDates?: Set<string> // ISO date strings where user has a booking
 }
 
-function generateWeekDates(weekOffset: number): { day: string; date: number; fullDate: Date; isoDate: string }[] {
-  const dates = []
-  const now = new Date()
-  const startOfWeek = new Date(now)
-  startOfWeek.setDate(now.getDate() - now.getDay() + (weekOffset * 7)) // Sunday start
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(startOfWeek)
-    d.setDate(startOfWeek.getDate() + i)
-    dates.push({
-      day: d.toLocaleDateString('en-US', { weekday: 'short' }),
-      date: d.getDate(),
-      fullDate: d,
-      isoDate: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
-    })
+function getMonthData(year: number, month: number) {
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const daysInMonth = lastDay.getDate()
+  const startDayOfWeek = firstDay.getDay() // 0 = Sunday
+
+  const days: { date: number; isoDate: string; isCurrentMonth: boolean }[] = []
+
+  // Add days from previous month to fill the first week
+  const prevMonth = month === 0 ? 11 : month - 1
+  const prevYear = month === 0 ? year - 1 : year
+  const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate()
+
+  for (let i = startDayOfWeek - 1; i >= 0; i--) {
+    const date = daysInPrevMonth - i
+    const isoDate = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`
+    days.push({ date, isoDate, isCurrentMonth: false })
   }
-  return dates
+
+  // Add days of current month
+  for (let date = 1; date <= daysInMonth; date++) {
+    const isoDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`
+    days.push({ date, isoDate, isCurrentMonth: true })
+  }
+
+  // Add days from next month to complete the grid (6 rows max)
+  const remainingDays = 42 - days.length // 6 weeks * 7 days
+  const nextMonth = month === 11 ? 0 : month + 1
+  const nextYear = month === 11 ? year + 1 : year
+
+  for (let date = 1; date <= remainingDays && days.length < 42; date++) {
+    const isoDate = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`
+    days.push({ date, isoDate, isCurrentMonth: false })
+  }
+
+  return days
 }
 
 function getTodayISO(): string {
   const today = new Date()
-  return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 }
 
 export default function CalendarStrip({
@@ -39,124 +59,115 @@ export default function CalendarStrip({
   datesWithSessions,
   bookedDates = new Set(),
 }: CalendarStripProps) {
-  const [weekOffset, setWeekOffset] = useState(0)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const selectedRef = useRef<HTMLButtonElement>(null)
-
-  const weekDates = generateWeekDates(weekOffset)
+  const today = new Date()
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth())
+  const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const todayISO = getTodayISO()
 
-  // Determine month/year display
-  const firstDate = weekDates[0].fullDate
-  const lastDate = weekDates[6].fullDate
-  const monthYear = firstDate.getMonth() === lastDate.getMonth()
-    ? firstDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    : `${firstDate.toLocaleDateString('en-US', { month: 'short' })} - ${lastDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+  const monthDays = useMemo(
+    () => getMonthData(currentYear, currentMonth),
+    [currentYear, currentMonth]
+  )
 
-  // Show "Today" button if not on current week OR selected date is not today
-  const showTodayButton = weekOffset !== 0 || selectedDate !== todayISO
+  const monthName = new Date(currentYear, currentMonth).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  })
 
-  // Auto-scroll selected date into view
-  useEffect(() => {
-    if (selectedRef.current && scrollContainerRef.current) {
-      selectedRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
-      })
-    }
-  }, [selectedDate, weekOffset])
+  const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-  const handlePrevWeek = () => {
-    if (weekOffset > 0) {
-      setWeekOffset(weekOffset - 1)
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11)
+      setCurrentYear(currentYear - 1)
+    } else {
+      setCurrentMonth(currentMonth - 1)
     }
   }
 
-  const handleNextWeek = () => {
-    setWeekOffset(weekOffset + 1)
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0)
+      setCurrentYear(currentYear + 1)
+    } else {
+      setCurrentMonth(currentMonth + 1)
+    }
   }
 
-  const handleTodayClick = () => {
-    setWeekOffset(0)
-    onSelectDate(todayISO)
-  }
+  // Limit to 5 rows if possible (35 days), otherwise 6 rows
+  const visibleDays = monthDays.slice(0, monthDays.length > 35 ? 42 : 35)
 
   return (
-    <div className="bg-surface-mid rounded-2xl p-4 border border-white/5">
+    <div className="bg-bg-card rounded-2xl p-4 border border-border">
       {/* Header: Month/Year + Navigation */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold text-white">{monthYear}</h2>
-        <div className="flex items-center gap-2">
-          {showTodayButton && (
-            <button
-              onClick={handleTodayClick}
-              className="bg-primary/15 text-primary border border-primary/30 px-3 py-1.5 min-h-[44px] text-xs font-medium rounded-full hover:bg-primary/20 transition-colors"
-            >
-              Today
-            </button>
-          )}
-          <button
-            onClick={handlePrevWeek}
-            disabled={weekOffset === 0}
-            className="size-8 min-w-[44px] min-h-[44px] rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            aria-label="Previous week"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={handleNextWeek}
-            className="size-8 min-w-[44px] min-h-[44px] rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
-            aria-label="Next week"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={handlePrevMonth}
+          className="size-8 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
+          aria-label="Previous month"
+        >
+          <MaterialIcon name="chevron_left" size={24} />
+        </button>
+
+        <h2 className="text-base font-semibold text-text-primary">{monthName}</h2>
+
+        <button
+          onClick={handleNextMonth}
+          className="size-8 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
+          aria-label="Next month"
+        >
+          <MaterialIcon name="chevron_right" size={24} />
+        </button>
       </div>
 
-      {/* Separator */}
-      <div className="h-px bg-white/5 my-3" />
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {weekDays.map((day, idx) => (
+          <div
+            key={idx}
+            className="text-center text-xs font-medium text-text-muted py-1"
+          >
+            {day}
+          </div>
+        ))}
+      </div>
 
-      {/* Calendar Strip */}
-      <div
-        ref={scrollContainerRef}
-        className="flex gap-2 overflow-x-auto snap-x snap-mandatory no-scrollbar"
-      >
-        {weekDates.map((dateItem) => {
-          const isSelected = dateItem.isoDate === selectedDate
-          const isToday = dateItem.isoDate === todayISO
-          const hasSessions = datesWithSessions.has(dateItem.isoDate)
-          const hasBooking = bookedDates.has(dateItem.isoDate)
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {visibleDays.map((dayItem, idx) => {
+          const isSelected = dayItem.isoDate === selectedDate
+          const isToday = dayItem.isoDate === todayISO
+          const hasSessions = datesWithSessions.has(dayItem.isoDate)
+          const hasBooking = bookedDates.has(dayItem.isoDate)
 
           return (
             <button
-              key={dateItem.isoDate}
-              ref={isSelected ? selectedRef : null}
-              onClick={() => onSelectDate(dateItem.isoDate)}
+              key={idx}
+              onClick={() => onSelectDate(dayItem.isoDate)}
+              disabled={!dayItem.isCurrentMonth}
               className={`
-                flex-shrink-0 snap-start flex-1 min-w-[44px] h-[72px] rounded-xl flex flex-col items-center justify-center gap-1
-                transition-all duration-200
-                ${
-                  isSelected
-                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                    : isToday
-                    ? 'bg-surface-dark border border-gray-700 text-gray-300 ring-1 ring-primary/40'
-                    : 'bg-surface-dark border border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300'
-                }
+                relative aspect-square flex flex-col items-center justify-center rounded-full text-sm font-medium
+                transition-all duration-150
+                ${!dayItem.isCurrentMonth ? 'text-text-muted/40 cursor-default' : ''}
+                ${dayItem.isCurrentMonth && !isSelected ? 'text-text-primary hover:bg-bg-secondary' : ''}
+                ${isSelected ? 'bg-primary text-white' : ''}
+                ${isToday && !isSelected ? 'ring-1 ring-primary ring-inset' : ''}
               `}
             >
-              <span className="text-xs font-medium uppercase">{dateItem.day}</span>
-              <span className="text-xl font-bold">{dateItem.date}</span>
+              <span>{dayItem.date}</span>
 
-              {/* Dot indicators */}
-              <div className="flex gap-1 h-1.5">
-                {hasSessions && (
-                  <div className={`w-1.5 h-1.5 rounded-full bg-primary ${hasBooking ? 'animate-pulse' : ''}`} />
-                )}
-                {hasBooking && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                )}
-              </div>
+              {/* Session indicator dot */}
+              {dayItem.isCurrentMonth && (hasSessions || hasBooking) && (
+                <div className="absolute bottom-1 flex gap-0.5">
+                  {hasSessions && (
+                    <div
+                      className={`w-1 h-1 rounded-full ${
+                        isSelected ? 'bg-white' : 'bg-primary'
+                      }`}
+                    />
+                  )}
+                </div>
+              )}
             </button>
           )
         })}
