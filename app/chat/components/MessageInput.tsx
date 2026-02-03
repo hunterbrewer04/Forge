@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, FormEvent, useRef, ChangeEvent } from 'react'
+import { useState, FormEvent, useRef, ChangeEvent, useEffect } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import { useAuth } from '@/contexts/AuthContext'
-import { Plus, Smile, Send } from '@/components/ui/icons'
+import { Plus, Send, X } from '@/components/ui/icons'
 
 interface MessageInputProps {
   conversationId: string
-  senderId?: string
   onOptimisticMessage?: (content: string, tempId: string) => void
   onMessageError?: (tempId: string) => void
 }
@@ -30,9 +29,20 @@ export default function MessageInput({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const supabase = createClient()
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timeout = setTimeout(() => {
+        setError(null)
+      }, 5000)
+      return () => clearTimeout(timeout)
+    }
+  }, [error])
 
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024
   const MAX_VIDEO_SIZE = 50 * 1024 * 1024
@@ -140,7 +150,6 @@ export default function MessageInput({
         fileInputRef.current.value = ''
       }
     } catch (err) {
-      console.error('Upload error:', err)
       setUploadError(err instanceof Error ? err.message : 'Failed to upload file')
     } finally {
       setUploading(false)
@@ -170,11 +179,11 @@ export default function MessageInput({
     try {
       if (!user?.id) {
         onMessageError?.(tempId)
-        alert('You must be logged in to send messages')
+        setError('You must be logged in to send messages')
         return
       }
 
-      const { error } = await supabase
+      const { error: dbError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
@@ -183,20 +192,18 @@ export default function MessageInput({
           created_at: new Date().toISOString(),
         })
 
-      if (error) {
-        console.error('Error sending message:', error)
+      if (dbError) {
         // Remove optimistic message and restore input
         onMessageError?.(tempId)
         setMessage(messageContent)
-        alert('Failed to send message. Please try again.')
+        setError('Failed to send message. Please try again.')
       }
       // Success: real-time subscription will handle replacing optimistic message
     } catch (err) {
-      console.error('Unexpected error:', err)
       // Remove optimistic message and restore input
       onMessageError?.(tempId)
       setMessage(messageContent)
-      alert('Failed to send message. Please try again.')
+      setError('Failed to send message. Please try again.')
     } finally {
       setSending(false)
     }
@@ -209,11 +216,11 @@ export default function MessageInput({
 
     try {
       if (!user?.id) {
-        alert('You must be logged in to send messages')
+        setError('You must be logged in to send messages')
         return
       }
 
-      const { error } = await supabase
+      const { error: dbError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
@@ -222,13 +229,11 @@ export default function MessageInput({
           created_at: new Date().toISOString(),
         })
 
-      if (error) {
-        console.error('Error sending quick reply:', error)
-        alert('Failed to send message. Please try again.')
+      if (dbError) {
+        setError('Failed to send message. Please try again.')
       }
     } catch (err) {
-      console.error('Unexpected error:', err)
-      alert('Failed to send message. Please try again.')
+      setError('Failed to send message. Please try again.')
     } finally {
       setSending(false)
     }
@@ -247,6 +252,20 @@ export default function MessageInput({
 
   return (
     <div className="flex-none bg-background-dark border-t border-white/10 pb-safe-bottom pt-2">
+      {/* Error banner */}
+      {error && (
+        <div className="mx-4 mb-3 px-3 py-2 bg-red-500/10 text-red-400 text-sm rounded-lg flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="ml-2 shrink-0 p-1 hover:bg-red-500/20 rounded transition-colors"
+            aria-label="Dismiss error"
+          >
+            <X size={16} strokeWidth={2} />
+          </button>
+        </div>
+      )}
+
       {/* Upload progress bar */}
       {uploading && (
         <div className="px-4 mb-3">
@@ -256,16 +275,16 @@ export default function MessageInput({
             </span>
             <span className="text-sm text-stone-400">{uploadProgress}%</span>
           </div>
-          <div className="w-full bg-stone-700 rounded-full h-1.5">
+          <div className="w-full bg-surface-mid rounded-full h-1.5">
             <div
-              className="bg-primary h-1.5 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-primary to-orange-400 h-1.5 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* Error message */}
+      {/* Upload error message */}
       {uploadError && (
         <div className="mx-4 mb-3 p-2 bg-red-900/30 border border-red-500/30 rounded-lg">
           <p className="text-sm text-red-400">{uploadError}</p>
@@ -279,7 +298,7 @@ export default function MessageInput({
             key={reply}
             onClick={() => handleQuickReply(reply)}
             disabled={sending || uploading}
-            className="shrink-0 bg-[#2C2C2C] border border-white/5 hover:bg-white/10 text-xs font-medium text-white px-3 py-1.5 rounded-full transition-colors whitespace-nowrap disabled:opacity-50"
+            className="shrink-0 bg-surface-mid border border-white/10 hover:border-primary/30 hover:bg-primary/5 text-xs font-medium text-stone-300 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap disabled:opacity-50"
           >
             {reply}
           </button>
@@ -302,14 +321,14 @@ export default function MessageInput({
           type="button"
           onClick={handleUploadButtonClick}
           disabled={sending || uploading}
-          className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-[#2C2C2C] text-stone-500 hover:text-primary transition-colors shrink-0 mb-0.5 disabled:opacity-50 active:scale-95"
+          className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-xl bg-surface-mid border border-white/5 text-stone-500 hover:text-primary transition-colors shrink-0 mb-0.5 disabled:opacity-50 active:scale-95"
           aria-label="Upload photo or video"
         >
           <Plus size={20} strokeWidth={2} />
         </button>
 
         {/* Text input */}
-        <div className="flex-1 bg-[#2C2C2C] rounded-[1.25rem] min-h-[44px] flex items-center px-4 py-2 border border-transparent focus-within:border-primary/50 transition-colors">
+        <div className="flex-1 bg-surface-mid rounded-2xl border border-white/5 focus-within:border-primary/40 min-h-[44px] flex items-center px-4 py-2 transition-colors">
           <textarea
             ref={textareaRef}
             value={message}
@@ -319,20 +338,13 @@ export default function MessageInput({
             rows={1}
             className="w-full bg-transparent border-none p-0 text-sm text-white placeholder-stone-500 focus:ring-0 resize-none max-h-24 focus:outline-none disabled:opacity-50"
           />
-          <button
-            type="button"
-            className="flex items-center justify-center size-8 min-w-[32px] min-h-[32px] ml-2 text-stone-500 hover:text-white transition-colors active:scale-95"
-            aria-label="Add emoji"
-          >
-            <Smile size={20} strokeWidth={2} />
-          </button>
         </div>
 
         {/* Send button */}
         <button
           type="submit"
           disabled={!message.trim() || sending || uploading}
-          className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-primary hover:bg-orange-600 text-white shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0 mb-0.5 disabled:opacity-50 disabled:bg-stone-600 disabled:shadow-none"
+          className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-xl bg-primary hover:bg-orange-600 text-white shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0 mb-0.5 disabled:opacity-50 disabled:bg-surface-mid disabled:border disabled:border-white/5 disabled:text-stone-600 disabled:shadow-none"
           aria-label="Send message"
         >
           <Send size={20} strokeWidth={2} className="ml-0.5" />

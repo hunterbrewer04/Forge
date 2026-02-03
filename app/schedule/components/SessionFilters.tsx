@@ -22,11 +22,11 @@ export default function SessionFilters({
             onClick={() => onFilterChange(filter.key)}
             className={`
               flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium
-              whitespace-nowrap transition-colors
+              whitespace-nowrap active:scale-95 transition-all
               ${
                 isActive
-                  ? 'bg-primary text-white shadow-md shadow-primary/20 font-bold'
-                  : 'bg-surface-dark border border-gray-700 text-gray-300'
+                  ? 'bg-primary text-white shadow-md shadow-primary/25 font-bold'
+                  : 'bg-surface-mid border border-white/10 text-stone-400 hover:text-white hover:border-white/20'
               }
             `}
           >

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import MessageInput from './MessageInput'
 import MediaViewer, { useMediaViewer } from './MediaViewer'
@@ -8,7 +8,8 @@ import { fetchMessages, fetchSenderProfile } from '@/lib/services/messages'
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
 import { MessageListSkeleton } from '@/components/skeletons/MessageSkeleton'
-import { ArrowLeft, User, BadgeCheck, MoreVertical, CheckCheck, AlertCircle, RefreshCw } from '@/components/ui/icons'
+import { ArrowLeft, User, CheckCheck, AlertCircle, RefreshCw } from '@/components/ui/icons'
+import Image from 'next/image'
 
 interface Message {
   id: string
@@ -45,10 +46,10 @@ export default function ChatWindow({
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const senderProfileCache = useRef<Map<string, SenderProfile>>(new Map())
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Media lightbox viewer state
   const {
@@ -103,16 +104,22 @@ export default function ChatWindow({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const processMessage = async (message: Message): Promise<Message> => {
+  const processMessage = useCallback(async (message: Message): Promise<Message> => {
     if (message.media_url && message.media_type) {
       const processed = await processMessageMedia(message)
       return processed as Message
     }
     return message
-  }
+  }, [])
 
   useEffect(() => {
-    scrollToBottom()
+    const container = messagesContainerRef.current
+    if (container) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
+      if (isNearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
   }, [messages])
 
   const loadMessages = useCallback(async () => {
@@ -144,7 +151,7 @@ export default function ChatWindow({
     } finally {
       setLoading(false)
     }
-  }, [conversationId])
+  }, [conversationId, processMessage])
 
   useEffect(() => {
     loadMessages()
@@ -245,7 +252,7 @@ export default function ChatWindow({
         <div className="flex-1 flex items-center justify-center">
           <button
             onClick={loadMessages}
-            className="flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:bg-white/5 rounded-xl transition-colors group"
+            className="flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:bg-white/5 rounded-2xl transition-colors group"
           >
             <div className="size-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4 group-hover:bg-red-500/20 transition-colors">
               <AlertCircle size={32} strokeWidth={2} className="text-red-400" />
@@ -264,46 +271,45 @@ export default function ChatWindow({
   return (
     <div className="h-full flex flex-col bg-background-dark">
       {/* Chat Header */}
-      <div className="flex-none px-4 py-3 border-b border-white/10 bg-background-dark/95 backdrop-blur-md sticky top-0 z-10">
+      <div className="flex-none px-4 py-3 border-b border-white/10 bg-[#1a1a1a]/95 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {onBack && (
               <button
                 onClick={onBack}
-                className="p-2 -ml-2 rounded-full hover:bg-white/5 transition-colors text-stone-400 hover:text-white"
+                className="p-2 -ml-2 min-w-[44px] min-h-[44px] rounded-full hover:bg-white/5 transition-colors text-stone-400 hover:text-white"
               >
                 <ArrowLeft size={20} strokeWidth={2} />
               </button>
             )}
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div
-                  className="size-10 rounded-full bg-center bg-cover border border-white/10 bg-stone-700 flex items-center justify-center"
-                  style={otherUserAvatar ? { backgroundImage: `url('${otherUserAvatar}')` } : undefined}
-                >
-                  {!otherUserAvatar && (
+                <div className="size-11 rounded-xl border-2 border-white/10 bg-stone-700 flex items-center justify-center relative overflow-hidden">
+                  {otherUserAvatar ? (
+                    <Image
+                      src={otherUserAvatar}
+                      alt={otherUserName}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
                     <User size={20} strokeWidth={2} className="text-stone-400" />
                   )}
                 </div>
-                <div className="absolute bottom-0 right-0 size-2.5 bg-green-500 rounded-full border-2 border-background-dark" />
+                <div className="absolute bottom-0 right-0 size-2.5 bg-emerald-400 rounded-full ring-2 ring-[#1a1a1a]" />
               </div>
               <div>
-                <h3 className="font-bold text-base leading-tight text-white flex items-center gap-1">
+                <h3 className="font-bold text-base leading-tight text-white">
                   {otherUserName}
-                  <BadgeCheck size={14} strokeWidth={2} className="text-gold" />
                 </h3>
-                <p className="text-xs text-primary font-medium">Online</p>
               </div>
             </div>
           </div>
-          <button className="p-2 rounded-full hover:bg-white/5 text-stone-500">
-            <MoreVertical size={24} strokeWidth={2} />
-          </button>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 bg-background-dark">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4 bg-background-dark">
         {messages.length === 0 ? (
           <div className="text-center text-stone-500 mt-8">
             No messages yet. Start the conversation!
@@ -319,7 +325,7 @@ export default function ChatWindow({
                 {/* Date Separator */}
                 {showDateSeparator && (
                   <div className="flex justify-center my-6">
-                    <span className="text-[10px] font-bold tracking-widest text-stone-500 uppercase bg-[#2C2C2C] px-3 py-1 rounded-full">
+                    <span className="text-[10px] font-semibold tracking-wider text-stone-500 uppercase bg-surface-mid border border-white/5 px-4 py-1.5 rounded-full">
                       {formatDateSeparator(message.created_at)}
                     </span>
                   </div>
@@ -329,15 +335,16 @@ export default function ChatWindow({
                 {isCurrentUser ? (
                   // Sent Message
                   <div className="flex flex-col items-end max-w-[85%] ml-auto">
-                    <div className="bg-primary p-3 rounded-2xl rounded-br-none text-white text-sm leading-relaxed shadow-md shadow-primary/10">
+                    <div className="bg-primary px-4 py-3 rounded-2xl rounded-br-sm text-white text-sm leading-relaxed shadow-md shadow-primary/10">
                       {/* Render image */}
                       {message.media_type === 'image' && message.signedUrl && (
-                        <div className="mb-2">
-                          <img
+                        <div className="mb-2 relative cursor-pointer" onClick={() => openSingleImage(message.signedUrl!, 'Shared image')}>
+                          <Image
                             src={message.signedUrl}
                             alt="Shared image"
-                            className="max-w-full max-h-64 rounded-lg cursor-pointer"
-                            onClick={() => openSingleImage(message.signedUrl!, 'Shared image')}
+                            width={200}
+                            height={200}
+                            className="max-w-full max-h-64 rounded-lg object-cover"
                           />
                         </div>
                       )}
@@ -366,11 +373,11 @@ export default function ChatWindow({
                       {message.content && <p>{message.content}</p>}
                     </div>
                     <div className="flex items-center gap-1 mt-1 mr-1">
-                      <span className="text-[10px] text-stone-500">
+                      <span className="text-[10px] text-stone-600">
                         {message.pending ? 'Sending...' : formatTimestamp(message.created_at)}
                       </span>
                       {message.pending ? (
-                        <div className="size-3 border-2 border-stone-500 border-t-transparent rounded-full animate-spin" />
+                        <div className="size-3 border-2 border-stone-600 border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <CheckCheck size={12} strokeWidth={2} className="text-primary" />
                       )}
@@ -379,24 +386,29 @@ export default function ChatWindow({
                 ) : (
                   // Received Message
                   <div className="flex gap-3 max-w-[85%]">
-                    <div
-                      className="size-8 rounded-full bg-center bg-cover shrink-0 mt-auto mb-1 bg-stone-700 flex items-center justify-center"
-                      style={otherUserAvatar ? { backgroundImage: `url('${otherUserAvatar}')` } : undefined}
-                    >
-                      {!otherUserAvatar && (
+                    <div className="size-7 rounded-lg shrink-0 mt-auto mb-1 bg-stone-700 flex items-center justify-center relative overflow-hidden">
+                      {otherUserAvatar ? (
+                        <Image
+                          src={otherUserAvatar}
+                          alt={otherUserName}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
                         <User size={14} strokeWidth={2} className="text-stone-400" />
                       )}
                     </div>
                     <div className="flex flex-col gap-1">
-                      <div className="bg-[#4A4A4A] p-3 rounded-2xl rounded-bl-none text-white text-sm leading-relaxed shadow-sm">
+                      <div className="bg-[#2a2a2a] px-4 py-3 rounded-2xl rounded-bl-sm text-white text-sm leading-relaxed shadow-sm">
                         {/* Render image */}
                         {message.media_type === 'image' && message.signedUrl && (
-                          <div className="mb-2">
-                            <img
+                          <div className="mb-2 relative cursor-pointer" onClick={() => openSingleImage(message.signedUrl!, 'Shared image')}>
+                            <Image
                               src={message.signedUrl}
                               alt="Shared image"
-                              className="max-w-full max-h-64 rounded-lg cursor-pointer"
-                              onClick={() => openSingleImage(message.signedUrl!, 'Shared image')}
+                              width={200}
+                              height={200}
+                              className="max-w-full max-h-64 rounded-lg object-cover"
                             />
                           </div>
                         )}
@@ -424,32 +436,13 @@ export default function ChatWindow({
 
                         {message.content && <p>{message.content}</p>}
                       </div>
-                      <span className="text-[10px] text-stone-500 ml-1">{formatTimestamp(message.created_at)}</span>
+                      <span className="text-[10px] text-stone-600 ml-1">{formatTimestamp(message.created_at)}</span>
                     </div>
                   </div>
                 )}
               </div>
             )
           })
-        )}
-
-        {/* Typing Indicator */}
-        {isTyping && (
-          <div className="flex gap-3 max-w-[85%] animate-pulse">
-            <div
-              className="size-8 rounded-full bg-center bg-cover shrink-0 mb-1 bg-stone-700 flex items-center justify-center"
-              style={otherUserAvatar ? { backgroundImage: `url('${otherUserAvatar}')` } : undefined}
-            >
-              {!otherUserAvatar && (
-                <User size={14} strokeWidth={2} className="text-stone-400" />
-              )}
-            </div>
-            <div className="bg-[#4A4A4A]/50 px-4 py-3 rounded-2xl rounded-bl-none w-16 flex items-center justify-center gap-1">
-              <div className="size-1.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-              <div className="size-1.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-              <div className="size-1.5 bg-gold rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-            </div>
-          </div>
         )}
 
         <div ref={messagesEndRef} />

@@ -12,6 +12,9 @@
   /* Surface Colors */
   --surface-dark: #2a2a2a;
   --surface-darker: #202020;
+  --surface-mid: #232323;
+  --surface-elevated: #2C2C2C;
+  --surface-deep: #1e1e1e;
 
   /* Safe Area Insets */
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
@@ -33,6 +36,9 @@
   --color-gold: var(--gold);
   --color-surface-dark: var(--surface-dark);
   --color-surface-darker: var(--surface-darker);
+  --color-surface-mid: var(--surface-mid);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-deep: var(--surface-deep);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: "Space Grotesk", sans-serif;
@@ -149,12 +155,6 @@ input, textarea, select {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #ff6714;
-}
-
-/* iOS Touch Active States */
-button:active, a:active, [role="button"]:active {
-  transform: scale(0.97);
-  transition: transform 0.1s ease;
 }
 
 /* View Transitions */
