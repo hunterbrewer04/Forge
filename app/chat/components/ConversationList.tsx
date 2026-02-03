@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Image from 'next/image'
-import { fetchTrainerConversations } from '@/lib/services/conversations'
+import { fetchTrainerConversations, getLastMessage, getUnreadCount } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
 import MaterialIcon from '@/components/ui/MaterialIcon'
@@ -14,9 +14,26 @@ interface Conversation {
   client_name: string | null
   avatar_url?: string | null
   last_message?: string
-  last_message_time?: string
-  is_online?: boolean
+  last_message_time?: string | null
   unread?: boolean
+}
+
+/**
+ * Format a timestamp into relative time (e.g., "2m ago", "1h ago", "Yesterday")
+ */
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays === 1) return 'Yesterday'
+  return date.toLocaleDateString()
 }
 
 interface ConversationListProps {
@@ -43,19 +60,28 @@ export default function ConversationList({
     try {
       const data = await fetchTrainerConversations(currentUserId)
 
-      const conversationsWithNames: Conversation[] = data.map((conv, idx) => ({
-        id: conv.id,
-        client_id: conv.client_id,
-        trainer_id: conv.trainer_id,
-        client_name: conv.profiles?.full_name || 'Unknown Client',
-        avatar_url: conv.profiles?.avatar_url,
-        last_message: 'Tap to view messages',
-        last_message_time: idx === 0 ? '2m ago' : idx === 1 ? '1h ago' : 'Yesterday',
-        is_online: idx < 2,
-        unread: idx === 0,
-      }))
+      // Enhance conversations with real last message and unread count
+      const enhancedConversations = await Promise.all(
+        data.map(async (conv) => {
+          const lastMessage = await getLastMessage(conv.id)
+          const unreadCount = await getUnreadCount(conv.id, currentUserId)
 
-      setConversations(conversationsWithNames)
+          return {
+            id: conv.id,
+            client_id: conv.client_id,
+            trainer_id: conv.trainer_id,
+            client_name: conv.profiles?.full_name || 'Unknown Client',
+            avatar_url: conv.profiles?.avatar_url,
+            last_message: lastMessage?.content || 'No messages yet',
+            last_message_time: lastMessage?.created_at
+              ? formatRelativeTime(lastMessage.created_at)
+              : null,
+            unread: unreadCount > 0,
+          }
+        })
+      )
+
+      setConversations(enhancedConversations)
     } catch (err) {
       logger.error('Error fetching conversations:', err)
       setError('Failed to load conversations. Tap to retry.')
@@ -120,7 +146,7 @@ export default function ConversationList({
               selectedConversationId === conversation.id ? 'bg-primary/10' : ''
             }`}
           >
-            {/* Avatar with online indicator */}
+            {/* Avatar */}
             <div className="relative shrink-0">
               <div className="size-12 rounded-full bg-bg-secondary overflow-hidden">
                 {conversation.avatar_url ? (
@@ -136,9 +162,6 @@ export default function ConversationList({
                   </div>
                 )}
               </div>
-              {conversation.is_online && (
-                <span className="absolute bottom-0 right-0 size-3 bg-success rounded-full ring-2 ring-bg-primary" />
-              )}
             </div>
 
             {/* Content */}
@@ -147,9 +170,11 @@ export default function ConversationList({
                 <h4 className="font-semibold text-text-primary truncate">
                   {conversation.client_name}
                 </h4>
-                <span className={`text-xs ${conversation.unread ? 'text-primary font-semibold' : 'text-text-muted'}`}>
-                  {conversation.last_message_time}
-                </span>
+                {conversation.last_message_time && (
+                  <span className={`text-xs ${conversation.unread ? 'text-primary font-semibold' : 'text-text-muted'}`}>
+                    {conversation.last_message_time}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-text-secondary truncate">
                 {conversation.last_message}

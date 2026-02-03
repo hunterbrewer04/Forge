@@ -29,17 +29,10 @@ export default function PaymentsPage() {
   const { user, profile, loading } = useAuth()
   const router = useRouter()
 
-  // Mock data - in real app, this would come from Supabase/Stripe
-  const [balance] = useState(75.00)
-  const [paymentMethods] = useState<PaymentMethod[]>([
-    { id: '1', type: 'card', last4: '1234', brand: 'Visa', expiry: '12/26', isDefault: true },
-    { id: '2', type: 'apple_pay', isDefault: false },
-  ])
-  const [transactions] = useState<Transaction[]>([
-    { id: '1', title: 'Pitching Session', date: 'Oct 24, 2023 • 2:00 PM', amount: -50.00, status: 'PAID', icon: 'sports_baseball' },
-    { id: '2', title: 'New Batting Gloves', date: 'Oct 20, 2023 • 11:30 AM', amount: -35.00, status: 'PAID', icon: 'sports' },
-    { id: '3', title: 'Monthly Membership', date: 'Oct 01, 2023 • 9:00 AM', amount: -120.00, status: 'PAID', icon: 'card_membership' },
-  ])
+  // Payment data - will be connected to Stripe in future implementation
+  const [balance] = useState(0)
+  const [paymentMethods] = useState<PaymentMethod[]>([])
+  const [transactions] = useState<Transaction[]>([])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -97,53 +90,60 @@ export default function PaymentsPage() {
         <h3 className="text-text-primary font-semibold mb-3">Saved Payment Methods</h3>
 
         <div className="space-y-2">
-          {paymentMethods.map((method) => (
-            <div
-              key={method.id}
-              className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-4"
-            >
-              {method.type === 'card' ? (
-                <>
-                  <div className="w-10 h-7 bg-bg-secondary rounded flex items-center justify-center">
-                    <MaterialIcon name="credit_card" size={18} className="text-text-muted" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-text-primary font-medium">
-                      {method.brand} ending in {method.last4}
-                    </p>
-                    <p className="text-text-muted text-xs">Expires {method.expiry}</p>
-                  </div>
-                </>
-              ) : method.type === 'apple_pay' ? (
-                <>
-                  <div className="w-10 h-7 bg-black rounded flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">Pay</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-text-primary font-medium">Apple Pay</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-10 h-7 bg-bg-secondary rounded flex items-center justify-center">
-                    <span className="text-text-muted text-xs font-bold">GPay</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-text-primary font-medium">Google Pay</p>
-                  </div>
-                </>
-              )}
-
-              {/* Radio indicator */}
-              <div className={`size-5 rounded-full border-2 flex items-center justify-center ${
-                method.isDefault ? 'border-primary bg-primary' : 'border-border'
-              }`}>
-                {method.isDefault && (
-                  <div className="size-2 rounded-full bg-white" />
-                )}
-              </div>
+          {paymentMethods.length === 0 ? (
+            <div className="text-center py-8 text-text-muted bg-bg-card border border-border rounded-xl">
+              <MaterialIcon name="credit_card_off" size={48} className="mb-2 opacity-50" />
+              <p className="text-sm">No payment methods added</p>
             </div>
-          ))}
+          ) : (
+            paymentMethods.map((method) => (
+              <div
+                key={method.id}
+                className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-4"
+              >
+                {method.type === 'card' ? (
+                  <>
+                    <div className="w-10 h-7 bg-bg-secondary rounded flex items-center justify-center">
+                      <MaterialIcon name="credit_card" size={18} className="text-text-muted" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-text-primary font-medium">
+                        {method.brand} ending in {method.last4}
+                      </p>
+                      <p className="text-text-muted text-xs">Expires {method.expiry}</p>
+                    </div>
+                  </>
+                ) : method.type === 'apple_pay' ? (
+                  <>
+                    <div className="w-10 h-7 bg-black rounded flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">Pay</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-text-primary font-medium">Apple Pay</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-7 bg-bg-secondary rounded flex items-center justify-center">
+                      <span className="text-text-muted text-xs font-bold">GPay</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-text-primary font-medium">Google Pay</p>
+                    </div>
+                  </>
+                )}
+
+                {/* Radio indicator */}
+                <div className={`size-5 rounded-full border-2 flex items-center justify-center ${
+                  method.isDefault ? 'border-primary bg-primary' : 'border-border'
+                }`}>
+                  {method.isDefault && (
+                    <div className="size-2 rounded-full bg-white" />
+                  )}
+                </div>
+              </div>
+            ))
+          )}
 
           {/* Add Payment Method */}
           <button className="flex items-center gap-3 w-full bg-bg-card border border-border border-dashed rounded-xl p-4 text-left hover:bg-bg-secondary transition-colors">
@@ -165,28 +165,35 @@ export default function PaymentsPage() {
         </div>
 
         <div className="space-y-2">
-          {transactions.map((tx) => (
-            <div
-              key={tx.id}
-              className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-4"
-            >
-              <div className="bg-bg-secondary p-2.5 rounded-full">
-                <MaterialIcon name={tx.icon} size={22} className="text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-text-primary font-medium text-sm truncate">{tx.title}</p>
-                <p className="text-text-muted text-xs">{tx.date}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-text-primary font-semibold">${Math.abs(tx.amount).toFixed(2)}</p>
-                <p className={`text-[10px] font-semibold ${
-                  tx.status === 'PAID' ? 'text-success' : tx.status === 'PENDING' ? 'text-warning' : 'text-error'
-                }`}>
-                  {tx.status}
-                </p>
-              </div>
+          {transactions.length === 0 ? (
+            <div className="text-center py-8 text-text-muted bg-bg-card border border-border rounded-xl">
+              <MaterialIcon name="receipt_long" size={48} className="mb-2 opacity-50" />
+              <p className="text-sm">No transactions yet</p>
             </div>
-          ))}
+          ) : (
+            transactions.map((tx) => (
+              <div
+                key={tx.id}
+                className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-4"
+              >
+                <div className="bg-bg-secondary p-2.5 rounded-full">
+                  <MaterialIcon name={tx.icon} size={22} className="text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-text-primary font-medium text-sm truncate">{tx.title}</p>
+                  <p className="text-text-muted text-xs">{tx.date}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-text-primary font-semibold">${Math.abs(tx.amount).toFixed(2)}</p>
+                  <p className={`text-[10px] font-semibold ${
+                    tx.status === 'PAID' ? 'text-success' : tx.status === 'PENDING' ? 'text-warning' : 'text-error'
+                  }`}>
+                    {tx.status}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
