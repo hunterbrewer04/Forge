@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase-browser'
 import MessageInput from './MessageInput'
 import MediaViewer, { useMediaViewer } from './MediaViewer'
-import { fetchMessages, fetchSenderProfile } from '@/lib/services/messages'
+import { fetchMessages, fetchSenderProfile, markMessagesAsRead } from '@/lib/services/messages'
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
 import { MessageListSkeleton } from '@/components/skeletons/MessageSkeleton'
@@ -19,6 +19,7 @@ interface Message {
   media_url: string | null
   media_type: string | null
   created_at: string
+  read_at?: string | null
   sender_name: string | null
   signedUrl?: string | null
   pending?: boolean
@@ -48,6 +49,7 @@ export default function ChatWindow({
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const prevMessagesLength = useRef(0)
   const senderProfileCache = useRef<Map<string, SenderProfile>>(new Map())
   const supabase = useMemo(() => createClient(), [])
 
@@ -101,7 +103,8 @@ export default function ChatWindow({
     return message
   }, [])
 
-  useEffect(() => {
+  const handleImageLoad = useCallback(() => {
+    // Re-check if near bottom and scroll if needed
     const container = messagesContainerRef.current
     if (container) {
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
@@ -109,6 +112,22 @@ export default function ChatWindow({
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       }
     }
+  }, [])
+
+  useEffect(() => {
+    // Always scroll to bottom on initial load (messages.length transition from 0)
+    // Or when near bottom and new messages arrive
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
+    const isInitialLoad = prevMessagesLength.current === 0 && messages.length > 0
+
+    if (isInitialLoad || isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: isInitialLoad ? 'auto' : 'smooth' })
+    }
+
+    prevMessagesLength.current = messages.length
   }, [messages])
 
   const loadMessages = useCallback(async () => {
@@ -126,6 +145,7 @@ export default function ChatWindow({
         media_url: msg.media_url,
         media_type: msg.media_type,
         created_at: msg.created_at,
+        read_at: msg.read_at,
         sender_name: msg.profiles?.full_name || 'Unknown',
       }))
 
@@ -134,6 +154,20 @@ export default function ChatWindow({
       )
 
       setMessages(messagesWithSignedUrls)
+
+      // Mark messages as read when conversation opens
+      if (conversationId && currentUserId) {
+        try {
+          await markMessagesAsRead(conversationId, currentUserId)
+        } catch (err) {
+          logger.error('Error marking messages as read:', err)
+        }
+      }
+
+      // After messages load, scroll to bottom
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+      }, 100)
     } catch (err) {
       logger.error('Error fetching messages:', err)
       setError('Failed to load messages. Tap to retry.')
@@ -168,6 +202,7 @@ export default function ChatWindow({
             media_url: payload.new.media_url,
             media_type: payload.new.media_type,
             created_at: payload.new.created_at,
+            read_at: payload.new.read_at,
             sender_name: senderName,
             pending: false,
           }
@@ -183,6 +218,32 @@ export default function ChatWindow({
             }
             return [...prev, processedMessage]
           })
+
+          // Mark new messages from other users as read
+          if (payload.new.sender_id !== currentUserId) {
+            try {
+              await markMessagesAsRead(conversationId, currentUserId)
+            } catch (err) {
+              logger.error('Error marking new message as read:', err)
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          // Update local message state when read_at changes
+          setMessages(prev => prev.map(msg =>
+            msg.id === payload.new.id
+              ? { ...msg, read_at: payload.new.read_at }
+              : msg
+          ))
         }
       )
       .subscribe()
@@ -334,6 +395,7 @@ export default function ChatWindow({
                             width={200}
                             height={200}
                             className="max-w-full max-h-48 rounded-lg object-cover"
+                            onLoad={handleImageLoad}
                           />
                         </div>
                       )}
@@ -358,9 +420,18 @@ export default function ChatWindow({
 
                       {message.content && <p>{message.content}</p>}
                     </div>
-                    <span className="text-[10px] text-text-muted mt-1 mr-1">
-                      {message.pending ? 'Sending...' : formatTimestamp(message.created_at)}
-                    </span>
+                    <div className="flex items-center gap-1 text-[10px] text-text-muted mt-1 mr-1">
+                      <span>{message.pending ? 'Sending...' : formatTimestamp(message.created_at)}</span>
+                      {!message.pending && (
+                        <span className="flex items-center">
+                          {message.read_at ? (
+                            <MaterialIcon name="done_all" size={14} className="text-[#ff6714]" />
+                          ) : (
+                            <MaterialIcon name="done" size={14} className="text-text-muted" />
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   // Received Message (Gray)
@@ -387,6 +458,7 @@ export default function ChatWindow({
                               width={200}
                               height={200}
                               className="max-w-full max-h-48 rounded-lg object-cover"
+                              onLoad={handleImageLoad}
                             />
                           </div>
                         )}

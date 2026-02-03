@@ -9,6 +9,7 @@ import Link from 'next/link'
 import type { ProfileJoin } from '@/lib/types/database'
 import MobileLayout from '@/components/layout/MobileLayout'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
+import { useHomeData } from '@/lib/hooks/useHomeData'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
 import MaterialIcon from '@/components/ui/MaterialIcon'
@@ -19,25 +20,16 @@ interface Stats {
   clientsCount?: number
 }
 
-interface RecentActivity {
-  id: string
-  title: string
-  subtitle: string
-  status: 'COMPLETED' | 'ARCHIVED' | 'UPCOMING'
-  icon: string
-}
-
 export default function HomePage() {
   const { user, profile, loading } = useAuth()
   const { theme } = useFacilityTheme()
   const router = useRouter()
   const [stats, setStats] = useState<Stats>({ totalConversations: 0 })
   const [loadingStats, setLoadingStats] = useState(true)
-  const [recentActivity] = useState<RecentActivity[]>([
-    { id: '1', title: 'Hitting Lab (Cage 4)', subtitle: 'Yesterday • 1 hour', status: 'COMPLETED', icon: 'sports_baseball' },
-    { id: '2', title: 'Strength Training', subtitle: 'Oct 12 • 45 mins', status: 'ARCHIVED', icon: 'fitness_center' },
-  ])
   const supabase = useMemo(() => createClient(), [])
+
+  // Fetch real home data
+  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData()
 
   // Use shared unread count hook for real-time message count
   const { unreadCount } = useUnreadCount({
@@ -117,6 +109,35 @@ export default function HomePage() {
   // Extract first name from full name
   const firstName = profile.full_name?.split(' ')[0] || 'User'
 
+  // Format next session time
+  const formatNextSessionTime = () => {
+    if (!nextSession?.start_time) return null
+
+    const sessionDate = new Date(nextSession.start_time)
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const sessionDay = new Date(sessionDate.getFullYear(), sessionDate.getMonth(), sessionDate.getDate())
+    const diffDays = Math.floor((sessionDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+    const time = sessionDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+
+    if (diffDays === 0) {
+      return `Today @ ${time}`
+    } else if (diffDays === 1) {
+      return `Tomorrow @ ${time}`
+    } else if (diffDays <= 7) {
+      const dayName = sessionDate.toLocaleDateString('en-US', { weekday: 'long' })
+      return `${dayName} @ ${time}`
+    } else {
+      const dateStr = sessionDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      return `${dateStr} @ ${time}`
+    }
+  }
+
   // Custom header matching the mockup
   const customHeader = (
     <header className="sticky top-0 z-30 w-full bg-bg-primary pt-safe-top transition-colors duration-200">
@@ -168,7 +189,15 @@ export default function HomePage() {
       <section className="mt-2">
         <h1 className="text-2xl font-bold text-text-primary">Hello, {firstName}</h1>
         <p className="text-text-secondary text-sm mt-1">
-          Next practice: <span className="text-primary font-semibold">Today @ 4 PM</span>
+          {loadingHomeData ? (
+            <span>Loading next session...</span>
+          ) : nextSession ? (
+            <>
+              Next practice: <span className="text-primary font-semibold">{formatNextSessionTime()}</span>
+            </>
+          ) : (
+            <span>No upcoming sessions scheduled</span>
+          )}
         </p>
       </section>
 
@@ -207,7 +236,7 @@ export default function HomePage() {
             {unreadCount > 0
               ? `${unreadCount} unread messages`
               : stats.trainerName
-                ? `Coach: See you at 4pm!`
+                ? `Chat with ${stats.trainerName}`
                 : 'View conversations'
             }
           </p>
@@ -225,7 +254,7 @@ export default function HomePage() {
           </div>
           <h3 className="text-text-primary font-semibold">Payments</h3>
           <p className="text-text-secondary text-xs mt-0.5">
-            Balance: <span className="text-success font-semibold">$0.00</span>
+            Manage billing & payments
           </p>
         </Link>
       </section>
@@ -239,31 +268,79 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="space-y-2">
-          {recentActivity.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3"
-            >
-              <div className="bg-bg-secondary p-2.5 rounded-full">
-                <MaterialIcon name={activity.icon} size={22} className="text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-text-primary font-medium text-sm truncate">{activity.title}</h4>
-                <p className="text-text-muted text-xs">{activity.subtitle}</p>
-              </div>
-              <span
-                className={`text-[10px] font-semibold px-2 py-1 rounded-md ${
-                  activity.status === 'COMPLETED'
-                    ? 'bg-success/10 text-success'
-                    : 'bg-bg-secondary text-text-muted'
-                }`}
+        {loadingHomeData ? (
+          <div className="space-y-2">
+            {[1, 2].map((i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3 animate-pulse"
               >
-                {activity.status}
-              </span>
+                <div className="bg-bg-secondary size-10 rounded-full" />
+                <div className="flex-1 min-w-0">
+                  <div className="h-4 bg-bg-secondary rounded w-3/4 mb-1" />
+                  <div className="h-3 bg-bg-secondary rounded w-1/2" />
+                </div>
+                <div className="h-6 w-16 bg-bg-secondary rounded" />
+              </div>
+            ))}
+          </div>
+        ) : recentActivity.length > 0 ? (
+          <div className="space-y-2">
+            {recentActivity.map((activity) => {
+              const activityDate = new Date(activity.completed_at)
+              const now = new Date()
+              const diffDays = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60 * 60 * 24))
+
+              let timeAgo = ''
+              if (diffDays === 0) {
+                timeAgo = 'Today'
+              } else if (diffDays === 1) {
+                timeAgo = 'Yesterday'
+              } else if (diffDays < 7) {
+                timeAgo = `${diffDays} days ago`
+              } else {
+                timeAgo = activityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              }
+
+              return (
+                <div
+                  key={activity.id}
+                  className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3"
+                >
+                  <div className="bg-bg-secondary p-2.5 rounded-full">
+                    <MaterialIcon name="sports_baseball" size={22} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-text-primary font-medium text-sm truncate">{activity.title}</h4>
+                    <p className="text-text-muted text-xs">
+                      {timeAgo}
+                      {activity.trainer_name && ` • ${activity.trainer_name}`}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-1 rounded-md bg-success/10 text-success">
+                    COMPLETED
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center bg-bg-card border border-border rounded-xl p-8 text-center">
+            <div className="bg-bg-secondary p-4 rounded-full mb-3">
+              <MaterialIcon name="event_busy" size={32} className="text-text-muted" />
             </div>
-          ))}
-        </div>
+            <h3 className="text-text-primary font-medium mb-1">No Recent Activity</h3>
+            <p className="text-text-secondary text-sm mb-4">
+              Your completed sessions will appear here
+            </p>
+            <Link
+              href="/schedule"
+              className="text-primary text-sm font-semibold hover:underline"
+            >
+              Book Your First Session
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Trainer-specific: My Clients stat */}

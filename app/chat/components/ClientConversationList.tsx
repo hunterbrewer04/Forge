@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Image from 'next/image'
 import { fetchClientConversation } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { AlertCircle, RefreshCw, User } from '@/components/ui/icons'
@@ -10,6 +11,7 @@ interface Conversation {
   client_id: string
   trainer_id: string
   trainer_name: string | null
+  trainer_avatar_url?: string | null
 }
 
 interface ClientConversationListProps {
@@ -42,6 +44,7 @@ export default function ClientConversationList({
         client_id: data.client_id,
         trainer_id: data.trainer_id,
         trainer_name: data.profiles?.full_name || 'Your Trainer',
+        trainer_avatar_url: data.profiles?.avatar_url || null,
       }
       setConversation(conv)
 
@@ -120,9 +123,21 @@ export default function ClientConversationList({
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="size-12 rounded-xl bg-stone-700 flex items-center justify-center shrink-0">
-                <User size={24} strokeWidth={2} className="text-stone-400" />
-              </div>
+              {conversation.trainer_avatar_url ? (
+                <Image
+                  src={conversation.trainer_avatar_url}
+                  alt={conversation.trainer_name || 'Trainer'}
+                  width={48}
+                  height={48}
+                  className="rounded-xl object-cover shrink-0"
+                />
+              ) : (
+                <div className="size-12 rounded-xl bg-stone-700 flex items-center justify-center shrink-0">
+                  <span className="text-white text-lg font-bold">
+                    {conversation.trainer_name?.[0]?.toUpperCase() || 'T'}
+                  </span>
+                </div>
+              )}
               <div>
                 <div className="text-base font-bold text-white">
                   {conversation.trainer_name}

@@ -116,3 +116,42 @@ export async function fetchConversationById(
     profiles
   } as ConversationWithClientProfile | ConversationWithTrainerProfile
 }
+
+/**
+ * Get the last message for a conversation
+ * Returns the most recent message's content, created_at, and sender_id
+ */
+export async function getLastMessage(conversationId: string) {
+  const supabase = createClient()
+
+  const { data } = await supabase
+    .from('messages')
+    .select('content, created_at, sender_id')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  return data
+}
+
+/**
+ * Get unread count for a user in a conversation
+ * Note: This will return 0 until Phase 4 adds the read_at field
+ * Currently checking for messages where sender is not the current user
+ * and read_at is null (field doesn't exist yet)
+ */
+export async function getUnreadCount(conversationId: string, userId: string) {
+  const supabase = createClient()
+
+  // Note: read_at field doesn't exist yet (Phase 4)
+  // This query will work once the field is added
+  const { count } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('conversation_id', conversationId)
+    .neq('sender_id', userId)
+    .is('read_at', null)
+
+  return count || 0
+}

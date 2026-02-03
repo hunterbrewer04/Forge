@@ -18,9 +18,11 @@ export async function fetchMessages(conversationId: string): Promise<MessageWith
       media_url,
       media_type,
       created_at,
+      read_at,
       profiles!messages_sender_id_fkey (
         id,
-        full_name
+        full_name,
+        avatar_url
       )
     `)
     .eq('conversation_id', conversationId)
@@ -103,10 +105,30 @@ export async function fetchSenderProfile(senderId: string) {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name')
+    .select('id, full_name, avatar_url')
     .eq('id', senderId)
     .single()
 
   if (error) throw error
   return data
+}
+
+/**
+ * Mark all unread messages in a conversation as read
+ * Only marks messages sent by other users (not the current user)
+ */
+export async function markMessagesAsRead(
+  conversationId: string,
+  userId: string
+): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('messages')
+    .update({ read_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .neq('sender_id', userId)
+    .is('read_at', null)
+
+  if (error) throw error
 }
