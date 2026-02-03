@@ -30,12 +30,12 @@ export default function AppLayout({
   onSignOut,
 }: AppLayoutProps) {
   return (
-    <div className="min-h-screen bg-background-dark flex">
+    <div className="fixed inset-0 bg-background-dark flex">
       {/* Sidebar - only visible on large screens */}
       <Sidebar onSignOut={onSignOut} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen lg:max-h-screen lg:overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* TopBar - shows on mobile, simplified on desktop */}
         <div className="lg:hidden">
           <TopBar
@@ -64,8 +64,10 @@ export default function AppLayout({
         </header>
 
         {/* Main content area - responsive max-width */}
-        <main className="flex-1 w-full max-w-md lg:max-w-4xl mx-auto flex flex-col gap-6 px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-8 lg:overflow-y-auto">
-          {children}
+        <main className="flex-1 overflow-y-auto overscroll-none w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="max-w-md lg:max-w-4xl mx-auto flex flex-col gap-6 px-4 sm:px-6 lg:px-8 pt-6 pb-24 lg:pb-8">
+            {children}
+          </div>
         </main>
 
         {/* Bottom nav only shows on mobile/tablet, hidden on large screens */}
