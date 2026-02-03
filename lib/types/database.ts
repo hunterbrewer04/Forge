@@ -30,6 +30,7 @@ export interface Message {
   media_url: string | null
   media_type: 'image' | 'video' | null
   created_at: string
+  read_at?: string | null
   // With relations
   sender?: Profile
   profiles?: Profile  // For foreign key joins
@@ -71,5 +72,6 @@ export interface MessageWithSenderProfile {
   media_url: string | null
   media_type: string | null
   created_at: string
+  read_at?: string | null
   profiles: ProfileJoin | null
 }
