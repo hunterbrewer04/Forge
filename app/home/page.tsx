@@ -150,7 +150,7 @@ export default function HomePage() {
           alt="Forge Sports Performance"
           width={260}
           height={160}
-          className="object-contain relative z-10"
+          className="object-contain relative z-10 mix-blend-lighten"
           priority
         />
       </section>

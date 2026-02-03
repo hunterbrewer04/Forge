@@ -27,7 +27,7 @@ export default function MobileLayout({
   notificationCount = 0,
 }: MobileLayoutProps) {
   return (
-    <div className="min-h-screen bg-background-dark">
+    <div className="fixed inset-0 flex flex-col bg-background-dark">
       <TopBar
         title={title}
         showBack={showBack}
@@ -38,12 +38,12 @@ export default function MobileLayout({
         notificationCount={notificationCount}
       />
 
-      {/* Main content area - centered with max-width on mobile, wider on tablet/desktop */}
-      <main className="w-full max-w-md lg:max-w-2xl xl:max-w-4xl mx-auto flex flex-col gap-6 px-4 sm:px-6 pt-6 pb-24 lg:pb-8">
-        {children}
+      <main className="flex-1 overflow-y-auto overscroll-none w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="max-w-md lg:max-w-2xl xl:max-w-4xl mx-auto flex flex-col gap-6 px-4 sm:px-6 pt-6 pb-24 lg:pb-8">
+          {children}
+        </div>
       </main>
 
-      {/* Bottom nav only shows on mobile/tablet, hidden on large screens */}
       {showBottomNav && (
         <div className="lg:hidden">
           <BottomNav />
