@@ -3,35 +3,23 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Calendar, User, MessageCircle } from "@/components/ui/icons";
+import MaterialIcon from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadCount } from "@/lib/hooks/useUnreadCount";
 
 interface NavItem {
   href: string;
-  iconKey: "home" | "messages" | "calendar" | "profile";
+  icon: string;
+  iconFilled: string;
   label: string;
 }
 
 const navItems: NavItem[] = [
-  { href: "/home", iconKey: "home", label: "Home" },
-  { href: "/chat", iconKey: "messages", label: "Messages" },
-  { href: "/schedule", iconKey: "calendar", label: "Schedule" },
-  { href: "/profile", iconKey: "profile", label: "Profile" },
+  { href: "/home", icon: "home", iconFilled: "home", label: "Home" },
+  { href: "/chat", icon: "chat_bubble_outline", iconFilled: "chat_bubble", label: "Messages" },
+  { href: "/schedule", icon: "calendar_today", iconFilled: "calendar_today", label: "Sessions" },
+  { href: "/profile", icon: "person_outline", iconFilled: "person", label: "Profile" },
 ];
-
-function NavIcon({ iconKey, size, strokeWidth }: { iconKey: NavItem["iconKey"]; size: number; strokeWidth: number }) {
-  switch (iconKey) {
-    case "home":
-      return <Home size={size} strokeWidth={strokeWidth} />;
-    case "messages":
-      return <MessageCircle size={size} strokeWidth={strokeWidth} />;
-    case "calendar":
-      return <Calendar size={size} strokeWidth={strokeWidth} />;
-    case "profile":
-      return <User size={size} strokeWidth={strokeWidth} />;
-  }
-}
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -58,33 +46,41 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#1C1C1C]/95 border-t border-steel/30 backdrop-blur-lg pb-safe-bottom z-40">
+    <nav className="fixed bottom-0 left-0 right-0 bg-bg-primary/95 dark:bg-bg-primary/95 border-t border-border backdrop-blur-lg pb-safe-bottom z-40 transition-colors duration-200">
       <div className="flex justify-around items-center h-16 max-w-md mx-auto px-2">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${
-              isActive(item.href)
-                ? "text-primary"
-                : "text-stone-400 hover:text-stone-300"
-            }`}
-          >
-            <div className="relative">
-              <NavIcon iconKey={item.iconKey} size={26} strokeWidth={2} />
-              {item.iconKey === "messages" && unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-              )}
-            </div>
-            <span
-              className={`text-[10px] tracking-wide ${
-                isActive(item.href) ? "font-bold" : "font-medium"
+        {navItems.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center w-full h-full gap-0.5 transition-colors ${
+                active
+                  ? "text-primary"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
-              {item.label}
-            </span>
-          </Link>
-        ))}
+              <div className="relative">
+                <MaterialIcon
+                  name={active ? item.iconFilled : item.icon}
+                  size={26}
+                  filled={active}
+                  weight={active ? 600 : 400}
+                />
+                {item.href === "/chat" && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[8px] h-2 bg-primary rounded-full" />
+                )}
+              </div>
+              <span
+                className={`text-[11px] tracking-tight ${
+                  active ? "font-semibold" : "font-medium"
+                }`}
+              >
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

@@ -1,15 +1,42 @@
 @import "tailwindcss";
 
-/* Forge Design System */
+/* Forge Design System - White Label Ready */
 :root {
-  /* Core Colors */
-  --primary: #ff6714;
+  /* Facility Branding (configurable per facility) */
+  --facility-primary: #1973f0;
+  --facility-name: "Forge";
+
+  /* Primary Color */
+  --primary: var(--facility-primary);
+
+  /* Light Mode (default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f7f8;
+  --bg-card: #ffffff;
+  --bg-input: #f6f7f8;
+  --text-primary: #111418;
+  --text-secondary: #60728a;
+  --text-muted: #9ca3af;
+  --border-color: #e5e7eb;
+  --border-light: #f0f1f2;
+
+  /* Message Bubbles */
+  --bubble-sent: var(--facility-primary);
+  --bubble-sent-text: #ffffff;
+  --bubble-received: #e8edf2;
+  --bubble-received-text: #111418;
+
+  /* Status Colors */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: var(--facility-primary);
+
+  /* Legacy Colors (for backwards compatibility during migration) */
   --background-light: #f8f6f5;
   --background-dark: #1C1C1C;
   --steel: #4A4A4A;
   --gold: #D4AF37;
-
-  /* Surface Colors */
   --surface-dark: #2a2a2a;
   --surface-darker: #202020;
   --surface-mid: #232323;
@@ -22,14 +49,56 @@
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
 
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Semantic aliases */
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
+}
+
+/* Dark Mode */
+.dark {
+  --bg-primary: #101822;
+  --bg-secondary: #0d121b;
+  --bg-card: #1a2235;
+  --bg-input: #1a2235;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --border-color: #374151;
+  --border-light: #1f2937;
+
+  /* Message Bubbles - Dark Mode */
+  --bubble-sent: var(--facility-primary);
+  --bubble-sent-text: #ffffff;
+  --bubble-received: #374151;
+  --bubble-received-text: #ffffff;
+
+  /* Legacy dark mode overrides */
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-input: var(--bg-input);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border-color);
+  --color-border-light: var(--border-light);
+  --color-bubble-sent: var(--bubble-sent);
+  --color-bubble-sent-text: var(--bubble-sent-text);
+  --color-bubble-received: var(--bubble-received);
+  --color-bubble-received-text: var(--bubble-received-text);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+  /* Legacy */
   --color-background-dark: var(--background-dark);
   --color-background-light: var(--background-light);
   --color-steel: var(--steel);
@@ -41,14 +110,7 @@
   --color-surface-deep: var(--surface-deep);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: "Space Grotesk", sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1C1C1C;
-    --foreground: #ededed;
-  }
+  --font-display: "Lexend", "Manrope", sans-serif;
 }
 
 html, body {
@@ -60,10 +122,11 @@ html, body {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: "Space Grotesk", Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: "Lexend", "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 button, a, nav, [role="button"] {
@@ -149,16 +212,16 @@ input, textarea, select {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1C1C1C;
+  background: var(--bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4A4A4A;
+  background: var(--text-muted);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff6714;
+  background: var(--primary);
 }
 
 /* View Transitions */

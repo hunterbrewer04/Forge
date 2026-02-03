@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase-browser'
@@ -10,7 +11,7 @@ import MobileLayout from '@/components/layout/MobileLayout'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
-import { User, Calendar, Mail, Plus, Users, TrendingUp } from '@/components/ui/icons'
+import MaterialIcon from '@/components/ui/MaterialIcon'
 
 interface Stats {
   totalConversations: number
@@ -18,11 +19,24 @@ interface Stats {
   clientsCount?: number
 }
 
+interface RecentActivity {
+  id: string
+  title: string
+  subtitle: string
+  status: 'COMPLETED' | 'ARCHIVED' | 'UPCOMING'
+  icon: string
+}
+
 export default function HomePage() {
   const { user, profile, loading } = useAuth()
+  const { theme } = useFacilityTheme()
   const router = useRouter()
   const [stats, setStats] = useState<Stats>({ totalConversations: 0 })
   const [loadingStats, setLoadingStats] = useState(true)
+  const [recentActivity] = useState<RecentActivity[]>([
+    { id: '1', title: 'Hitting Lab (Cage 4)', subtitle: 'Yesterday • 1 hour', status: 'COMPLETED', icon: 'sports_baseball' },
+    { id: '2', title: 'Strength Training', subtitle: 'Oct 12 • 45 mins', status: 'ARCHIVED', icon: 'fitness_center' },
+  ])
   const supabase = useMemo(() => createClient(), [])
 
   // Use shared unread count hook for real-time message count
@@ -77,7 +91,7 @@ export default function HomePage() {
             : trainerData as ProfileJoin | null
           setStats({
             totalConversations: 1,
-            trainerName: trainer?.full_name || 'Coach Mike',
+            trainerName: trainer?.full_name || 'Coach',
           })
         }
       }
@@ -90,7 +104,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <MobileLayout>
+      <MobileLayout hideTopBar>
         <HomePageSkeleton />
       </MobileLayout>
     )
@@ -103,196 +117,170 @@ export default function HomePage() {
   // Extract first name from full name
   const firstName = profile.full_name?.split(' ')[0] || 'User'
 
-  // Custom TopBar content for homepage
-  const topBarLeftContent = (
-    <div className="flex items-center gap-3">
-      <div className="relative group cursor-pointer">
-        <div className="size-11 rounded-full border-[2.5px] border-primary ring-2 ring-primary/20 bg-stone-700 overflow-hidden">
+  // Custom header matching the mockup
+  const customHeader = (
+    <header className="sticky top-0 z-30 w-full bg-bg-primary pt-safe-top transition-colors duration-200">
+      <div className="flex items-center justify-between px-4 py-3">
+        {/* Avatar */}
+        <div className="size-10 rounded-full overflow-hidden bg-bg-secondary border-2 border-border">
           {profile.avatar_url ? (
-            <div className="relative size-full">
-              <Image
-                src={profile.avatar_url}
-                alt={profile.full_name || 'User'}
-                fill
-                className="object-cover"
-              />
-            </div>
+            <Image
+              src={profile.avatar_url}
+              alt={profile.full_name || 'User'}
+              width={40}
+              height={40}
+              className="object-cover size-full"
+            />
           ) : (
-            <div className="size-full flex items-center justify-center text-stone-300">
-              <User size={22} strokeWidth={2} />
+            <div className="size-full flex items-center justify-center text-text-secondary">
+              <MaterialIcon name="person" size={20} />
             </div>
           )}
         </div>
-        <div className="absolute bottom-0 right-0 size-3 rounded-full bg-green-500 border-2 border-background-dark"></div>
+
+        {/* Facility Branding */}
+        <div className="flex flex-col items-center">
+          <span className="text-primary font-bold text-base tracking-tight uppercase">
+            {theme.name.split(' ')[0] || 'STRIKEZONE'}
+          </span>
+          <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">
+            {theme.tagline}
+          </span>
+        </div>
+
+        {/* Notifications */}
+        <button
+          className="relative flex items-center justify-center size-10 text-text-secondary hover:text-text-primary transition-colors"
+          aria-label="Notifications"
+        >
+          <MaterialIcon name="notifications" size={24} />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+          )}
+        </button>
       </div>
-      <div>
-        <h2 className="text-lg font-bold leading-tight">Hey, {firstName}!</h2>
-        <p className="text-sm text-stone-400 font-medium">Ready to crush it today?</p>
-      </div>
-    </div>
+    </header>
   )
 
   return (
-    <MobileLayout
-      topBarLeftContent={topBarLeftContent}
-      notificationCount={unreadCount}
-    >
-      {/* Brand Logo with Glow */}
-      <section className="flex justify-center mb-1 relative">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgb(255 103 20 / 0.05) 0%, transparent 70%)'
-          }}
-        ></div>
-        <Image
-          src="/Forge-Full-Logo.PNG"
-          alt="Forge Sports Performance"
-          width={260}
-          height={160}
-          className="object-contain relative z-10 mix-blend-lighten"
-          priority
-        />
+    <MobileLayout customHeader={customHeader}>
+      {/* Greeting Section */}
+      <section className="mt-2">
+        <h1 className="text-2xl font-bold text-text-primary">Hello, {firstName}</h1>
+        <p className="text-text-secondary text-sm mt-1">
+          Next practice: <span className="text-primary font-semibold">Today @ 4 PM</span>
+        </p>
       </section>
 
-      {/* Quick Actions Grid */}
-      <section className="grid grid-cols-2 gap-3 mb-4">
-        {/* Schedule Session - Primary Action */}
-        <Link
-          href="/schedule"
-          className="bg-gradient-to-br from-primary via-orange-500 to-amber-600 active:brightness-90 rounded-xl p-5 flex flex-col justify-between min-h-[170px] shadow-lg shadow-orange-900/20 transition-transform active:scale-95 text-left group relative overflow-hidden"
-        >
-          <div className="absolute inset-0 opacity-10 bg-[url('/patterns/carbon-fibre.png')]"></div>
-          <div className="bg-black/20 self-start p-2.5 rounded-xl text-white mb-2 z-10 group-hover:bg-black/30 transition-colors w-12 h-12 flex items-center justify-center">
-            <Calendar size={32} strokeWidth={2} />
-          </div>
-          <div className="z-10">
-            <h3 className="text-white text-lg font-bold leading-tight">Schedule<br/>Session</h3>
-            <p className="text-black/60 font-bold text-xs mt-1 uppercase tracking-wide">Book Now →</p>
-          </div>
-        </Link>
+      {/* Book Sessions CTA Card */}
+      <Link
+        href="/schedule"
+        className="block bg-primary rounded-2xl p-5 shadow-lg shadow-primary/20 transition-transform active:scale-[0.98]"
+      >
+        <h2 className="text-white text-xl font-bold">Book Sessions</h2>
+        <p className="text-white/80 text-sm mt-1">Secure your spot in the tunnel</p>
+        <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
+          Schedule Now
+          <MaterialIcon name="calendar_today" size={18} />
+        </div>
+      </Link>
 
-        {/* Messages */}
+      {/* Messages & Payments Grid */}
+      <section className="grid grid-cols-2 gap-3">
+        {/* Messages Card */}
         <Link
           href="/chat"
-          className="bg-[#2a2a2a] border border-steel/30 border-l-2 border-l-primary/40 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[170px] transition-all active:scale-95 text-left group"
+          className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 active:scale-[0.98]"
         >
-          <div className="flex justify-between items-start w-full">
-            <div className={`bg-stone-800 p-2 rounded-lg text-white group-hover:text-primary transition-colors ${unreadCount > 0 ? 'animate-pulse' : ''}`}>
-              <Mail size={28} strokeWidth={2} />
+          <div className="flex items-start justify-between mb-3">
+            <div className="bg-primary/10 p-2 rounded-lg">
+              <MaterialIcon name="chat_bubble" size={24} className="text-primary" />
             </div>
             {unreadCount > 0 && (
-              <span className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
-                {unreadCount}
+              <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {unreadCount} NEW
               </span>
             )}
           </div>
-          <div>
-            <h3 className="text-white text-lg font-bold leading-tight">Messages</h3>
-            <p className="text-stone-400 text-xs mt-1">
-              {unreadCount > 0
-                ? `${unreadCount} unread`
-                : profile.is_client
-                  ? `Chat with ${stats.trainerName || 'Coach'}`
-                  : 'View Messages'
-              }
-            </p>
-          </div>
+          <h3 className="text-text-primary font-semibold">Messages</h3>
+          <p className="text-text-secondary text-xs mt-0.5 truncate">
+            {unreadCount > 0
+              ? `${unreadCount} unread messages`
+              : stats.trainerName
+                ? `Coach: See you at 4pm!`
+                : 'View conversations'
+            }
+          </p>
         </Link>
 
-        {/* Create Session - Trainer Only */}
-        {profile.is_trainer && (
-          <Link
-            href="/schedule/new"
-            className="bg-[#2a2a2a] border border-dashed border-steel/50 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[170px] transition-all active:scale-95 text-left group"
-          >
-            <div className="bg-primary/10 p-2 rounded-lg text-primary group-hover:bg-primary/20 transition-colors self-start">
-              <Plus size={28} strokeWidth={2} />
+        {/* Payments Card */}
+        <Link
+          href="/payments"
+          className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 active:scale-[0.98]"
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div className="bg-success/10 p-2 rounded-lg">
+              <MaterialIcon name="account_balance_wallet" size={24} className="text-success" />
             </div>
-            <div>
-              <h3 className="text-white text-lg font-bold leading-tight">Create Session</h3>
-              <p className="text-stone-400 text-xs mt-1">New Class</p>
-            </div>
-          </Link>
-        )}
-
-        {/* My Clients - Trainer Only */}
-        {profile.is_trainer && (
-          <Link
-            href="/chat"
-            className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[170px] transition-all active:scale-95 text-left group"
-          >
-            <div className="bg-stone-800 p-2 rounded-lg text-white group-hover:text-primary transition-colors self-start">
-              <Users size={28} strokeWidth={2} />
-            </div>
-            <div>
-              <h3 className="text-white text-lg font-bold leading-tight">My Clients</h3>
-              <p className="text-2xl font-bold text-primary mt-2">{stats.clientsCount || 0}</p>
-              <p className="text-stone-500 text-xs mt-0.5">Active Clients</p>
-            </div>
-          </Link>
-        )}
-
-        {/* My Progress - Client Only */}
-        {profile.is_client && (
-          <Link
-            href="/profile"
-            className="bg-[#2a2a2a] border border-steel/30 active:border-primary/50 active:bg-[#333] rounded-xl p-5 flex flex-col justify-between min-h-[170px] transition-all active:scale-95 text-left group relative overflow-hidden"
-          >
-            <div className="absolute bottom-0 right-0 w-20 h-20 opacity-5">
-              <svg viewBox="0 0 100 50" className="text-primary">
-                <polyline
-                  points="0,40 20,35 40,25 60,20 80,10 100,5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                />
-              </svg>
-            </div>
-            <div className="bg-stone-800 p-2 rounded-lg text-white group-hover:text-primary transition-colors self-start z-10">
-              <TrendingUp size={28} strokeWidth={2} />
-            </div>
-            <div className="z-10">
-              <h3 className="text-white text-lg font-bold leading-tight">My Progress</h3>
-              <p className="text-stone-400 text-xs mt-1">Track Your Gains</p>
-            </div>
-          </Link>
-        )}
+          </div>
+          <h3 className="text-text-primary font-semibold">Payments</h3>
+          <p className="text-text-secondary text-xs mt-0.5">
+            Balance: <span className="text-success font-semibold">$0.00</span>
+          </p>
+        </Link>
       </section>
 
-      {/* Stats Summary Section */}
-      {!loadingStats && (
-        <section className="flex items-center justify-around py-4 bg-surface-mid rounded-xl border border-white/5">
-          {profile.is_trainer ? (
-            <>
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.clientsCount || 0}</p>
-                <p className="text-xs text-stone-500 mt-0.5">Clients</p>
+      {/* Recent Activity */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-text-primary font-semibold">Recent Activity</h2>
+          <Link href="/schedule?tab=history" className="text-primary text-sm font-medium">
+            View All
+          </Link>
+        </div>
+
+        <div className="space-y-2">
+          {recentActivity.map((activity) => (
+            <div
+              key={activity.id}
+              className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3"
+            >
+              <div className="bg-bg-secondary p-2.5 rounded-full">
+                <MaterialIcon name={activity.icon} size={22} className="text-primary" />
               </div>
-              <div className="w-px h-8 bg-white/10" />
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.totalConversations}</p>
-                <p className="text-xs text-stone-500 mt-0.5">Conversations</p>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-text-primary font-medium text-sm truncate">{activity.title}</h4>
+                <p className="text-text-muted text-xs">{activity.subtitle}</p>
               </div>
-              <div className="w-px h-8 bg-white/10" />
-              <div className="text-center">
-                <p className="text-xl font-bold text-primary">{unreadCount}</p>
-                <p className="text-xs text-stone-500 mt-0.5">Unread</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{stats.trainerName || 'Coach'}</p>
-                <p className="text-xs text-stone-500 mt-0.5">Your Trainer</p>
-              </div>
-              <div className="w-px h-8 bg-white/10" />
-              <div className="text-center">
-                <p className="text-xl font-bold text-primary">{unreadCount}</p>
-                <p className="text-xs text-stone-500 mt-0.5">Unread</p>
-              </div>
-            </>
-          )}
+              <span
+                className={`text-[10px] font-semibold px-2 py-1 rounded-md ${
+                  activity.status === 'COMPLETED'
+                    ? 'bg-success/10 text-success'
+                    : 'bg-bg-secondary text-text-muted'
+                }`}
+              >
+                {activity.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Trainer-specific: My Clients stat */}
+      {profile.is_trainer && !loadingStats && (
+        <section className="bg-bg-card border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-text-secondary text-sm">Active Clients</p>
+              <p className="text-2xl font-bold text-text-primary">{stats.clientsCount || 0}</p>
+            </div>
+            <Link
+              href="/chat"
+              className="bg-primary text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors"
+            >
+              View All
+            </Link>
+          </div>
         </section>
       )}
     </MobileLayout>

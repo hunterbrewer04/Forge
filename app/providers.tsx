@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { isServer, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { FacilityThemeProvider } from '@/contexts/FacilityThemeContext'
 import { registerServiceWorker } from '@/lib/register-sw'
 
 function makeQueryClient() {
@@ -42,7 +43,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
+      <FacilityThemeProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </FacilityThemeProvider>
     </QueryClientProvider>
   )
 }
