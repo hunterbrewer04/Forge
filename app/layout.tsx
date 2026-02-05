@@ -69,7 +69,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Forge" />
         {/* Material Symbols Font */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-25..200&display=swap"
           rel="stylesheet"
         />
         {/* Apple Touch Icon */}
