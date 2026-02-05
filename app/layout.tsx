@@ -67,11 +67,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Forge" />
-        {/* Material Symbols Font */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-25..200&display=swap"
-          rel="stylesheet"
-        />
         {/* Apple Touch Icon */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         {/* iOS Splash Screens */}

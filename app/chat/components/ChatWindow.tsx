@@ -340,7 +340,7 @@ export default function ChatWindow({
               </div>
               <div>
                 <h3 className="font-semibold text-text-primary leading-tight">
-                  {otherUserName}
+                  {otherUserName || 'Chat'}
                 </h3>
                 <span className="text-xs text-success">Online</span>
               </div>

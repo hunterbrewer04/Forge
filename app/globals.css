@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Self-hosted Material Symbols font */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('/fonts/MaterialSymbolsOutlined.woff2') format('woff2');
+}
+
 /* Forge Design System - White Label Ready */
 :root {
   /* Facility Branding (configurable per facility) */
@@ -23,7 +32,7 @@
   /* Message Bubbles */
   --bubble-sent: var(--facility-primary);
   --bubble-sent-text: #ffffff;
-  --bubble-received: #e8edf2;
+  --bubble-received: #f0f2f5;
   --bubble-received-text: #111418;
 
   /* Status Colors */

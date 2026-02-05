@@ -148,7 +148,7 @@ export default function CalendarStrip({
               className={`
                 relative aspect-square flex flex-col items-center justify-center rounded-full text-sm font-medium
                 transition-all duration-150
-                ${!dayItem.isCurrentMonth ? 'text-text-muted/40 cursor-default' : ''}
+                ${!dayItem.isCurrentMonth ? 'invisible cursor-default' : ''}
                 ${dayItem.isCurrentMonth && !isSelected ? 'text-text-primary hover:bg-bg-secondary' : ''}
                 ${isSelected ? 'bg-primary text-white' : ''}
                 ${isToday && !isSelected ? 'ring-1 ring-primary ring-inset' : ''}
