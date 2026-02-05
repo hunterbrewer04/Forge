@@ -79,7 +79,7 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
           <p className="text-text-secondary text-sm mt-0.5">{timeRange}</p>
 
           {/* Trainer & Spots */}
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
+          <div className="flex items-center gap-2 mt-2">
             {trainer && (
               <div className="flex items-center gap-1.5">
                 {trainer.avatar_url ? (
@@ -95,7 +95,7 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
                     <MaterialIcon name="person" size={14} className="text-text-muted" />
                   </div>
                 )}
-                <span className="text-text-secondary text-sm">
+                <span className="text-text-secondary text-sm truncate max-w-[100px]">
                   {trainer.full_name?.split(' ')[0] || 'Coach'}
                 </span>
               </div>
@@ -103,7 +103,7 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
 
             <span className="text-text-muted">•</span>
 
-            <span className={`text-xs font-semibold ${spotsColor}`}>
+            <span className={`text-xs font-semibold shrink-0 ${spotsColor}`}>
               {spotsText}
             </span>
           </div>

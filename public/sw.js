@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
@@ -13,7 +13,8 @@ const STATIC_ASSETS = [
   '/login',
   '/signup',
   '/manifest.json',
-  '/offline.html'
+  '/offline.html',
+  '/fonts/MaterialSymbolsOutlined.woff2'
 ];
 
 // Navigation routes for stale-while-revalidate
@@ -158,7 +159,7 @@ self.addEventListener('fetch', (event) => {
   // Strategy 4: Network-first for everything else
   event.respondWith(
     fetch(request).then((response) => {
-      if (response.ok && response.type === 'basic') {
+      if (response.ok && (response.type === 'basic' || response.type === 'cors')) {
         const clone = response.clone();
         caches.open(DYNAMIC_CACHE).then((cache) => {
           cache.put(request, clone);

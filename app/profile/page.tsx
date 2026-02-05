@@ -220,7 +220,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Name & Role */}
-        <h1 className="text-2xl font-bold text-text-primary mb-1">{displayName}</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-1 text-center w-full px-2">{displayName}</h1>
         <div className="bg-text-primary text-bg-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
           {role}
         </div>
