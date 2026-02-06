@@ -279,16 +279,29 @@ export default function ChatPage() {
   const activeChatComponent = (() => {
     if (error) {
       return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="bg-bg-card rounded-2xl border border-border p-8 text-center max-w-md mx-6">
-            <div className="text-error text-lg font-semibold mb-4">Error</div>
-            <p className="text-text-secondary mb-6">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 text-white bg-primary rounded-lg font-medium"
-            >
-              Retry
-            </button>
+        <div className="h-full flex flex-col bg-bg-primary">
+          <div className="flex-none border-b border-border bg-bg-primary pt-safe-top">
+            <div className="flex items-center px-4 py-3">
+              <button
+                onClick={handleBackToList}
+                className="p-2 -ml-2 min-w-[44px] min-h-[44px] rounded-full hover:bg-bg-secondary transition-colors text-text-secondary hover:text-text-primary"
+              >
+                <MaterialIcon name="arrow_back" size={20} />
+              </button>
+              <span className="ml-3 text-text-secondary">Error</span>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="bg-bg-card rounded-2xl border border-border p-8 text-center max-w-md mx-6">
+              <div className="text-error text-lg font-semibold mb-4">Error</div>
+              <p className="text-text-secondary mb-6">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 text-white bg-primary rounded-lg font-medium"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         </div>
       )
@@ -296,8 +309,21 @@ export default function ChatPage() {
 
     if (loadingConversation) {
       return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-text-secondary text-center">Loading conversation...</div>
+        <div className="h-full flex flex-col bg-bg-primary">
+          <div className="flex-none border-b border-border bg-bg-primary pt-safe-top">
+            <div className="flex items-center px-4 py-3">
+              <button
+                onClick={handleBackToList}
+                className="p-2 -ml-2 min-w-[44px] min-h-[44px] rounded-full hover:bg-bg-secondary transition-colors text-text-secondary hover:text-text-primary"
+              >
+                <MaterialIcon name="arrow_back" size={20} />
+              </button>
+              <span className="ml-3 text-text-secondary">Loading...</span>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-text-secondary text-center">Loading conversation...</div>
+          </div>
         </div>
       )
     }

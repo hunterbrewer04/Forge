@@ -131,89 +131,91 @@ export default function SchedulePage() {
   )
 
   return (
-    <MobileLayout customHeader={customHeader}>
-      {/* Calendar */}
-      <CalendarStrip
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-        datesWithSessions={datesWithSessions}
-        bookedDates={bookedDates}
-      />
+    <>
+      <MobileLayout customHeader={customHeader}>
+        {/* Calendar */}
+        <CalendarStrip
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          datesWithSessions={datesWithSessions}
+          bookedDates={bookedDates}
+        />
 
-      {/* Selected Date Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-text-primary font-semibold">{selectedDateLabel}</h2>
-        {selectedDateSessions.length > 0 && (
-          <span className="bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
-            {selectedDateSessions.length} Available
-          </span>
-        )}
-      </div>
-
-      {/* Loading State */}
-      {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <div className="text-text-secondary text-sm">Loading sessions...</div>
-          </div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <div className="flex flex-col items-center justify-center py-12 bg-bg-card rounded-xl border border-error/20 p-6">
-          <p className="text-error mb-4 text-center">{error}</p>
-          <button
-            onClick={() => fetchSessions()}
-            className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      )}
-
-      {/* Sessions List */}
-      {!loading && !error && (
-        <div className="flex-1 flex flex-col">
-          {selectedDateSessions.length > 0 ? (
-            <div className="space-y-3">
-              {selectedDateSessions.map((session) => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  onBook={() => handleBookSession(session)}
-                  onCancel={() => handleCancelBooking(session)}
-                  onTap={() => handleTapSession(session)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
-              <div className="bg-bg-secondary p-4 rounded-full mb-4">
-                <MaterialIcon name="event_busy" size={32} className="text-text-muted" />
-              </div>
-              <h3 className="text-text-primary font-semibold mb-1">No sessions available</h3>
-              <p className="text-text-secondary text-sm">
-                There are no sessions scheduled for this date.
-              </p>
-            </div>
+        {/* Selected Date Header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-text-primary font-semibold">{selectedDateLabel}</h2>
+          {selectedDateSessions.length > 0 && (
+            <span className="bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
+              {selectedDateSessions.length} Available
+            </span>
           )}
         </div>
-      )}
 
-      {/* Trainer: Create Session Link */}
-      {profile?.is_trainer && (
-        <Link
-          href="/schedule/new"
-          className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all active:scale-[0.98]"
-        >
-          <MaterialIcon name="add" size={20} />
-          Create New Session
-        </Link>
-      )}
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <div className="text-text-secondary text-sm">Loading sessions...</div>
+            </div>
+          </div>
+        )}
 
-      {/* Booking Modal */}
+        {/* Error State */}
+        {error && !loading && (
+          <div className="flex flex-col items-center justify-center py-12 bg-bg-card rounded-xl border border-error/20 p-6">
+            <p className="text-error mb-4 text-center">{error}</p>
+            <button
+              onClick={() => fetchSessions()}
+              className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Sessions List */}
+        {!loading && !error && (
+          <div className="flex-1 flex flex-col">
+            {selectedDateSessions.length > 0 ? (
+              <div className="space-y-3">
+                {selectedDateSessions.map((session) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    onBook={() => handleBookSession(session)}
+                    onCancel={() => handleCancelBooking(session)}
+                    onTap={() => handleTapSession(session)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+                <div className="bg-bg-secondary p-4 rounded-full mb-4">
+                  <MaterialIcon name="event_busy" size={32} className="text-text-muted" />
+                </div>
+                <h3 className="text-text-primary font-semibold mb-1">No sessions available</h3>
+                <p className="text-text-secondary text-sm">
+                  There are no sessions scheduled for this date.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Trainer: Create Session Link */}
+        {profile?.is_trainer && (
+          <Link
+            href="/schedule/new"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all active:scale-[0.98]"
+          >
+            <MaterialIcon name="add" size={20} />
+            Create New Session
+          </Link>
+        )}
+      </MobileLayout>
+
+      {/* Modals -- outside layout to avoid iOS fixed-positioning issues */}
       {selectedSession && (
         <BookingModal
           session={selectedSession}
@@ -226,7 +228,6 @@ export default function SchedulePage() {
         />
       )}
 
-      {/* Cancel Booking Modal */}
       {selectedSession?.user_booking && (
         <CancelBookingModal
           session={selectedSession}
@@ -239,6 +240,6 @@ export default function SchedulePage() {
           onCancelSuccess={handleCancelSuccess}
         />
       )}
-    </MobileLayout>
+    </>
   )
 }
