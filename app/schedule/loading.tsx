@@ -15,7 +15,7 @@ export default function ScheduleLoading() {
       </header>
 
       {/* Main content */}
-      <main className="px-4 py-6 pb-24">
+      <main className="px-4 py-6 pb-28">
         <ScheduleSkeleton />
       </main>
 

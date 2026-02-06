@@ -11,12 +11,6 @@ interface MessageInputProps {
   onMessageError?: (tempId: string) => void
 }
 
-const QUICK_REPLIES = [
-  'Got it, thanks!',
-  'On my way',
-  'Sounds good',
-]
-
 export default function MessageInput({
   conversationId,
   onOptimisticMessage,
@@ -209,36 +203,6 @@ export default function MessageInput({
     }
   }
 
-  const handleQuickReply = async (reply: string) => {
-    if (sending) return
-
-    setSending(true)
-
-    try {
-      if (!user?.id) {
-        setError('You must be logged in to send messages')
-        return
-      }
-
-      const { error: dbError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content: reply,
-          created_at: new Date().toISOString(),
-        })
-
-      if (dbError) {
-        setError('Failed to send message. Please try again.')
-      }
-    } catch (err) {
-      setError('Failed to send message. Please try again.')
-    } finally {
-      setSending(false)
-    }
-  }
-
   const handleUploadButtonClick = () => {
     fileInputRef.current?.click()
   }
@@ -290,20 +254,6 @@ export default function MessageInput({
           <p className="text-sm text-error">{uploadError}</p>
         </div>
       )}
-
-      {/* Quick Replies */}
-      <div className="flex gap-2 overflow-x-auto px-4 pb-3 no-scrollbar">
-        {QUICK_REPLIES.map((reply) => (
-          <button
-            key={reply}
-            onClick={() => handleQuickReply(reply)}
-            disabled={sending || uploading}
-            className="shrink-0 bg-bg-secondary border border-border hover:border-primary/30 hover:bg-primary/5 text-xs font-medium text-text-secondary px-3 py-1.5 rounded-full transition-colors whitespace-nowrap disabled:opacity-50"
-          >
-            {reply}
-          </button>
-        ))}
-      </div>
 
       {/* Hidden file input */}
       <input
