@@ -311,8 +311,8 @@ export default function ChatWindow({
   return (
     <div className="h-full flex flex-col bg-bg-primary">
       {/* Chat Header */}
-      <div className="flex-none px-4 py-3 border-b border-border bg-bg-primary sticky top-0 z-10">
-        <div className="flex items-center justify-between">
+      <div className="flex-none border-b border-border bg-bg-primary sticky top-0 z-10 pt-safe-top">
+        <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             {onBack && (
               <button

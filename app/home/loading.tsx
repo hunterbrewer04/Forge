@@ -20,7 +20,7 @@ export default function HomeLoading() {
       </header>
 
       {/* Main content */}
-      <main className="px-4 py-6 pb-24 space-y-6">
+      <main className="px-4 py-6 pb-28 space-y-6">
         <HomePageSkeleton />
       </main>
 
