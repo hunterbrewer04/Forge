@@ -27,6 +27,7 @@ export default function BookingModal({
   // Refs for cleanup - prevent state updates after unmount
   const mountedRef = useRef(true)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   // Track mounted state and cleanup timeouts
   useEffect(() => {
@@ -108,7 +109,7 @@ export default function BookingModal({
     setErrorMessage('')
   }
 
-  // Swipe-to-dismiss handlers
+  // Swipe-to-dismiss handlers — only trigger when scroll is at top
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartY(e.touches[0].clientY)
   }
@@ -116,8 +117,8 @@ export default function BookingModal({
   const handleTouchMove = (e: React.TouchEvent) => {
     const currentY = e.touches[0].clientY
     const delta = currentY - touchStartY
-    // Only allow downward swipes
-    if (delta > 0) {
+    // Only allow downward swipes when scrollable body is at top
+    if (delta > 0 && (!scrollRef.current || scrollRef.current.scrollTop === 0)) {
       setTranslateY(delta)
     }
   }
@@ -140,7 +141,7 @@ export default function BookingModal({
 
       {/* Modal Content */}
       <div
-        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl p-6 animate-slide-up safe-area-bottom overflow-hidden"
+        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom max-h-[85vh] flex flex-col"
         style={{
           transform: `translateY(${translateY}px)`,
           transition: translateY === 0 ? 'transform 0.3s ease-out' : 'none'
@@ -155,15 +156,16 @@ export default function BookingModal({
           style={{ backgroundColor: session.session_type?.color || '#ff6714' }}
         />
 
-        {/* Drag Handle */}
-        <div className="flex justify-center pt-2 pb-3">
-          <div className="w-10 h-1 bg-gray-600 rounded-full" />
+        {/* Header: Drag Handle + Close Button */}
+        <div className="px-6 pt-2 shrink-0">
+          <div className="flex justify-center pb-3">
+            <div className="w-10 h-1 bg-gray-600 rounded-full" />
+          </div>
         </div>
 
-        {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors z-10"
           disabled={modalState === 'loading'}
         >
           <X size={24} />
@@ -172,129 +174,143 @@ export default function BookingModal({
         {/* Confirm State */}
         {modalState === 'confirm' && (
           <>
-            {/* Session Info */}
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-white mb-2">
-                {session.title}
-              </h2>
+            {/* Scrollable Body */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 min-h-0">
+              {/* Session Info */}
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-white mb-2">
+                  {session.title}
+                </h2>
 
-              {session.session_type && (
-                <span
-                  className="inline-block px-2 py-1 text-xs font-medium rounded-full mb-4"
-                  style={{
-                    backgroundColor: `${session.session_type.color}20`,
-                    color: session.session_type.color,
-                  }}
-                >
-                  {session.session_type.name}
-                </span>
-              )}
+                {session.session_type && (
+                  <span
+                    className="inline-block px-2 py-1 text-xs font-medium rounded-full mb-4"
+                    style={{
+                      backgroundColor: `${session.session_type.color}20`,
+                      color: session.session_type.color,
+                    }}
+                  >
+                    {session.session_type.name}
+                  </span>
+                )}
 
-              <div className="space-y-3 text-gray-300">
-                <div className="flex items-center gap-3">
-                  <Calendar size={18} className="text-primary" />
-                  <span>{formatDate(session.starts_at)}</span>
+                <div className="space-y-3 text-gray-300">
+                  <div className="flex items-center gap-3">
+                    <Calendar size={18} className="text-primary" />
+                    <span>{formatDate(session.starts_at)}</span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Clock size={18} className="text-primary" />
+                    <span>
+                      {formatTime(session.starts_at)} - {formatTime(session.ends_at)}
+                      <span className="text-gray-500 ml-2">
+                        ({session.duration_minutes} min)
+                      </span>
+                    </span>
+                  </div>
+
+                  {session.location && (
+                    <div className="flex items-center gap-3">
+                      <MapPin size={18} className="text-primary" />
+                      <span>{session.location}</span>
+                    </div>
+                  )}
+
+                  {session.trainer && (
+                    <div className="flex items-center gap-3">
+                      <User size={18} className="text-primary" />
+                      <span>{session.trainer.full_name || 'Trainer'}</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Clock size={18} className="text-primary" />
-                  <span>
-                    {formatTime(session.starts_at)} - {formatTime(session.ends_at)}
-                    <span className="text-gray-500 ml-2">
-                      ({session.duration_minutes} min)
-                    </span>
+                {session.description && (
+                  <p className="mt-4 text-sm text-gray-400">{session.description}</p>
+                )}
+              </div>
+
+              {/* Availability */}
+              <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-gray-400">Availability</span>
+                  <span
+                    className={`font-bold ${
+                      session.availability.spots_left <= 2
+                        ? 'text-yellow-500'
+                        : 'text-green-500'
+                    }`}
+                  >
+                    {session.availability.spots_left} of{' '}
+                    {session.availability.capacity} {session.availability.spots_left === 1 ? 'spot' : 'spots'} left
                   </span>
                 </div>
 
-                {session.location && (
-                  <div className="flex items-center gap-3">
-                    <MapPin size={18} className="text-primary" />
-                    <span>{session.location}</span>
+                {/* Capacity Visual */}
+                {session.availability.capacity <= 10 ? (
+                  <div className="flex gap-1.5 justify-center">
+                    {Array.from({ length: session.availability.capacity }).map((_, i) => {
+                      const bookedCount = session.availability.capacity - session.availability.spots_left
+                      const isFilled = i < bookedCount
+                      return (
+                        <div
+                          key={i}
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            isFilled ? 'bg-primary' : 'bg-gray-700'
+                          }`}
+                        />
+                      )
+                    })}
                   </div>
-                )}
-
-                {session.trainer && (
-                  <div className="flex items-center gap-3">
-                    <User size={18} className="text-primary" />
-                    <span>{session.trainer.full_name || 'Trainer'}</span>
+                ) : (
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{
+                        width: `${
+                          ((session.availability.capacity - session.availability.spots_left) /
+                            session.availability.capacity) *
+                          100
+                        }%`,
+                      }}
+                    />
                   </div>
                 )}
               </div>
-
-              {session.description && (
-                <p className="mt-4 text-sm text-gray-400">{session.description}</p>
-              )}
             </div>
 
-            {/* Availability */}
-            <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-gray-400">Availability</span>
-                <span
-                  className={`font-bold ${
-                    session.availability.spots_left <= 2
-                      ? 'text-yellow-500'
-                      : 'text-green-500'
-                  }`}
+            {/* Pinned Footer: Actions */}
+            <div className="px-6 pb-6 pt-4 shrink-0">
+              <div className="flex gap-3">
+                <button
+                  onClick={handleClose}
+                  className="flex-1 py-3 px-4 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors"
                 >
-                  {session.availability.spots_left} of{' '}
-                  {session.availability.capacity} {session.availability.spots_left === 1 ? 'spot' : 'spots'} left
-                </span>
+                  Cancel
+                </button>
+                {session.availability.is_full ? (
+                  <button
+                    disabled
+                    className="flex-1 py-3 px-4 bg-gray-800 text-gray-500 font-bold rounded-lg cursor-not-allowed"
+                  >
+                    Session Full
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleBook}
+                    className="flex-1 py-3 px-4 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    Book Session
+                  </button>
+                )}
               </div>
-
-              {/* Capacity Visual */}
-              {session.availability.capacity <= 10 ? (
-                <div className="flex gap-1.5 justify-center">
-                  {Array.from({ length: session.availability.capacity }).map((_, i) => {
-                    const bookedCount = session.availability.capacity - session.availability.spots_left
-                    const isFilled = i < bookedCount
-                    return (
-                      <div
-                        key={i}
-                        className={`w-2.5 h-2.5 rounded-full ${
-                          isFilled ? 'bg-primary' : 'bg-gray-700'
-                        }`}
-                      />
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all"
-                    style={{
-                      width: `${
-                        ((session.availability.capacity - session.availability.spots_left) /
-                          session.availability.capacity) *
-                        100
-                      }%`,
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleClose}
-                className="flex-1 py-3 px-4 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBook}
-                className="flex-1 py-3 px-4 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Book Session
-              </button>
             </div>
           </>
         )}
 
         {/* Loading State */}
         {modalState === 'loading' && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12 px-6 pb-6">
             <Loader2 size={48} className="text-primary animate-spin mb-4" />
             <p className="text-white font-medium">Booking your session...</p>
           </div>
@@ -302,7 +318,7 @@ export default function BookingModal({
 
         {/* Success State */}
         {modalState === 'success' && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12 px-6 pb-6">
             <svg className="w-16 h-16 mb-4" viewBox="0 0 52 52">
               <circle className="animate-checkmark-circle" cx="26" cy="26" r="25" fill="none" stroke="#22c55e" strokeWidth="2" />
               <path className="animate-checkmark" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
@@ -316,7 +332,7 @@ export default function BookingModal({
 
         {/* Error State */}
         {modalState === 'error' && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-12 px-6 pb-6">
             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
               <AlertCircle size={40} className="text-red-500" />
             </div>
@@ -341,17 +357,6 @@ export default function BookingModal({
       </div>
 
       <style jsx>{`
-        @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
         .safe-area-bottom {
           padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
         }

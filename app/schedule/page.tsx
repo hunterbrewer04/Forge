@@ -66,8 +66,12 @@ export default function SchedulePage() {
   }, [])
 
   const handleTapSession = useCallback((session: SessionWithDetails) => {
-    router.push(`/schedule/${session.id}`)
-  }, [router])
+    if (session.user_booking) {
+      handleCancelBooking(session)
+    } else {
+      handleBookSession(session)
+    }
+  }, [handleCancelBooking, handleBookSession])
 
   const handleBookingSuccess = useCallback(() => {
     fetchSessions()
@@ -171,7 +175,7 @@ export default function SchedulePage() {
 
       {/* Sessions List */}
       {!loading && !error && (
-        <>
+        <div className="flex-1 flex flex-col">
           {selectedDateSessions.length > 0 ? (
             <div className="space-y-3">
               {selectedDateSessions.map((session) => (
@@ -185,7 +189,7 @@ export default function SchedulePage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
               <div className="bg-bg-secondary p-4 rounded-full mb-4">
                 <MaterialIcon name="event_busy" size={32} className="text-text-muted" />
               </div>
@@ -195,7 +199,7 @@ export default function SchedulePage() {
               </p>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Trainer: Create Session Link */}
