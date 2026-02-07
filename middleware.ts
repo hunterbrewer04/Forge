@@ -11,7 +11,7 @@ import { NextResponse, type NextRequest } from 'next/server'
  * Also protects authenticated routes by redirecting unauthenticated users to /login.
  */
 
-const PUBLIC_ROUTES = ['/login', '/signup', '/api/calendar']
+const PUBLIC_ROUTES = ['/', '/login', '/signup', '/api/calendar']
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })

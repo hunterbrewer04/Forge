@@ -6,10 +6,6 @@ const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
 // Static assets to precache
 const STATIC_ASSETS = [
   '/',
-  '/home',
-  '/chat',
-  '/schedule',
-  '/profile',
   '/login',
   '/signup',
   '/manifest.json',
@@ -150,7 +146,11 @@ self.addEventListener('fetch', (event) => {
         }).catch(() => cached || caches.match('/offline.html'));
 
         // Return cached immediately if available, otherwise wait for network
-        return cached || networkFetch;
+        if (cached) {
+          event.waitUntil(networkFetch);
+          return cached;
+        }
+        return networkFetch;
       })
     );
     return;

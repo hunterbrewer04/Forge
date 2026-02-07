@@ -140,11 +140,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const bookingCountMap = new Map<string, number>()
 
     if (sessionIds.length > 0) {
-      const { data: bookings } = await supabase
+      const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('session_id')
         .in('session_id', sessionIds)
         .eq('status', 'confirmed')
+
+      if (bookingsError) {
+        console.error('Error fetching bookings for calendar:', bookingsError)
+        return new NextResponse('Internal Server Error', {
+          status: 500,
+          headers: { 'Content-Type': 'text/plain' },
+        })
+      }
 
       for (const b of bookings || []) {
         bookingCountMap.set(b.session_id, (bookingCountMap.get(b.session_id) || 0) + 1)
