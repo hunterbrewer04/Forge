@@ -1,14 +1,17 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase-browser'
 import MessageInput from './MessageInput'
-import MediaViewer, { useMediaViewer } from './MediaViewer'
+import { useMediaViewer } from './MediaViewer'
+
+const MediaViewer = dynamic(() => import('./MediaViewer'), { ssr: false })
 import { fetchMessages, fetchSenderProfile, markMessagesAsRead } from '@/lib/services/messages'
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
 import { MessageListSkeleton } from '@/components/skeletons/MessageSkeleton'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { ArrowLeft, User, Video as VideoIcon, Info, AlertCircle, RefreshCw, CheckCheck, Check, Maximize } from '@/components/ui/icons'
 import Image from 'next/image'
 
 interface Message {
@@ -289,7 +292,7 @@ export default function ChatWindow({
                 onClick={onBack}
                 className="p-2 -ml-2 min-w-[44px] min-h-[44px] rounded-full hover:bg-bg-secondary transition-colors text-text-secondary hover:text-text-primary"
               >
-                <MaterialIcon name="arrow_back" size={20} />
+                <ArrowLeft size={20} />
               </button>
             )}
             <div className="flex items-center gap-3">
@@ -303,7 +306,7 @@ export default function ChatWindow({
                       className="object-cover"
                     />
                   ) : (
-                    <MaterialIcon name="person" size={20} className="text-text-muted" />
+                    <User size={20} className="text-text-muted" />
                   )}
                 </div>
                 <div className="absolute bottom-0 right-0 size-2.5 bg-success rounded-full ring-2 ring-bg-primary" />
@@ -320,10 +323,10 @@ export default function ChatWindow({
           {/* Action buttons */}
           <div className="flex items-center gap-1">
             <button className="size-10 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors">
-              <MaterialIcon name="videocam" size={22} />
+              <VideoIcon size={22} />
             </button>
             <button className="size-10 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors">
-              <MaterialIcon name="info" size={22} />
+              <Info size={22} />
             </button>
           </div>
         </div>
@@ -339,11 +342,11 @@ export default function ChatWindow({
             className="flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:bg-bg-secondary rounded-2xl transition-colors group"
           >
             <div className="size-16 rounded-full bg-error/10 flex items-center justify-center mb-4 group-hover:bg-error/20 transition-colors">
-              <MaterialIcon name="error" size={32} className="text-error" />
+              <AlertCircle size={32} className="text-error" />
             </div>
             <div className="text-text-primary mb-2 font-medium">{error}</div>
             <div className="flex items-center gap-2 text-primary text-sm font-medium">
-              <MaterialIcon name="refresh" size={16} />
+              <RefreshCw size={16} />
               Tap to retry
             </div>
           </button>
@@ -404,7 +407,7 @@ export default function ChatWindow({
                             className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
                             aria-label="View fullscreen"
                           >
-                            <MaterialIcon name="fullscreen" size={20} />
+                            <Maximize size={20} />
                           </button>
                         </div>
                       )}
@@ -416,9 +419,9 @@ export default function ChatWindow({
                       {!message.pending && (
                         <span className="flex items-center">
                           {message.read_at ? (
-                            <MaterialIcon name="done_all" size={14} className="text-[#ff6714]" />
+                            <CheckCheck size={14} className="text-[#ff6714]" />
                           ) : (
-                            <MaterialIcon name="done" size={14} className="text-text-muted" />
+                            <Check size={14} className="text-text-muted" />
                           )}
                         </span>
                       )}
@@ -436,7 +439,7 @@ export default function ChatWindow({
                           className="object-cover"
                         />
                       ) : (
-                        <MaterialIcon name="person" size={14} className="text-text-muted" />
+                        <User size={14} className="text-text-muted" />
                       )}
                     </div>
                     <div className="flex flex-col">
@@ -467,7 +470,7 @@ export default function ChatWindow({
                               className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
                               aria-label="View fullscreen"
                             >
-                              <MaterialIcon name="fullscreen" size={20} />
+                              <Maximize size={20} />
                             </button>
                           </div>
                         )}

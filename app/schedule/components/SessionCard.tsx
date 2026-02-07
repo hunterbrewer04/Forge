@@ -1,7 +1,7 @@
 'use client'
 
 import type { SessionWithDetails } from '@/lib/types/sessions'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { Dumbbell, User, type LucideIcon } from '@/components/ui/icons'
 import Image from 'next/image'
 
 interface SessionCardProps {
@@ -12,7 +12,7 @@ interface SessionCardProps {
 }
 
 export default function SessionCard({ session, onBook, onCancel, onTap }: SessionCardProps) {
-  const { session_type, trainer, availability, user_booking } = session
+  const { trainer, availability, user_booking } = session
 
   // Determine card state
   const isBooked = !!user_booking
@@ -32,14 +32,8 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
 
   const timeRange = `${formatTime(startTime)} - ${formatTime(endTime)}`
 
-  // Get session icon based on type
-  const getSessionIcon = () => {
-    const slug = session_type?.slug || ''
-    if (slug.includes('crossfit') || slug.includes('strength')) return 'fitness_center'
-    if (slug.includes('yoga') || slug.includes('vinyasa')) return 'self_improvement'
-    if (slug.includes('hitting') || slug.includes('baseball')) return 'sports_baseball'
-    return 'sports'
-  }
+  // Get session icon based on type - all session types use Dumbbell
+  const SessionIcon: LucideIcon = Dumbbell
 
   // Spots display
   const spotsText = isFull
@@ -65,7 +59,7 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
       <div className="flex items-start gap-3">
         {/* Session Type Icon */}
         <div className="bg-bg-secondary p-3 rounded-xl shrink-0">
-          <MaterialIcon name={getSessionIcon()} size={24} className="text-primary" />
+          <SessionIcon size={24} className="text-primary" />
         </div>
 
         {/* Content */}
@@ -92,7 +86,7 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
                   />
                 ) : (
                   <div className="w-5 h-5 rounded-full bg-bg-secondary flex items-center justify-center">
-                    <MaterialIcon name="person" size={14} className="text-text-muted" />
+                    <User size={14} className="text-text-muted" />
                   </div>
                 )}
                 <span className="text-text-secondary text-sm truncate max-w-[100px]">
@@ -101,7 +95,7 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
               </div>
             )}
 
-            <span className="text-text-muted">•</span>
+            <span className="text-text-muted">&bull;</span>
 
             <span className={`text-xs font-semibold shrink-0 ${spotsColor}`}>
               {spotsText}

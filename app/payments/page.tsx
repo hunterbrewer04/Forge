@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import MobileLayout from '@/components/layout/MobileLayout'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { ArrowLeft, CreditCard, Plus, Clipboard, Lock, Dumbbell } from '@/components/ui/icons'
 import Link from 'next/link'
 
 interface PaymentMethod {
@@ -22,7 +22,6 @@ interface Transaction {
   date: string
   amount: number
   status: 'PAID' | 'PENDING' | 'FAILED'
-  icon: string
 }
 
 export default function PaymentsPage() {
@@ -61,7 +60,7 @@ export default function PaymentsPage() {
           className="size-10 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
           aria-label="Go back"
         >
-          <MaterialIcon name="arrow_back" size={24} />
+          <ArrowLeft size={24} />
         </button>
 
         <h1 className="text-lg font-semibold text-text-primary">Payments</h1>
@@ -77,7 +76,7 @@ export default function PaymentsPage() {
       <section className="bg-text-primary rounded-2xl p-5 text-bg-primary">
         <div className="flex items-center justify-between mb-4">
           <span className="text-bg-primary/70 text-sm font-medium">Current Balance</span>
-          <MaterialIcon name="credit_card" size={24} className="text-bg-primary/50" />
+          <CreditCard size={24} className="text-bg-primary/50" />
         </div>
         <h2 className="text-4xl font-bold mb-4">${balance.toFixed(2)}</h2>
         <button className="w-full bg-bg-primary text-text-primary py-3 rounded-xl font-semibold hover:bg-bg-primary/90 transition-colors">
@@ -92,7 +91,7 @@ export default function PaymentsPage() {
         <div className="space-y-2">
           {paymentMethods.length === 0 ? (
             <div className="text-center py-8 text-text-muted bg-bg-card border border-border rounded-xl">
-              <MaterialIcon name="credit_card_off" size={48} className="mb-2 opacity-50" />
+              <CreditCard size={48} className="mb-2 opacity-50" />
               <p className="text-sm">No payment methods added</p>
             </div>
           ) : (
@@ -104,7 +103,7 @@ export default function PaymentsPage() {
                 {method.type === 'card' ? (
                   <>
                     <div className="w-10 h-7 bg-bg-secondary rounded flex items-center justify-center">
-                      <MaterialIcon name="credit_card" size={18} className="text-text-muted" />
+                      <CreditCard size={18} className="text-text-muted" />
                     </div>
                     <div className="flex-1">
                       <p className="text-text-primary font-medium">
@@ -148,7 +147,7 @@ export default function PaymentsPage() {
           {/* Add Payment Method */}
           <button className="flex items-center gap-3 w-full bg-bg-card border border-border border-dashed rounded-xl p-4 text-left hover:bg-bg-secondary transition-colors">
             <div className="size-10 rounded-full bg-bg-secondary flex items-center justify-center">
-              <MaterialIcon name="add" size={22} className="text-text-secondary" />
+              <Plus size={22} className="text-text-secondary" />
             </div>
             <span className="text-text-primary font-medium">Add Payment Method</span>
           </button>
@@ -167,7 +166,7 @@ export default function PaymentsPage() {
         <div className="space-y-2">
           {transactions.length === 0 ? (
             <div className="text-center py-8 text-text-muted bg-bg-card border border-border rounded-xl">
-              <MaterialIcon name="receipt_long" size={48} className="mb-2 opacity-50" />
+              <Clipboard size={48} className="mb-2 opacity-50" />
               <p className="text-sm">No transactions yet</p>
             </div>
           ) : (
@@ -177,7 +176,7 @@ export default function PaymentsPage() {
                 className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-4"
               >
                 <div className="bg-bg-secondary p-2.5 rounded-full">
-                  <MaterialIcon name={tx.icon} size={22} className="text-primary" />
+                  <Dumbbell size={22} className="text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-text-primary font-medium text-sm truncate">{tx.title}</p>
@@ -200,7 +199,7 @@ export default function PaymentsPage() {
       {/* Security Footer */}
       <section className="mt-8 mb-8 text-center">
         <div className="flex items-center justify-center gap-2 text-text-muted">
-          <MaterialIcon name="lock" size={16} />
+          <Lock size={16} />
           <span className="text-xs">SECURE SSL ENCRYPTION</span>
         </div>
         <p className="text-[10px] text-text-muted mt-2 uppercase tracking-wider">

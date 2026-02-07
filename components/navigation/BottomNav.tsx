@@ -3,22 +3,21 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import MaterialIcon from "@/components/ui/MaterialIcon";
+import { Home, MessageCircle, Calendar, User, type LucideIcon } from "@/components/ui/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadCount } from "@/lib/hooks/useUnreadCount";
 
 interface NavItem {
   href: string;
-  icon: string;
-  iconFilled: string;
+  icon: LucideIcon;
   label: string;
 }
 
 const navItems: NavItem[] = [
-  { href: "/home", icon: "home", iconFilled: "home", label: "Home" },
-  { href: "/chat", icon: "chat_bubble_outline", iconFilled: "chat_bubble", label: "Messages" },
-  { href: "/schedule", icon: "calendar_today", iconFilled: "calendar_today", label: "Sessions" },
-  { href: "/profile", icon: "person_outline", iconFilled: "person", label: "Profile" },
+  { href: "/home", icon: Home, label: "Home" },
+  { href: "/chat", icon: MessageCircle, label: "Messages" },
+  { href: "/schedule", icon: Calendar, label: "Sessions" },
+  { href: "/profile", icon: User, label: "Profile" },
 ];
 
 export default function BottomNav() {
@@ -50,6 +49,7 @@ export default function BottomNav() {
       <div className="flex justify-around items-center h-16 max-w-md mx-auto px-2">
         {navItems.map((item) => {
           const active = isActive(item.href);
+          const IconComponent = item.icon;
           return (
             <Link
               key={item.href}
@@ -61,11 +61,10 @@ export default function BottomNav() {
               }`}
             >
               <div className="relative">
-                <MaterialIcon
-                  name={active ? item.iconFilled : item.icon}
+                <IconComponent
                   size={26}
-                  filled={active}
-                  weight={active ? 600 : 400}
+                  strokeWidth={active ? 2.5 : 2}
+                  fill={active ? "currentColor" : "none"}
                 />
                 {item.href === "/chat" && unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[8px] h-2 bg-primary rounded-full" />

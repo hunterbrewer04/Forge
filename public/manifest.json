@@ -57,6 +57,18 @@
           "type": "image/png"
         }
       ]
+    },
+    {
+      "name": "Schedule",
+      "short_name": "Sessions",
+      "description": "Book training sessions",
+      "url": "/schedule"
+    },
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "description": "Your dashboard",
+      "url": "/home"
     }
   ],
   "screenshots": [

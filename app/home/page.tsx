@@ -12,7 +12,7 @@ import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import { useHomeData } from '@/lib/hooks/useHomeData'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { User, Bell, Calendar, MessageCircle, Wallet, Dumbbell, CalendarOff } from '@/components/ui/icons'
 
 interface Stats {
   totalConversations: number
@@ -154,7 +154,7 @@ export default function HomePage() {
             />
           ) : (
             <div className="size-full flex items-center justify-center text-text-secondary">
-              <MaterialIcon name="person" size={20} />
+              <User size={20} />
             </div>
           )}
         </div>
@@ -174,7 +174,7 @@ export default function HomePage() {
           className="relative flex items-center justify-center size-10 text-text-secondary hover:text-text-primary transition-colors"
           aria-label="Notifications"
         >
-          <MaterialIcon name="notifications" size={24} />
+          <Bell size={24} />
           {unreadCount > 0 && (
             <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
           )}
@@ -210,7 +210,7 @@ export default function HomePage() {
         <p className="text-white/80 text-sm mt-1">Secure your spot in the tunnel</p>
         <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
           Schedule Now
-          <MaterialIcon name="calendar_today" size={18} />
+          <Calendar size={18} />
         </div>
       </Link>
 
@@ -223,7 +223,7 @@ export default function HomePage() {
         >
           <div className="flex items-start justify-between mb-3">
             <div className="bg-primary/10 p-2 rounded-lg">
-              <MaterialIcon name="chat_bubble" size={24} className="text-primary" />
+              <MessageCircle size={24} className="text-primary" />
             </div>
             {unreadCount > 0 && (
               <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
@@ -249,7 +249,7 @@ export default function HomePage() {
         >
           <div className="flex items-start justify-between mb-3">
             <div className="bg-success/10 p-2 rounded-lg">
-              <MaterialIcon name="account_balance_wallet" size={24} className="text-success" />
+              <Wallet size={24} className="text-success" />
             </div>
           </div>
           <h3 className="text-text-primary font-semibold">Payments</h3>
@@ -308,7 +308,7 @@ export default function HomePage() {
                   className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3"
                 >
                   <div className="bg-bg-secondary p-2.5 rounded-full">
-                    <MaterialIcon name="sports_baseball" size={22} className="text-primary" />
+                    <Dumbbell size={22} className="text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-text-primary font-medium text-sm truncate">{activity.title}</h4>
@@ -327,7 +327,7 @@ export default function HomePage() {
         ) : (
           <div className="flex flex-col items-center justify-center bg-bg-card border border-border rounded-xl p-8 text-center">
             <div className="bg-bg-secondary p-4 rounded-full mb-3">
-              <MaterialIcon name="event_busy" size={32} className="text-text-muted" />
+              <CalendarOff size={32} className="text-text-muted" />
             </div>
             <h3 className="text-text-primary font-medium mb-1">No Recent Activity</h3>
             <p className="text-text-secondary text-sm mb-4">

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
@@ -13,8 +13,7 @@ const STATIC_ASSETS = [
   '/login',
   '/signup',
   '/manifest.json',
-  '/offline.html',
-  '/fonts/MaterialSymbolsOutlined.woff2'
+  '/offline.html'
 ];
 
 // Navigation routes for stale-while-revalidate

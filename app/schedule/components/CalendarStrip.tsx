@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { ChevronLeft, ChevronRight } from '@/components/ui/icons'
 
 interface CalendarStripProps {
   selectedDate: string // ISO date string YYYY-MM-DD
@@ -106,7 +106,7 @@ export default function CalendarStrip({
           className="size-8 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
           aria-label="Previous month"
         >
-          <MaterialIcon name="chevron_left" size={24} />
+          <ChevronLeft size={24} />
         </button>
 
         <h2 className="text-base font-semibold text-text-primary">{monthName}</h2>
@@ -116,7 +116,7 @@ export default function CalendarStrip({
           className="size-8 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
           aria-label="Next month"
         >
-          <MaterialIcon name="chevron_right" size={24} />
+          <ChevronRight size={24} />
         </button>
       </div>
 

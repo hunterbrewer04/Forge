@@ -3,14 +3,16 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import MobileLayout from '@/components/layout/MobileLayout'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { ArrowLeft, CalendarOff, Plus } from '@/components/ui/icons'
 import { useScheduleData } from '@/lib/hooks/useScheduleData'
 import CalendarStrip from './components/CalendarStrip'
 import SessionCard from './components/SessionCard'
-import BookingModal from './components/BookingModal'
-import CancelBookingModal from './components/CancelBookingModal'
+
+const BookingModal = dynamic(() => import('./components/BookingModal'), { ssr: false })
+const CancelBookingModal = dynamic(() => import('./components/CancelBookingModal'), { ssr: false })
 import type { SessionWithDetails } from '@/lib/types/sessions'
 
 export default function SchedulePage() {
@@ -120,7 +122,7 @@ export default function SchedulePage() {
           className="size-10 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
           aria-label="Go back"
         >
-          <MaterialIcon name="arrow_back" size={24} />
+          <ArrowLeft size={24} />
         </button>
 
         <h1 className="text-lg font-semibold text-text-primary">Book a Session</h1>
@@ -192,7 +194,7 @@ export default function SchedulePage() {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
                 <div className="bg-bg-secondary p-4 rounded-full mb-4">
-                  <MaterialIcon name="event_busy" size={32} className="text-text-muted" />
+                  <CalendarOff size={32} className="text-text-muted" />
                 </div>
                 <h3 className="text-text-primary font-semibold mb-1">No sessions available</h3>
                 <p className="text-text-secondary text-sm">
@@ -209,7 +211,7 @@ export default function SchedulePage() {
             href="/schedule/new"
             className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all active:scale-[0.98]"
           >
-            <MaterialIcon name="add" size={20} />
+            <Plus size={20} />
             Create New Session
           </Link>
         )}

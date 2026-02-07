@@ -76,6 +76,12 @@ import {
   Link2,
   ExternalLink,
   Clipboard,
+  Maximize,
+  SquarePen,
+  Wallet,
+  CalendarOff,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 // Re-export LucideIcon type for external use
@@ -220,4 +226,10 @@ export {
   Link2,
   ExternalLink,
   Clipboard,
+  Maximize,
+  SquarePen,
+  Wallet,
+  CalendarOff,
+  Sun,
+  Moon,
 };
