@@ -278,39 +278,9 @@ export default function ChatWindow({
     return currentDate !== prevDate
   }
 
-  if (loading) {
-    return (
-      <div className="h-full flex flex-col bg-bg-primary">
-        <MessageListSkeleton />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="h-full flex flex-col bg-bg-primary">
-        <div className="flex-1 flex items-center justify-center">
-          <button
-            onClick={loadMessages}
-            className="flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:bg-bg-secondary rounded-2xl transition-colors group"
-          >
-            <div className="size-16 rounded-full bg-error/10 flex items-center justify-center mb-4 group-hover:bg-error/20 transition-colors">
-              <MaterialIcon name="error" size={32} className="text-error" />
-            </div>
-            <div className="text-text-primary mb-2 font-medium">{error}</div>
-            <div className="flex items-center gap-2 text-primary text-sm font-medium">
-              <MaterialIcon name="refresh" size={16} />
-              Tap to retry
-            </div>
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="h-full flex flex-col bg-bg-primary">
-      {/* Chat Header */}
+      {/* Chat Header -- always rendered */}
       <div className="flex-none border-b border-border bg-bg-primary sticky top-0 z-10 pt-safe-top">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
@@ -359,6 +329,27 @@ export default function ChatWindow({
         </div>
       </div>
 
+      {/* Body -- switches on state */}
+      {loading ? (
+        <MessageListSkeleton />
+      ) : error ? (
+        <div className="flex-1 flex items-center justify-center">
+          <button
+            onClick={loadMessages}
+            className="flex flex-col items-center justify-center p-8 text-center cursor-pointer hover:bg-bg-secondary rounded-2xl transition-colors group"
+          >
+            <div className="size-16 rounded-full bg-error/10 flex items-center justify-center mb-4 group-hover:bg-error/20 transition-colors">
+              <MaterialIcon name="error" size={32} className="text-error" />
+            </div>
+            <div className="text-text-primary mb-2 font-medium">{error}</div>
+            <div className="flex items-center gap-2 text-primary text-sm font-medium">
+              <MaterialIcon name="refresh" size={16} />
+              Tap to retry
+            </div>
+          </button>
+        </div>
+      ) : (
+        <>
       {/* Messages Area */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-bg-primary">
         {messages.length === 0 ? (
@@ -503,6 +494,8 @@ export default function ChatWindow({
         onOptimisticMessage={addOptimisticMessage}
         onMessageError={removeOptimisticMessage}
       />
+        </>
+      )}
 
       {/* Media Lightbox Viewer */}
       <MediaViewer

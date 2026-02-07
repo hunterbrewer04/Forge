@@ -83,10 +83,12 @@ export default function ChatLayout({
           )}
         </div>
 
-        {/* Bottom nav only shows on mobile */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40">
-          <BottomNav />
-        </div>
+        {/* Bottom nav only shows on mobile, hidden when in active chat */}
+        {!showActiveChat && (
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40">
+            <BottomNav />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { X, Clock, MapPin, User, Calendar, CheckCircle, AlertCircle, Loader2 } from '@/components/ui/icons'
+import { toast } from 'sonner'
 import type { SessionWithDetails } from '@/lib/types/sessions'
 
 interface BookingModalProps {
@@ -86,6 +87,9 @@ export default function BookingModal({
         onBookingSuccess()
         onClose()
         setModalState('confirm')
+        toast.success('Booking confirmed!', {
+          description: `You're booked for ${session.title}`,
+        })
       }, 1500)
     } catch (error) {
       setModalState('error')
@@ -141,7 +145,7 @@ export default function BookingModal({
 
       {/* Modal Content */}
       <div
-        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom max-h-[85vh] flex flex-col"
+        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom max-h-[85dvh] flex flex-col"
         style={{
           transform: `translateY(${translateY}px)`,
           transition: translateY === 0 ? 'transform 0.3s ease-out' : 'none'
@@ -310,7 +314,7 @@ export default function BookingModal({
 
         {/* Loading State */}
         {modalState === 'loading' && (
-          <div className="flex flex-col items-center justify-center py-12 px-6 pb-6">
+          <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 pb-6">
             <Loader2 size={48} className="text-primary animate-spin mb-4" />
             <p className="text-white font-medium">Booking your session...</p>
           </div>
@@ -318,7 +322,7 @@ export default function BookingModal({
 
         {/* Success State */}
         {modalState === 'success' && (
-          <div className="flex flex-col items-center justify-center py-12 px-6 pb-6">
+          <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 pb-6">
             <svg className="w-16 h-16 mb-4" viewBox="0 0 52 52">
               <circle className="animate-checkmark-circle" cx="26" cy="26" r="25" fill="none" stroke="#22c55e" strokeWidth="2" />
               <path className="animate-checkmark" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
@@ -332,7 +336,7 @@ export default function BookingModal({
 
         {/* Error State */}
         {modalState === 'error' && (
-          <div className="flex flex-col items-center justify-center py-12 px-6 pb-6">
+          <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 pb-6">
             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
               <AlertCircle size={40} className="text-red-500" />
             </div>
