@@ -38,8 +38,8 @@ export async function fetchClientConversation(userId: string): Promise<Conversat
 }
 
 /**
- * Fetch all conversations for a trainer with last message and unread counts.
- * Uses a single query with nested message select to avoid N+1 queries.
+ * Fetch all conversations for a trainer.
+ * Returns list of conversations with client profiles.
  */
 export async function fetchTrainerConversations(userId: string): Promise<ConversationWithClientProfile[]> {
   const supabase = createClient()
@@ -128,11 +128,14 @@ export async function getLastMessagesForConversations(conversationIds: string[])
 
   // Fetch the most recent message per conversation using a single query
   // Order by created_at desc to get latest first, then deduplicate client-side
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('messages')
     .select('conversation_id, content, created_at, sender_id')
     .in('conversation_id', conversationIds)
     .order('created_at', { ascending: false })
+    .limit(conversationIds.length * 2)
+
+  if (error) throw error
 
   const result = new Map<string, { content: string | null; created_at: string; sender_id: string }>()
 
@@ -155,12 +158,14 @@ export async function getUnreadCountsForConversations(conversationIds: string[],
 
   const supabase = createClient()
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('messages')
     .select('conversation_id')
     .in('conversation_id', conversationIds)
     .neq('sender_id', userId)
     .is('read_at', null)
+
+  if (error) throw error
 
   const counts = new Map<string, number>()
   for (const msg of data || []) {

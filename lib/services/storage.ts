@@ -10,6 +10,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
 
 // In-memory cache for signed URLs to avoid redundant API calls
+const MAX_CACHE_SIZE = 500
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>()
 
 /**
@@ -34,6 +35,21 @@ export async function getSignedMediaUrl(filePath: string): Promise<string | null
     if (error) {
       logger.error('Error generating signed URL:', error)
       return null
+    }
+
+    // Enforce max cache size before inserting
+    if (signedUrlCache.size >= MAX_CACHE_SIZE) {
+      // First pass: remove expired entries
+      for (const [key, entry] of signedUrlCache) {
+        if (entry.expiresAt <= now) signedUrlCache.delete(key)
+      }
+      // If still over limit, remove oldest entries
+      if (signedUrlCache.size >= MAX_CACHE_SIZE) {
+        const entries = [...signedUrlCache.entries()]
+          .sort((a, b) => a[1].expiresAt - b[1].expiresAt)
+        const toRemove = entries.slice(0, entries.length - MAX_CACHE_SIZE + 1)
+        for (const [key] of toRemove) signedUrlCache.delete(key)
+      }
     }
 
     signedUrlCache.set(filePath, {

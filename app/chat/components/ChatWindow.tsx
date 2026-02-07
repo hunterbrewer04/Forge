@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase-browser'
 import MessageInput from './MessageInput'
-import { useMediaViewer } from './MediaViewer'
+import { useMediaViewer } from './useMediaViewer'
 
 const MediaViewer = dynamic(() => import('./MediaViewer'), { ssr: false })
 import { fetchMessages, fetchSenderProfile, markMessagesAsRead } from '@/lib/services/messages'
