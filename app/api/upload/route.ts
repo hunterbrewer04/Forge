@@ -14,6 +14,7 @@ import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError } from '@/lib/api/errors'
+import { isValidUUID } from '@/lib/api/validation'
 import { env } from '@/lib/env-validation'
 
 // File size limits (in bytes)
@@ -146,6 +147,11 @@ export async function POST(request: NextRequest) {
 
     if (!conversationId) {
       return createApiError('No conversation ID provided', 400, 'NO_CONVERSATION_ID')
+    }
+
+    // Validate conversationId is a UUID to prevent path traversal
+    if (!isValidUUID(conversationId)) {
+      return createApiError('Invalid conversation ID format', 400, 'INVALID_CONVERSATION_ID')
     }
 
     // 4. Validate MIME type

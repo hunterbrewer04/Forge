@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
@@ -13,7 +13,8 @@ const STATIC_ASSETS = [
   '/login',
   '/signup',
   '/manifest.json',
-  '/offline.html'
+  '/offline.html',
+  '/icon-192x192.png'
 ];
 
 // Navigation routes for stale-while-revalidate
@@ -131,25 +132,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 3: Network-first for navigation routes
-  // IMPORTANT: Using network-first instead of stale-while-revalidate
-  // to prevent serving cached pages with stale auth state
+  // Strategy 3: Stale-while-revalidate for navigation routes
+  // Serves cached page instantly, fetches fresh version in background.
+  // Auth state is managed client-side by Supabase SDK, not by the cached HTML.
   if (request.mode === 'navigate' || NAV_ROUTES.some(route => url.pathname.startsWith(route))) {
     event.respondWith(
-      fetch(request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => {
-            cache.put(request, clone);
-            limitCacheSize(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
-          });
-        }
-        return response;
-      }).catch(() => {
-        // Network failed, fall back to cache or offline page
-        return caches.match(request).then((cached) => {
-          return cached || caches.match('/offline.html');
-        });
+      caches.match(request).then((cached) => {
+        const networkFetch = fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+              cache.put(request, clone);
+              limitCacheSize(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
+            });
+          }
+          return response;
+        }).catch(() => cached || caches.match('/offline.html'));
+
+        // Return cached immediately if available, otherwise wait for network
+        return cached || networkFetch;
       })
     );
     return;

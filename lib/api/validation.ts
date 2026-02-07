@@ -203,6 +203,48 @@ export function isValidUUID(value: string): boolean {
 }
 
 /**
+ * Session API schemas
+ */
+export const SessionSchemas = {
+  create: z.object({
+    title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
+    starts_at: z.string().min(1, 'Start time is required'),
+    ends_at: z.string().min(1, 'End time is required'),
+    session_type_id: CommonSchemas.uuid.nullable().optional(),
+    description: z.string().max(2000, 'Description too long').nullable().optional(),
+    duration_minutes: z.number().int().min(5).max(480).optional(),
+    capacity: z.number().int().min(1).max(200).nullable().optional(),
+    is_premium: z.boolean().optional(),
+    location: z.string().max(500, 'Location too long').nullable().optional(),
+  }),
+
+  update: z.object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(2000).nullable().optional(),
+    session_type_id: CommonSchemas.uuid.nullable().optional(),
+    duration_minutes: z.number().int().min(5).max(480).optional(),
+    capacity: z.number().int().min(1).max(200).nullable().optional(),
+    is_premium: z.boolean().optional(),
+    location: z.string().max(500).nullable().optional(),
+    starts_at: z.string().optional(),
+    ends_at: z.string().optional(),
+    status: z.enum(['scheduled', 'cancelled', 'completed']).optional(),
+    cancellation_reason: z.string().max(1000).nullable().optional(),
+  }),
+} as const
+
+/**
+ * Booking API schemas
+ */
+export const BookingSchemas = {
+  cancel: z.object({
+    cancellation_reason: z.string().max(1000, 'Reason too long').nullable().optional(),
+  }),
+
+  statusFilter: z.enum(['confirmed', 'cancelled', 'attended', 'no_show']),
+} as const
+
+/**
  * Example schemas for common API operations
  */
 export const ExampleSchemas = {

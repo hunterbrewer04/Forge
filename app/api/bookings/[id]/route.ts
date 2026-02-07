@@ -10,9 +10,9 @@ import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { BookingSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
 import { env } from '@/lib/env-validation'
-import type { CancelBookingInput } from '@/lib/types/sessions'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -152,12 +152,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return rateLimitResult
     }
 
-    // 3. Parse request body
-    let body: CancelBookingInput = {}
+    // 3. Parse and validate request body
+    let body: { cancellation_reason?: string | null } = {}
     try {
       const text = await request.text()
       if (text) {
-        body = JSON.parse(text)
+        const parsed = JSON.parse(text)
+        const result = BookingSchemas.cancel.safeParse(parsed)
+        if (!result.success) {
+          return createApiError(
+            `Validation failed: ${result.error.errors.map(e => e.message).join(', ')}`,
+            400,
+            'VALIDATION_ERROR'
+          )
+        }
+        body = result.data
       }
     } catch {
       return createApiError('Invalid JSON body', 400, 'INVALID_REQUEST')
