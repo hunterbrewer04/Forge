@@ -90,6 +90,11 @@ export const RateLimitPresets = {
 class UpstashRateLimiter {
   private baseUrl: string
   private token: string
+  private consecutiveFailures = 0
+  private circuitOpenUntil = 0
+  private readonly failureThreshold = 3
+  private readonly circuitResetMs = 30_000 // 30 seconds
+  private fallback = new InMemoryRateLimiter()
 
   constructor(url: string, token: string) {
     this.baseUrl = url
@@ -120,6 +125,15 @@ class UpstashRateLimiter {
   ): Promise<RateLimitResult> {
     const now = Date.now()
     const windowMs = config.windowSeconds * 1000
+
+    // Circuit breaker: if open, use in-memory fallback
+    if (this.consecutiveFailures >= this.failureThreshold) {
+      if (now < this.circuitOpenUntil) {
+        return this.fallback.checkLimit(key, config)
+      }
+      // Circuit half-open: try Upstash again
+    }
+
     const windowKey = `ratelimit:${key}:${Math.floor(now / windowMs)}`
 
     try {
@@ -130,6 +144,9 @@ class UpstashRateLimiter {
       if (count === 1) {
         await this.execute(['EXPIRE', windowKey, String(config.windowSeconds)])
       }
+
+      // Success: reset circuit breaker
+      this.consecutiveFailures = 0
 
       const remaining = Math.max(0, config.maxRequests - count)
       const resetAt = (Math.floor(now / windowMs) + 1) * windowMs
@@ -142,13 +159,16 @@ class UpstashRateLimiter {
       }
     } catch (error) {
       console.error('Upstash rate limit error:', error)
-      // Fail open - allow request if Redis is unavailable
-      return {
-        success: true,
-        limit: config.maxRequests,
-        remaining: config.maxRequests,
-        resetAt: now + windowMs,
+      // Circuit breaker: track failure and fall back to in-memory limiter
+      this.consecutiveFailures++
+      if (this.consecutiveFailures >= this.failureThreshold) {
+        this.circuitOpenUntil = now + this.circuitResetMs
+        console.warn(
+          `Rate limiter circuit breaker open after ${this.failureThreshold} failures. ` +
+          `Using in-memory fallback for ${this.circuitResetMs / 1000}s.`
+        )
       }
+      return this.fallback.checkLimit(key, config)
     }
   }
 }
@@ -304,33 +324,17 @@ export function withRateLimit(
  * Gets current rate limit status for a client
  */
 export async function getRateLimitStatus(
-  request: NextRequest,
+  _request: NextRequest,
   config: RateLimitConfig,
-  userId?: string
 ): Promise<{
   limit: number
   remaining: number
   resetAt: number
 }> {
-  const limiter = getRateLimiter()
-  const clientId = getClientIdentifier(request, userId)
-  const key = config.keyPrefix ? `${config.keyPrefix}:${clientId}` : clientId
-
-  // For status check, we don't want to increment
-  // This is a simplified version that returns current limits
   const now = Date.now()
   const windowMs = config.windowSeconds * 1000
 
-  if (limiter instanceof InMemoryRateLimiter) {
-    // For in-memory, we can check without incrementing
-    return {
-      limit: config.maxRequests,
-      remaining: config.maxRequests,
-      resetAt: now + windowMs,
-    }
-  }
-
-  // For Upstash, return defaults (checking would increment)
+  // Status check returns defaults without incrementing the counter
   return {
     limit: config.maxRequests,
     remaining: config.maxRequests,

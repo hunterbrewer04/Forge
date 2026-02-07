@@ -9,20 +9,15 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [showPrompt, setShowPrompt] = useState(false)
-  const [isIOS, setIsIOS] = useState(false)
-  const [isInStandaloneMode, setIsInStandaloneMode] = useState(false)
+  // null = hidden, 'ios' = show iOS instructions, 'android' = show Chrome/Edge install button
+  const [promptType, setPromptType] = useState<'ios' | 'android' | null>(null)
 
   useEffect(() => {
-    // Detect iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    setIsIOS(iOS)
 
     // Check if already installed (standalone mode)
-    // navigator.standalone is an iOS Safari-specific property
     const standalone = window.matchMedia('(display-mode: standalone)').matches ||
                       window.navigator.standalone === true
-    setIsInStandaloneMode(standalone)
 
     if (standalone) {
       return
@@ -34,24 +29,29 @@ export default function InstallPrompt() {
       return
     }
 
-    // For iOS, show prompt immediately since there's no beforeinstallprompt event
+    // Delay showing the prompt until the user has engaged with the app
+    const ENGAGEMENT_DELAY_MS = 30_000 // 30 seconds
+
     if (iOS) {
-      setShowPrompt(true)
-      return
+      const timer = setTimeout(() => setPromptType('ios'), ENGAGEMENT_DELAY_MS)
+      return () => clearTimeout(timer)
     }
 
-    // For Chrome/Edge Android: Listen for beforeinstallprompt event
+    // For Chrome/Edge Android: Capture beforeinstallprompt but delay showing
+    let engagementTimer: ReturnType<typeof setTimeout> | null = null
+
     const handler = (e: Event) => {
       e.preventDefault()
       const event = e as BeforeInstallPromptEvent
       setDeferredPrompt(event)
-      setShowPrompt(true)
+      engagementTimer = setTimeout(() => setPromptType('android'), ENGAGEMENT_DELAY_MS)
     }
 
     window.addEventListener('beforeinstallprompt', handler)
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler)
+      if (engagementTimer) clearTimeout(engagementTimer)
     }
   }, [])
 
@@ -60,10 +60,7 @@ export default function InstallPrompt() {
       return
     }
 
-    // Show the install prompt
     await deferredPrompt.prompt()
-
-    // Wait for the user's response
     const { outcome } = await deferredPrompt.userChoice
 
     if (outcome === 'accepted') {
@@ -72,22 +69,21 @@ export default function InstallPrompt() {
       console.log('User dismissed the install prompt')
     }
 
-    // Clear the deferredPrompt
     setDeferredPrompt(null)
-    setShowPrompt(false)
+    setPromptType(null)
   }
 
   const handleDismiss = () => {
-    setShowPrompt(false)
+    setPromptType(null)
     document.cookie = 'forge-pwa-dismissed=true; max-age=31536000; path=/'
   }
 
-  if (!showPrompt) {
+  if (!promptType) {
     return null
   }
 
   // iOS Install Instructions
-  if (isIOS) {
+  if (promptType === 'ios') {
     return (
       <div className="fixed top-0 mt-16 left-0 right-0 bg-[#2a2a2a] border-t border-stone-700 shadow-lg p-4 z-50 animate-slide-up">
         <div className="max-w-md mx-auto">
@@ -100,8 +96,8 @@ export default function InstallPrompt() {
               </p>
               <ol className="text-xs text-stone-300 space-y-1 list-decimal list-inside">
                 <li>Tap the Share button <span className="inline-block">⬆️</span> in Safari</li>
-                <li>Scroll down and tap "Add to Home Screen"</li>
-                <li>Tap "Add" in the top right corner</li>
+                <li>Scroll down and tap &ldquo;Add to Home Screen&rdquo;</li>
+                <li>Tap &ldquo;Add&rdquo; in the top right corner</li>
               </ol>
             </div>
           </div>

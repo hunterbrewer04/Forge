@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
 
     // 8. Generate unique filename and upload
     const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 8)
+    const randomString = crypto.randomUUID().slice(0, 8)
     const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const fileName = `${timestamp}_${randomString}.${extension}`
     const filePath = `${conversationId}/${fileName}`
