@@ -174,3 +174,56 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// ============================================================================
+// Push Notifications
+// ============================================================================
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let data;
+  try {
+    data = event.data.json();
+  } catch {
+    data = { title: 'Forge', body: event.data.text() };
+  }
+
+  const options = {
+    body: data.body || '',
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    tag: data.tag || 'forge-notification',
+    data: {
+      url: data.url || '/home',
+      type: data.type || 'general',
+    },
+    actions: data.actions || [],
+    vibrate: [100, 50, 100],
+    renotify: !!data.tag,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Forge', options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || '/home';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Focus existing window if one is open
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      // Open new window if none exists
+      return self.clients.openWindow(url);
+    })
+  );
+});

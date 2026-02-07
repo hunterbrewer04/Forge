@@ -6,6 +6,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import InstallPrompt from "@/components/InstallPrompt";
 import UpdatePrompt from "@/components/UpdatePrompt";
+import NotificationPrompt from "@/components/NotificationPrompt";
 import { validateEnvironmentVariables } from "@/lib/env-validation";
 
 // Validate environment variables on app startup (server-side only)
@@ -147,6 +148,7 @@ export default function RootLayout({
         />
         <InstallPrompt />
         <UpdatePrompt />
+        <NotificationPrompt />
         <SpeedInsights />
       </body>
     </html>

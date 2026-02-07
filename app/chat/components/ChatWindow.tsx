@@ -35,6 +35,7 @@ interface SenderProfile {
 interface ChatWindowProps {
   conversationId: string
   currentUserId: string
+  otherUserId?: string
   otherUserName: string
   otherUserAvatar?: string | null
   onBack?: () => void
@@ -43,6 +44,7 @@ interface ChatWindowProps {
 export default function ChatWindow({
   conversationId,
   currentUserId,
+  otherUserId,
   otherUserName,
   otherUserAvatar,
   onBack,
@@ -494,6 +496,7 @@ export default function ChatWindow({
       {/* Message Input */}
       <MessageInput
         conversationId={conversationId}
+        recipientId={otherUserId}
         onOptimisticMessage={addOptimisticMessage}
         onMessageError={removeOptimisticMessage}
       />

@@ -12,6 +12,7 @@ import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { BookingSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
+import { sendPushToUser } from '@/lib/services/push-send'
 import { env } from '@/lib/env-validation'
 
 interface RouteParams {
@@ -291,7 +292,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       },
     })
 
-    // 10. Handle FK join format
+    // 10. Send push notification to the other party
+    const notifyUserId = isBookingOwner ? session?.trainer_id : existingBooking.client_id
+    if (notifyUserId) {
+      const cancelledBy = isBookingOwner ? 'client' : isSessionTrainer ? 'trainer' : 'admin'
+      sendPushToUser(notifyUserId, {
+        title: 'Booking Cancelled',
+        body: `A booking for "${session?.title || 'session'}" was cancelled by the ${cancelledBy}.`,
+        url: '/schedule',
+        type: 'booking',
+      }).catch(() => {}) // Best-effort
+    }
+
+    // 11. Handle FK join format
     const sessionData = Array.isArray(booking.session)
       ? booking.session[0] || null
       : booking.session

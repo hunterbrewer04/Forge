@@ -52,6 +52,18 @@ const ENV_VARS: EnvVarConfig[] = [
     description: 'Upstash Redis REST token for authentication',
     clientSide: false,
   },
+  {
+    name: 'NEXT_PUBLIC_VAPID_PUBLIC_KEY',
+    required: false, // Optional - push notifications disabled without it
+    description: 'VAPID public key for Web Push notifications',
+    clientSide: true,
+  },
+  {
+    name: 'VAPID_PRIVATE_KEY',
+    required: false, // Optional - push notifications disabled without it
+    description: 'VAPID private key for Web Push notifications (server-side only)',
+    clientSide: false,
+  },
 ]
 
 class EnvironmentValidationError extends Error {
