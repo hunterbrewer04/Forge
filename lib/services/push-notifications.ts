@@ -49,7 +49,7 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
 
     if (!subscription) {
       // Create new subscription
-      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey)
+      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey,

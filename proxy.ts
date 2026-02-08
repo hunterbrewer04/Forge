@@ -6,11 +6,15 @@ import { env } from '@/lib/env-validation'
  * Next.js 16 proxy for authentication and session management
  *
  * Security Features:
+ * - "Protect by default" — only explicitly listed routes are public
  * - Automatic session refresh on each request
- * - Protected route enforcement with redirects
  * - Return URL preservation for post-login navigation
  * - Prevents authenticated users from accessing auth pages
  */
+
+const PUBLIC_ROUTES = ['/', '/login', '/signup', '/api/calendar']
+const AUTH_ROUTES = ['/login', '/signup']
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -18,7 +22,6 @@ export async function proxy(request: NextRequest) {
     },
   })
 
-  // Use validated environment variables from Phase 1
   const supabase = createServerClient(
     env.supabaseUrl(),
     env.supabaseAnonKey(),
@@ -65,39 +68,38 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Get user and refresh session if needed
-  // This ensures the session is always fresh and handles token refresh automatically
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser()
 
-  // Protected routes that require authentication
-  const protectedRoutes = ['/chat', '/home']
-  const authRoutes = ['/login', '/signup']
+  const { pathname } = request.nextUrl
 
-  const isProtectedRoute = protectedRoutes.some(route =>
-    request.nextUrl.pathname.startsWith(route)
+  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+    pathname.startsWith(route)
   )
-  const isAuthRoute = authRoutes.some(route =>
-    request.nextUrl.pathname === route
-  )
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname === route)
+  const isStaticAsset =
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/') ||
+    pathname.includes('.')
 
-  // If accessing a protected route without authentication, redirect to login
-  if (isProtectedRoute && (!user || authError)) {
-    // Preserve the intended destination for post-login redirect
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('return_to', request.nextUrl.pathname)
-    return NextResponse.redirect(loginUrl)
+  // Redirect unauthenticated users away from protected routes
+  if (!user || authError) {
+    if (!isPublicRoute && !isStaticAsset) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('return_to', request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
-  // If authenticated and accessing login/signup, redirect to home
+  // Redirect authenticated users away from auth pages
   if (user && !authError && isAuthRoute) {
-    // Check if there's a return_to parameter
     const returnTo = request.nextUrl.searchParams.get('return_to')
-    const redirectUrl = returnTo && returnTo.startsWith('/')
-      ? new URL(returnTo, request.url)
-      : new URL('/home', request.url)
+    const redirectUrl =
+      returnTo && returnTo.startsWith('/')
+        ? new URL(returnTo, request.url)
+        : new URL('/home', request.url)
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -107,12 +109,11 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
+     * Match all request paths except:
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
+     * - favicon.ico, icons, splash screens, PWA assets
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icon-.*|apple-touch-icon.*|splash/.*|manifest.json|sw.js|offline.html|Forge-Full-Logo.PNG).*)',
   ],
 }
