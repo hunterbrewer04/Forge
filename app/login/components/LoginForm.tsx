@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
 import { getErrorMessage } from '@/lib/utils/errors'
@@ -11,7 +11,6 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
 
@@ -32,8 +31,7 @@ export default function LoginForm() {
       if (signInError) throw signInError
 
       // Redirect to the intended destination after successful login
-      router.push(returnTo)
-      router.refresh()
+      window.location.href = returnTo
     } catch (err: unknown) {
       setError(getErrorMessage(err))
     } finally {

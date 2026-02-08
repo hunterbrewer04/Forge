@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
 import { getErrorMessage } from '@/lib/utils/errors'
@@ -43,7 +42,6 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   // Calculate password strength and requirements status
@@ -95,8 +93,7 @@ export default function SignupPage() {
 
       if (data.user) {
         // Database trigger will automatically create profile with is_client: true
-        router.push('/chat')
-        router.refresh()
+        window.location.href = '/chat'
       }
     } catch (err: unknown) {
       setError(getErrorMessage(err))
