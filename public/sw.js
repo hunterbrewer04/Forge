@@ -131,7 +131,7 @@ self.addEventListener('fetch', (event) => {
   // Strategy 3: Stale-while-revalidate for navigation routes
   // Serves cached page instantly, fetches fresh version in background.
   // Auth state is managed client-side by Supabase SDK, not by the cached HTML.
-  if (request.mode === 'navigate' || NAV_ROUTES.some(route => url.pathname.startsWith(route))) {
+  if (request.mode === 'navigate') {
     event.respondWith(
       caches.match(request).then((cached) => {
         const networkFetch = fetch(request).then((response) => {
