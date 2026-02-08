@@ -10,7 +10,7 @@ import ChatLayout from '@/components/layout/ChatLayout'
 import { logger } from '@/lib/utils/logger'
 import { fetchClientConversation, fetchConversationById } from '@/lib/services/conversations'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { RefreshCw, ArrowLeft, MoreHorizontal, Search } from '@/components/ui/icons'
 
 interface ConversationInfo {
   id: string
@@ -169,7 +169,7 @@ export default function ChatPage() {
                   onClick={() => window.location.reload()}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-white bg-primary rounded-lg font-medium text-sm transition-colors"
                 >
-                  <MaterialIcon name="refresh" size={16} />
+                  <RefreshCw size={16} />
                   Refresh
                 </button>
                 <button
@@ -228,7 +228,7 @@ export default function ChatPage() {
             className="flex items-center justify-center size-10 rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
             aria-label="Go back"
           >
-            <MaterialIcon name="arrow_back" size={24} />
+            <ArrowLeft size={24} />
           </button>
           <h1 className="text-xl font-bold text-text-primary">Messages</h1>
         </div>
@@ -236,7 +236,7 @@ export default function ChatPage() {
           className="flex items-center justify-center size-10 text-text-secondary"
           aria-label="More options"
         >
-          <MaterialIcon name="more_horiz" size={24} />
+          <MoreHorizontal size={24} />
         </button>
       </div>
 
@@ -244,7 +244,7 @@ export default function ChatPage() {
       <div className="mt-4">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MaterialIcon name="search" size={20} className="text-text-muted" />
+            <Search size={20} className="text-text-muted" />
           </div>
           <input
             type="text"
@@ -286,7 +286,7 @@ export default function ChatPage() {
                 onClick={handleBackToList}
                 className="p-2 -ml-2 min-w-[44px] min-h-[44px] rounded-full hover:bg-bg-secondary transition-colors text-text-secondary hover:text-text-primary"
               >
-                <MaterialIcon name="arrow_back" size={20} />
+                <ArrowLeft size={20} />
               </button>
               <span className="ml-3 text-text-secondary">Error</span>
             </div>
@@ -316,7 +316,7 @@ export default function ChatPage() {
                 onClick={handleBackToList}
                 className="p-2 -ml-2 min-w-[44px] min-h-[44px] rounded-full hover:bg-bg-secondary transition-colors text-text-secondary hover:text-text-primary"
               >
-                <MaterialIcon name="arrow_back" size={20} />
+                <ArrowLeft size={20} />
               </button>
               <span className="ml-3 text-text-secondary">Loading...</span>
             </div>

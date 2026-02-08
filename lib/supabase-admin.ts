@@ -18,6 +18,7 @@
  * For regular user operations, use lib/supabase-server.ts instead.
  */
 
+import 'server-only'
 import { createClient } from '@supabase/supabase-js'
 import { env } from './env-validation'
 
@@ -62,7 +63,15 @@ export function createAdminClient() {
 }
 
 /**
- * Type-safe admin client instance.
- * Use createAdminClient() instead for better error handling.
+ * Lazy admin client singleton.
+ * Only instantiated on first access, avoiding build failures when
+ * SUPABASE_SERVICE_ROLE_KEY is not set (e.g., in client-side bundles).
  */
-export const supabaseAdmin = createAdminClient()
+let _adminClient: ReturnType<typeof createAdminClient> | null = null
+export function getAdminClient() {
+  if (!_adminClient) {
+    _adminClient = createAdminClient()
+  }
+  return _adminClient
+}
+

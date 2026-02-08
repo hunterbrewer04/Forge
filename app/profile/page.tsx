@@ -10,7 +10,7 @@ import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
 import { toast } from 'sonner'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { ArrowLeft, Settings, User, ChevronRight, Clock, Bell, CreditCard, Sun, Moon, Lock, LogOut } from '@/components/ui/icons'
 import Image from 'next/image'
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
@@ -159,7 +159,7 @@ export default function ProfilePage() {
           className="size-10 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
           aria-label="Go back"
         >
-          <MaterialIcon name="arrow_back" size={24} />
+          <ArrowLeft size={24} />
         </button>
 
         <h1 className="text-lg font-semibold text-text-primary">Athlete Profile</h1>
@@ -168,7 +168,7 @@ export default function ProfilePage() {
           className="size-10 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
           aria-label="Settings"
         >
-          <MaterialIcon name="settings" size={24} />
+          <Settings size={24} />
         </button>
       </div>
     </header>
@@ -206,7 +206,7 @@ export default function ProfilePage() {
               />
             ) : (
               <div className="size-full flex items-center justify-center">
-                <MaterialIcon name="person" size={48} className="text-text-muted" />
+                <User size={48} className="text-text-muted" />
               </div>
             )}
             {uploadingAvatar && (
@@ -239,28 +239,28 @@ export default function ProfilePage() {
             className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
           >
             <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <MaterialIcon name="person" size={22} className="text-text-primary" />
+              <User size={22} className="text-text-primary" />
             </div>
             <span className="flex-1 text-text-primary font-medium">Edit Profile</span>
-            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+            <ChevronRight size={22} className="text-text-muted" />
           </button>
 
           {/* Training History */}
           <button className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
             <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <MaterialIcon name="history" size={22} className="text-text-primary" />
+              <Clock size={22} className="text-text-primary" />
             </div>
             <span className="flex-1 text-text-primary font-medium">Training History</span>
-            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+            <ChevronRight size={22} className="text-text-muted" />
           </button>
 
           {/* Notification Settings */}
           <button className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
             <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <MaterialIcon name="notifications" size={22} className="text-text-primary" />
+              <Bell size={22} className="text-text-primary" />
             </div>
             <span className="flex-1 text-text-primary font-medium">Notification Settings</span>
-            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+            <ChevronRight size={22} className="text-text-muted" />
           </button>
 
           {/* Payment Methods */}
@@ -269,10 +269,10 @@ export default function ProfilePage() {
             className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
           >
             <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <MaterialIcon name="credit_card" size={22} className="text-text-primary" />
+              <CreditCard size={22} className="text-text-primary" />
             </div>
             <span className="flex-1 text-text-primary font-medium">Payment Methods</span>
-            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+            <ChevronRight size={22} className="text-text-muted" />
           </button>
         </div>
       </section>
@@ -289,7 +289,7 @@ export default function ProfilePage() {
             className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
           >
             <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <MaterialIcon name={isDark ? 'dark_mode' : 'light_mode'} size={22} className="text-text-primary" />
+              {isDark ? <Moon size={22} className="text-text-primary" /> : <Sun size={22} className="text-text-primary" />}
             </div>
             <span className="flex-1 text-text-primary font-medium">
               {isDark ? 'Dark Mode' : 'Light Mode'}
@@ -305,10 +305,10 @@ export default function ProfilePage() {
             className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
           >
             <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <MaterialIcon name="lock" size={22} className="text-text-primary" />
+              <Lock size={22} className="text-text-primary" />
             </div>
             <span className="flex-1 text-text-primary font-medium">Reset Password</span>
-            <MaterialIcon name="chevron_right" size={22} className="text-text-muted" />
+            <ChevronRight size={22} className="text-text-muted" />
           </button>
         </div>
       </section>
@@ -320,7 +320,7 @@ export default function ProfilePage() {
           disabled={signingOut}
           className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary active:scale-[0.98] disabled:opacity-50"
         >
-          <MaterialIcon name="logout" size={22} />
+          <LogOut size={22} />
           {signingOut ? 'Signing Out...' : 'Log Out'}
         </button>
 

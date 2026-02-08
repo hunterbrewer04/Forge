@@ -38,8 +38,8 @@ export async function fetchClientConversation(userId: string): Promise<Conversat
 }
 
 /**
- * Fetch all conversations for a trainer
- * Returns list of conversations with client profiles
+ * Fetch all conversations for a trainer.
+ * Returns list of conversations with client profiles.
  */
 export async function fetchTrainerConversations(userId: string): Promise<ConversationWithClientProfile[]> {
   const supabase = createClient()
@@ -118,6 +118,64 @@ export async function fetchConversationById(
 }
 
 /**
+ * Get last messages for multiple conversations in a single query.
+ * Returns a map of conversationId -> last message data.
+ */
+export async function getLastMessagesForConversations(conversationIds: string[]) {
+  if (conversationIds.length === 0) return new Map()
+
+  const supabase = createClient()
+
+  // Fetch the most recent message per conversation using a single query
+  // Order by created_at desc to get latest first, then deduplicate client-side
+  const { data, error } = await supabase
+    .from('messages')
+    .select('conversation_id, content, created_at, sender_id')
+    .in('conversation_id', conversationIds)
+    .order('created_at', { ascending: false })
+    .limit(conversationIds.length * 2)
+
+  if (error) throw error
+
+  const result = new Map<string, { content: string | null; created_at: string; sender_id: string }>()
+
+  // First message per conversation_id is the latest (due to ordering)
+  for (const msg of data || []) {
+    if (!result.has(msg.conversation_id)) {
+      result.set(msg.conversation_id, msg)
+    }
+  }
+
+  return result
+}
+
+/**
+ * Get unread counts for multiple conversations in a single query.
+ * Returns a map of conversationId -> unread count.
+ */
+export async function getUnreadCountsForConversations(conversationIds: string[], userId: string) {
+  if (conversationIds.length === 0) return new Map()
+
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('messages')
+    .select('conversation_id')
+    .in('conversation_id', conversationIds)
+    .neq('sender_id', userId)
+    .is('read_at', null)
+
+  if (error) throw error
+
+  const counts = new Map<string, number>()
+  for (const msg of data || []) {
+    counts.set(msg.conversation_id, (counts.get(msg.conversation_id) || 0) + 1)
+  }
+
+  return counts
+}
+
+/**
  * Get the last message for a conversation
  * Returns the most recent message's content, created_at, and sender_id
  */
@@ -137,15 +195,10 @@ export async function getLastMessage(conversationId: string) {
 
 /**
  * Get unread count for a user in a conversation
- * Note: This will return 0 until Phase 4 adds the read_at field
- * Currently checking for messages where sender is not the current user
- * and read_at is null (field doesn't exist yet)
  */
 export async function getUnreadCount(conversationId: string, userId: string) {
   const supabase = createClient()
 
-  // Note: read_at field doesn't exist yet (Phase 4)
-  // This query will work once the field is added
   const { count } = await supabase
     .from('messages')
     .select('*', { count: 'exact', head: true })

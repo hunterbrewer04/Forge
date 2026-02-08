@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import Sidebar from "@/components/navigation/Sidebar";
 import BottomNav from "@/components/navigation/BottomNav";
-import MaterialIcon from "@/components/ui/MaterialIcon";
+import { Plus, MessageCircle } from "@/components/ui/icons";
 
 interface ChatLayoutProps {
   conversationList: ReactNode;
@@ -49,7 +49,7 @@ export default function ChatLayout({
                 className="flex items-center justify-center size-10 bg-primary hover:bg-primary/90 transition-colors rounded-full shadow-lg shadow-primary/20 active:scale-95"
                 aria-label="New conversation"
               >
-                <MaterialIcon name="add" size={20} className="text-white" />
+                <Plus size={20} className="text-white" />
               </button>
             </div>
           </div>
@@ -70,7 +70,7 @@ export default function ChatLayout({
             <div className="hidden lg:flex flex-1 items-center justify-center">
               <div className="text-center">
                 <div className="size-24 rounded-2xl bg-bg-secondary flex items-center justify-center mx-auto mb-4">
-                  <MaterialIcon name="chat_bubble_outline" size={48} className="text-text-muted" />
+                  <MessageCircle size={48} className="text-text-muted" />
                 </div>
                 <h3 className="text-lg font-semibold text-text-primary mb-2">
                   Select a Conversation

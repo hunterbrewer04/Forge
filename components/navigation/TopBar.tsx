@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import MaterialIcon from "@/components/ui/MaterialIcon";
+import { ArrowLeft, Bell, MoreVertical } from "@/components/ui/icons";
 
 interface TopBarProps {
   title?: string;
@@ -44,7 +44,7 @@ export default function TopBar({
               className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-full text-text-secondary transition-colors hover:bg-bg-secondary hover:text-text-primary active:scale-95"
               aria-label="Go back"
             >
-              <MaterialIcon name="arrow_back" size={24} />
+              <ArrowLeft size={24} />
             </button>
           )}
           {leftContent}
@@ -61,7 +61,7 @@ export default function TopBar({
               className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-full text-text-secondary transition-colors hover:bg-bg-secondary hover:text-text-primary active:scale-95 relative"
               aria-label="Notifications"
             >
-              <MaterialIcon name="notifications" size={24} />
+              <Bell size={24} />
               {notificationCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 size-2.5 rounded-full bg-primary ring-2 ring-bg-primary" />
               )}
@@ -72,7 +72,7 @@ export default function TopBar({
               className="flex items-center justify-center size-10 min-w-[44px] min-h-[44px] rounded-full text-text-secondary transition-colors hover:bg-bg-secondary hover:text-text-primary active:scale-95"
               aria-label="Menu"
             >
-              <MaterialIcon name="more_vert" size={24} />
+              <MoreVertical size={24} />
             </button>
           )}
         </div>

@@ -1,14 +1,5 @@
 @import "tailwindcss";
 
-/* Self-hosted Material Symbols font */
-@font-face {
-  font-family: 'Material Symbols Outlined';
-  font-style: normal;
-  font-weight: 100 700;
-  font-display: swap;
-  src: url('/fonts/MaterialSymbolsOutlined.woff2') format('woff2');
-}
-
 /* Forge Design System - White Label Ready */
 :root {
   /* Facility Branding (configurable per facility) */
@@ -194,16 +185,6 @@ input, textarea, select {
 
 .pr-safe-right {
   padding-right: var(--safe-area-inset-right);
-}
-
-/* Material Symbols Styling */
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24;
 }
 
 /* Hide scrollbar for clean mobile look */

@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Image from 'next/image'
-import { fetchTrainerConversations, getLastMessage, getUnreadCount } from '@/lib/services/conversations'
+import { fetchTrainerConversations, getLastMessagesForConversations, getUnreadCountsForConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
-import MaterialIcon from '@/components/ui/MaterialIcon'
+import { AlertCircle, RefreshCw, User, SquarePen } from '@/components/ui/icons'
 
 interface Conversation {
   id: string
@@ -59,27 +59,31 @@ export default function ConversationList({
 
     try {
       const data = await fetchTrainerConversations(currentUserId)
+      const conversationIds = data.map(c => c.id)
 
-      // Enhance conversations with real last message and unread count
-      const enhancedConversations = await Promise.all(
-        data.map(async (conv) => {
-          const lastMessage = await getLastMessage(conv.id)
-          const unreadCount = await getUnreadCount(conv.id, currentUserId)
+      // Batch fetch last messages and unread counts (2 queries instead of 2N)
+      const [lastMessages, unreadCounts] = await Promise.all([
+        getLastMessagesForConversations(conversationIds),
+        getUnreadCountsForConversations(conversationIds, currentUserId),
+      ])
 
-          return {
-            id: conv.id,
-            client_id: conv.client_id,
-            trainer_id: conv.trainer_id,
-            client_name: conv.profiles?.full_name || 'Unknown Client',
-            avatar_url: conv.profiles?.avatar_url,
-            last_message: lastMessage?.content || 'No messages yet',
-            last_message_time: lastMessage?.created_at
-              ? formatRelativeTime(lastMessage.created_at)
-              : null,
-            unread: unreadCount > 0,
-          }
-        })
-      )
+      const enhancedConversations = data.map((conv) => {
+        const lastMessage = lastMessages.get(conv.id)
+        const unreadCount = unreadCounts.get(conv.id) || 0
+
+        return {
+          id: conv.id,
+          client_id: conv.client_id,
+          trainer_id: conv.trainer_id,
+          client_name: conv.profiles?.full_name || 'Unknown Client',
+          avatar_url: conv.profiles?.avatar_url,
+          last_message: lastMessage?.content || 'No messages yet',
+          last_message_time: lastMessage?.created_at
+            ? formatRelativeTime(lastMessage.created_at)
+            : null,
+          unread: unreadCount > 0,
+        }
+      })
 
       setConversations(enhancedConversations)
     } catch (err) {
@@ -112,11 +116,11 @@ export default function ConversationList({
           className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-bg-secondary rounded-2xl transition-colors group"
         >
           <div className="size-14 rounded-full bg-error/10 flex items-center justify-center mb-3 group-hover:bg-error/20 transition-colors">
-            <MaterialIcon name="error" size={28} className="text-error" />
+            <AlertCircle size={28} className="text-error" />
           </div>
           <div className="text-text-primary mb-2 text-sm font-medium">{error}</div>
           <div className="flex items-center gap-2 text-primary text-xs font-medium">
-            <MaterialIcon name="refresh" size={14} />
+            <RefreshCw size={14} />
             Tap to retry
           </div>
         </button>
@@ -158,7 +162,7 @@ export default function ConversationList({
                   />
                 ) : (
                   <div className="size-full flex items-center justify-center">
-                    <MaterialIcon name="person" size={24} className="text-text-muted" />
+                    <User size={24} className="text-text-muted" />
                   </div>
                 )}
               </div>
@@ -200,7 +204,7 @@ export default function ConversationList({
         className="fixed bottom-24 right-4 size-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all lg:hidden"
         aria-label="New message"
       >
-        <MaterialIcon name="edit_square" size={24} />
+        <SquarePen size={24} />
       </button>
     </div>
   )
