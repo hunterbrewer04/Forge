@@ -333,10 +333,15 @@ export default function ChatPage() {
         ? conversationInfo.client_name || 'Client'
         : conversationInfo.trainer_name || 'Your Trainer'
 
+      const otherUserId = isTrainer
+        ? conversationInfo.client_id
+        : conversationInfo.trainer_id
+
       return (
         <ChatWindow
           conversationId={selectedConversationId}
           currentUserId={user.id}
+          otherUserId={otherUserId}
           otherUserName={otherName}
           otherUserAvatar={conversationInfo.avatar_url}
           onBack={handleBackToList}

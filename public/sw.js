@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
@@ -6,14 +6,11 @@ const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
 // Static assets to precache
 const STATIC_ASSETS = [
   '/',
-  '/home',
-  '/chat',
-  '/schedule',
-  '/profile',
   '/login',
   '/signup',
   '/manifest.json',
-  '/offline.html'
+  '/offline.html',
+  '/icon-192x192.png'
 ];
 
 // Navigation routes for stale-while-revalidate
@@ -131,25 +128,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 3: Network-first for navigation routes
-  // IMPORTANT: Using network-first instead of stale-while-revalidate
-  // to prevent serving cached pages with stale auth state
+  // Strategy 3: Stale-while-revalidate for navigation routes
+  // Serves cached page instantly, fetches fresh version in background.
+  // Auth state is managed client-side by Supabase SDK, not by the cached HTML.
   if (request.mode === 'navigate' || NAV_ROUTES.some(route => url.pathname.startsWith(route))) {
     event.respondWith(
-      fetch(request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => {
-            cache.put(request, clone);
-            limitCacheSize(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
-          });
+      caches.match(request).then((cached) => {
+        const networkFetch = fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+              cache.put(request, clone);
+              limitCacheSize(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
+            });
+          }
+          return response;
+        }).catch(() => cached || caches.match('/offline.html'));
+
+        // Return cached immediately if available, otherwise wait for network
+        if (cached) {
+          event.waitUntil(networkFetch);
+          return cached;
         }
-        return response;
-      }).catch(() => {
-        // Network failed, fall back to cache or offline page
-        return caches.match(request).then((cached) => {
-          return cached || caches.match('/offline.html');
-        });
+        return networkFetch;
       })
     );
     return;
@@ -170,6 +171,59 @@ self.addEventListener('fetch', (event) => {
       return caches.match(request).then((cached) => {
         return cached || caches.match('/offline.html');
       });
+    })
+  );
+});
+
+// ============================================================================
+// Push Notifications
+// ============================================================================
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let data;
+  try {
+    data = event.data.json();
+  } catch {
+    data = { title: 'Forge', body: event.data.text() };
+  }
+
+  const options = {
+    body: data.body || '',
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    tag: data.tag || 'forge-notification',
+    data: {
+      url: data.url || '/home',
+      type: data.type || 'general',
+    },
+    actions: data.actions || [],
+    vibrate: [100, 50, 100],
+    renotify: !!data.tag,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Forge', options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || '/home';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Focus existing window if one is open
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      // Open new window if none exists
+      return self.clients.openWindow(url);
     })
   );
 });

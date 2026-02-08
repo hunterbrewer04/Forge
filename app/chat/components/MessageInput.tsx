@@ -7,12 +7,14 @@ import { Plus, Send, X } from '@/components/ui/icons'
 
 interface MessageInputProps {
   conversationId: string
+  recipientId?: string
   onOptimisticMessage?: (content: string, tempId: string) => void
   onMessageError?: (tempId: string) => void
 }
 
 export default function MessageInput({
   conversationId,
+  recipientId,
   onOptimisticMessage,
   onMessageError,
 }: MessageInputProps) {
@@ -191,8 +193,20 @@ export default function MessageInput({
         onMessageError?.(tempId)
         setMessage(messageContent)
         setError('Failed to send message. Please try again.')
+      } else if (recipientId) {
+        // Fire-and-forget push notification to recipient
+        fetch('/api/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientId,
+            title: 'New Message',
+            body: messageContent.length > 100 ? messageContent.slice(0, 97) + '...' : messageContent,
+            url: '/chat',
+            type: 'message',
+          }),
+        }).catch(() => {}) // Best-effort, don't block chat
       }
-      // Success: real-time subscription will handle replacing optimistic message
     } catch (err) {
       // Remove optimistic message and restore input
       onMessageError?.(tempId)

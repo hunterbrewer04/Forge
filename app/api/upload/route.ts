@@ -14,6 +14,7 @@ import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError } from '@/lib/api/errors'
+import { isValidUUID } from '@/lib/api/validation'
 import { env } from '@/lib/env-validation'
 
 // File size limits (in bytes)
@@ -148,6 +149,11 @@ export async function POST(request: NextRequest) {
       return createApiError('No conversation ID provided', 400, 'NO_CONVERSATION_ID')
     }
 
+    // Validate conversationId is a UUID to prevent path traversal
+    if (!isValidUUID(conversationId)) {
+      return createApiError('Invalid conversation ID format', 400, 'INVALID_CONVERSATION_ID')
+    }
+
     // 4. Validate MIME type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return createApiError(
@@ -213,7 +219,7 @@ export async function POST(request: NextRequest) {
 
     // 8. Generate unique filename and upload
     const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 8)
+    const randomString = crypto.randomUUID().slice(0, 8)
     const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const fileName = `${timestamp}_${randomString}.${extension}`
     const filePath = `${conversationId}/${fileName}`

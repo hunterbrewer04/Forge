@@ -10,7 +10,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { timingSafeEqual } from 'crypto'
 import { env } from '@/lib/env-validation'
+import { checkRateLimit } from '@/lib/api/rate-limit'
+import { isValidUUID } from '@/lib/api/validation'
 import { generateICalFeed } from '@/lib/services/calendar'
 import type { Session, SessionType } from '@/lib/types/sessions'
 
@@ -31,6 +34,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Clean the trainerId (remove .ics extension if present)
     const cleanTrainerId = trainerId.replace(/\.ics$/, '')
+
+    // Validate trainerId is a UUID to prevent header injection
+    if (!isValidUUID(cleanTrainerId)) {
+      return new NextResponse('Bad Request - Invalid trainer ID', {
+        status: 400,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    }
+
+    // Rate limit by IP (no auth session available)
+    const rateLimitResult = await checkRateLimit(
+      request,
+      { maxRequests: 30, windowSeconds: 60, keyPrefix: 'calendar' }
+    )
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
 
     // Validate token is provided
     if (!token) {
@@ -69,7 +89,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
     }
 
-    if (profile.calendar_token !== token) {
+    // Use constant-time comparison to prevent timing attacks
+    const storedToken = profile.calendar_token || ''
+    let tokensMatch = false
+    try {
+      const a = Buffer.from(token, 'utf8')
+      const b = Buffer.from(storedToken, 'utf8')
+      tokensMatch = a.length === b.length && timingSafeEqual(a, b)
+    } catch {
+      tokensMatch = false
+    }
+
+    if (!tokensMatch) {
       return new NextResponse('Unauthorized - Invalid token', {
         status: 401,
         headers: { 'Content-Type': 'text/plain' },
@@ -104,27 +135,41 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
     }
 
-    // Get booking counts for each session
-    const sessionsWithBookings: SessionForCalendar[] = await Promise.all(
-      (sessions || []).map(async (session) => {
-        const { count } = await supabase
-          .from('bookings')
-          .select('*', { count: 'exact', head: true })
-          .eq('session_id', session.id)
-          .eq('status', 'confirmed')
+    // Get booking counts in a single batch query instead of N+1
+    const sessionIds = (sessions || []).map((s) => s.id)
+    const bookingCountMap = new Map<string, number>()
 
-        // Handle FK join format
-        const session_type = Array.isArray(session.session_type)
-          ? session.session_type[0] || null
-          : session.session_type
+    if (sessionIds.length > 0) {
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('session_id')
+        .in('session_id', sessionIds)
+        .eq('status', 'confirmed')
 
-        return {
-          ...session,
-          session_type,
-          booked_count: count || 0,
-        }
-      })
-    )
+      if (bookingsError) {
+        console.error('Error fetching bookings for calendar:', bookingsError)
+        return new NextResponse('Internal Server Error', {
+          status: 500,
+          headers: { 'Content-Type': 'text/plain' },
+        })
+      }
+
+      for (const b of bookings || []) {
+        bookingCountMap.set(b.session_id, (bookingCountMap.get(b.session_id) || 0) + 1)
+      }
+    }
+
+    const sessionsWithBookings: SessionForCalendar[] = (sessions || []).map((session) => {
+      const session_type = Array.isArray(session.session_type)
+        ? session.session_type[0] || null
+        : session.session_type
+
+      return {
+        ...session,
+        session_type,
+        booked_count: bookingCountMap.get(session.id) || 0,
+      }
+    })
 
     // Generate iCal feed
     const trainerName = profile.full_name || 'Trainer'

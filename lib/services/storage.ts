@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 
 const SIGNED_URL_EXPIRY = 3600 // 1 hour
-const CACHE_BUFFER = 300 // 5 minutes before expiry, refresh
+const CACHE_TTL_MS = 45 * 60 * 1000 // 45 minutes (refresh before 1-hour expiry)
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo']
@@ -15,13 +15,11 @@ const signedUrlCache = new Map<string, { url: string; expiresAt: number }>()
 
 /**
  * Generate a signed URL for secure media access with caching.
- * Cached URLs are reused until 5 minutes before expiry.
+ * Cached URLs are reused until 45 minutes (refreshed before 1-hour expiry).
  */
 export async function getSignedMediaUrl(filePath: string): Promise<string | null> {
-  const now = Date.now()
   const cached = signedUrlCache.get(filePath)
-
-  if (cached && cached.expiresAt > now + CACHE_BUFFER * 1000) {
+  if (cached && cached.expiresAt > Date.now()) {
     return cached.url
   }
 
@@ -36,6 +34,8 @@ export async function getSignedMediaUrl(filePath: string): Promise<string | null
       logger.error('Error generating signed URL:', error)
       return null
     }
+
+    const now = Date.now()
 
     // Enforce max cache size before inserting
     if (signedUrlCache.size >= MAX_CACHE_SIZE) {
@@ -54,7 +54,7 @@ export async function getSignedMediaUrl(filePath: string): Promise<string | null
 
     signedUrlCache.set(filePath, {
       url: data.signedUrl,
-      expiresAt: now + SIGNED_URL_EXPIRY * 1000,
+      expiresAt: now + CACHE_TTL_MS,
     })
 
     return data.signedUrl
@@ -93,7 +93,7 @@ export async function uploadMedia(
   const supabase = createClient()
 
   const timestamp = Date.now()
-  const randomString = Math.random().toString(36).substring(2, 8)
+  const randomString = crypto.randomUUID().slice(0, 8)
   const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
   const fileName = `${timestamp}-${randomString}.${extension}`
   const filePath = `${conversationId}/${fileName}`

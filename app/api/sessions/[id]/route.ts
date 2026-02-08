@@ -11,9 +11,10 @@ import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { validateRequestBody } from '@/lib/api/validation'
+import { SessionSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
 import { env } from '@/lib/env-validation'
-import type { UpdateSessionInput } from '@/lib/types/sessions'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -195,13 +196,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return rateLimitResult
     }
 
-    // 3. Parse request body
-    let body: UpdateSessionInput
-    try {
-      body = await request.json()
-    } catch {
-      return createApiError('Invalid JSON body', 400, 'INVALID_REQUEST')
+    // 3. Parse and validate request body
+    const bodyResult = await validateRequestBody(request, SessionSchemas.update)
+    if (bodyResult instanceof NextResponse) {
+      return bodyResult
     }
+    const body = bodyResult
 
     // 4. Create Supabase client
     const supabase = createServerClient(

@@ -9,6 +9,7 @@ import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { BookingSchemas } from '@/lib/api/validation'
 import { env } from '@/lib/env-validation'
 import type { BookingFilters } from '@/lib/types/sessions'
 
@@ -42,8 +43,23 @@ export async function GET(request: NextRequest) {
 
     // 3. Parse query params
     const { searchParams } = new URL(request.url)
+    // Validate status parameter against allowed values
+    const statusParam = searchParams.get('status')
+    let validatedStatus: BookingFilters['status'] | undefined
+    if (statusParam) {
+      const statusResult = BookingSchemas.statusFilter.safeParse(statusParam)
+      if (!statusResult.success) {
+        return createApiError(
+          'Invalid status filter. Allowed: confirmed, cancelled, attended, no_show',
+          400,
+          'VALIDATION_ERROR'
+        )
+      }
+      validatedStatus = statusResult.data
+    }
+
     const filters: BookingFilters = {
-      status: searchParams.get('status') as BookingFilters['status'] || undefined,
+      status: validatedStatus,
       upcoming: searchParams.get('upcoming') !== 'false',
     }
 

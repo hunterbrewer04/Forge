@@ -10,9 +10,10 @@ import { createServerClient } from '@supabase/ssr'
 import { validateAuth, validateRole } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { validateRequestBody, SessionSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
 import { env } from '@/lib/env-validation'
-import type { SessionFilters, CreateSessionInput } from '@/lib/types/sessions'
+import type { SessionFilters } from '@/lib/types/sessions'
 
 /**
  * GET /api/sessions
@@ -270,22 +271,12 @@ export async function POST(request: NextRequest) {
       return rateLimitResult
     }
 
-    // 3. Parse request body
-    let body: CreateSessionInput
-    try {
-      body = await request.json()
-    } catch {
-      return createApiError('Invalid JSON body', 400, 'INVALID_REQUEST')
+    // 3. Parse and validate request body
+    const bodyResult = await validateRequestBody(request, SessionSchemas.create)
+    if (bodyResult instanceof NextResponse) {
+      return bodyResult
     }
-
-    // 4. Validate required fields
-    if (!body.title || !body.starts_at || !body.ends_at) {
-      return createApiError(
-        'Missing required fields: title, starts_at, ends_at',
-        400,
-        'VALIDATION_ERROR'
-      )
-    }
+    const body = bodyResult
 
     // 4b. Validate date formats and range (Issue #10)
     const startsAt = new Date(body.starts_at)
