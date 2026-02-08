@@ -26,7 +26,7 @@ export default function ChatLayout({
       <Sidebar onSignOut={onSignOut} />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-screen lg:max-h-screen overflow-hidden">
+      <div className="relative flex-1 flex flex-col lg:flex-row min-h-screen lg:max-h-screen overflow-hidden">
         {/* Mobile Header - only on mobile, hidden when chat is open */}
         {!showActiveChat && <div className="lg:hidden flex-none">{mobileHeader}</div>}
 
@@ -62,8 +62,8 @@ export default function ChatLayout({
           className={`
             ${showActiveChat ? "flex" : "hidden"}
             lg:flex flex-col flex-1
-            absolute inset-0 lg:relative
-            bg-bg-primary z-20 lg:z-0
+            lg:relative
+            bg-bg-primary lg:z-0
           `}
         >
           {activeChat || (
