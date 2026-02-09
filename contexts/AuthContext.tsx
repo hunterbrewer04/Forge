@@ -165,8 +165,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setError(null)
           setLoading(false)
           // Clear SW navigation cache to prevent serving stale authenticated pages
-          if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+          if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(
+              reg => reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+            ).catch((err) => { console.warn('Failed to clear SW cache:', err) })
           }
         } else if (event === 'TOKEN_REFRESHED') {
           // Session was refreshed, update user
@@ -200,8 +202,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       // Clear SW navigation cache before signing out
-      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(
+          reg => reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+        ).catch((err) => { console.warn('Failed to clear SW cache:', err) })
       }
 
       const { error: signOutError } = await supabase.auth.signOut()

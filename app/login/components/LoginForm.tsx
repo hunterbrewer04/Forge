@@ -27,33 +27,49 @@ export default function LoginForm() {
     try {
       // Register auth listener BEFORE signIn to avoid missing the SIGNED_IN event.
       // signInWithPassword may emit SIGNED_IN synchronously on completion.
-      const authConfirmed = new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => {
-          subscription.unsubscribe()
-          resolve()
-        }, 3000)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-          if (event === 'SIGNED_IN') {
-            clearTimeout(timeout)
-            subscription.unsubscribe()
+      const cleanup = { subscription: null as { unsubscribe: () => void } | null, timeout: null as ReturnType<typeof setTimeout> | null }
+      let signInSucceeded = false
+
+      try {
+        const authConfirmed = new Promise<void>((resolve) => {
+          cleanup.timeout = setTimeout(() => {
+            console.warn('Auth state confirmation timed out after 3s — proceeding with login')
+            cleanup.subscription?.unsubscribe()
             resolve()
-          }
+          }, 3000)
+
+          const { data } = supabase.auth.onAuthStateChange((event) => {
+            if (event === 'SIGNED_IN') {
+              if (cleanup.timeout) clearTimeout(cleanup.timeout)
+              cleanup.subscription?.unsubscribe()
+              resolve()
+            }
+          })
+          cleanup.subscription = data.subscription
         })
-      })
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
 
-      if (signInError) throw signInError
+        if (signInError) throw signInError
 
-      // Wait for auth state confirmation (cookies persisted)
-      await authConfirmed
+        // Wait for auth state confirmation (cookies persisted)
+        await authConfirmed
+        signInSucceeded = true
+      } finally {
+        if (!signInSucceeded) {
+          cleanup.subscription?.unsubscribe()
+          if (cleanup.timeout) clearTimeout(cleanup.timeout)
+        }
+      }
 
       // Clear SW navigation cache to prevent serving stale login page
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(
+          reg => reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+        ).catch((err) => { console.warn('Failed to clear SW cache:', err) })
       }
 
       window.location.href = returnTo

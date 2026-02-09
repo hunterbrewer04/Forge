@@ -59,6 +59,10 @@ export function useHomeData(userId: string | undefined): HomeData {
       return
     }
 
+    setData(prev => ({ ...prev, loading: true }))
+
+    let isCurrent = true
+
     async function fetchHomeData() {
       const supabase = createClient()
 
@@ -151,6 +155,8 @@ export function useHomeData(userId: string | undefined): HomeData {
             }
           })
 
+        if (!isCurrent) return
+
         setData({
           nextSession: nextSessionData,
           recentActivity: recentActivityData,
@@ -158,6 +164,8 @@ export function useHomeData(userId: string | undefined): HomeData {
           error: null
         })
       } catch (err) {
+        if (!isCurrent) return
+
         setData(prev => ({
           ...prev,
           loading: false,
@@ -167,6 +175,8 @@ export function useHomeData(userId: string | undefined): HomeData {
     }
 
     fetchHomeData()
+
+    return () => { isCurrent = false }
   }, [userId])
 
   return data
