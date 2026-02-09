@@ -15,7 +15,9 @@ export default function LoginForm() {
   const supabase = createClient()
 
   // Get return_to URL from query parameters (set by proxy.ts)
-  const returnTo = searchParams.get('return_to') || '/home'
+  // Validate it's a relative path to prevent open redirects
+  const rawReturnTo = searchParams.get('return_to') || '/home'
+  const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/home'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,6 +25,22 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
+      // Register auth listener BEFORE signIn to avoid missing the SIGNED_IN event.
+      // signInWithPassword may emit SIGNED_IN synchronously on completion.
+      const authConfirmed = new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          subscription.unsubscribe()
+          resolve()
+        }, 3000)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+          if (event === 'SIGNED_IN') {
+            clearTimeout(timeout)
+            subscription.unsubscribe()
+            resolve()
+          }
+        })
+      })
+
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -30,11 +48,17 @@ export default function LoginForm() {
 
       if (signInError) throw signInError
 
-      // Redirect to the intended destination after successful login
+      // Wait for auth state confirmation (cookies persisted)
+      await authConfirmed
+
+      // Clear SW navigation cache to prevent serving stale login page
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+      }
+
       window.location.href = returnTo
     } catch (err: unknown) {
       setError(getErrorMessage(err))
-    } finally {
       setLoading(false)
     }
   }

@@ -134,13 +134,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(session?.user ?? null)
         setError(null)
+        setLoading(false)
 
         if (session?.user && !profileFetched.current) {
           profileFetched.current = true
-          await fetchProfile(session.user.id)
+          fetchProfile(session.user.id)
         }
-
-        setLoading(false)
       } catch (err) {
         console.error('Unexpected error getting session:', err)
         if (mounted) {
@@ -165,6 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null)
           setError(null)
           setLoading(false)
+          // Clear SW navigation cache to prevent serving stale authenticated pages
+          if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+          }
         } else if (event === 'TOKEN_REFRESHED') {
           // Session was refreshed, update user
           setUser(session?.user ?? null)
@@ -196,6 +199,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Clear SW navigation cache before signing out
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+      }
+
       const { error: signOutError } = await supabase.auth.signOut()
 
       if (signOutError) {
