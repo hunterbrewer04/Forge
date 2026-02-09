@@ -45,7 +45,7 @@ interface BookingWithSession {
   session: SessionRelation | SessionRelation[] | null
 }
 
-export function useHomeData(): HomeData {
+export function useHomeData(userId: string | undefined): HomeData {
   const [data, setData] = useState<HomeData>({
     nextSession: null,
     recentActivity: [],
@@ -54,14 +54,19 @@ export function useHomeData(): HomeData {
   })
 
   useEffect(() => {
+    if (!userId) {
+      setData(prev => ({ ...prev, loading: false }))
+      return
+    }
+
+    setData(prev => ({ ...prev, loading: true }))
+
+    let isCurrent = true
+
     async function fetchHomeData() {
       const supabase = createClient()
 
       try {
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('Not authenticated')
-
         // Fetch next upcoming booking from bookings table
         const { data: nextBooking, error: nextError } = await supabase
           .from('bookings')
@@ -77,7 +82,7 @@ export function useHomeData(): HomeData {
               )
             )
           `)
-          .eq('client_id', user.id)
+          .eq('client_id', userId!)
           .eq('status', 'confirmed')
           .gte('session.starts_at', new Date().toISOString())
           .order('session(starts_at)', { ascending: true })
@@ -102,7 +107,7 @@ export function useHomeData(): HomeData {
               )
             )
           `)
-          .eq('client_id', user.id)
+          .eq('client_id', userId!)
           .in('status', ['attended', 'confirmed'])
           .lte('session.starts_at', new Date().toISOString())
           .order('session(starts_at)', { ascending: false })
@@ -150,6 +155,8 @@ export function useHomeData(): HomeData {
             }
           })
 
+        if (!isCurrent) return
+
         setData({
           nextSession: nextSessionData,
           recentActivity: recentActivityData,
@@ -157,6 +164,8 @@ export function useHomeData(): HomeData {
           error: null
         })
       } catch (err) {
+        if (!isCurrent) return
+
         setData(prev => ({
           ...prev,
           loading: false,
@@ -166,7 +175,9 @@ export function useHomeData(): HomeData {
     }
 
     fetchHomeData()
-  }, [])
+
+    return () => { isCurrent = false }
+  }, [userId])
 
   return data
 }

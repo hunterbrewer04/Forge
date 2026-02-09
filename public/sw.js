@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
@@ -12,9 +12,6 @@ const STATIC_ASSETS = [
   '/offline.html',
   '/icon-192x192.png'
 ];
-
-// Navigation routes for stale-while-revalidate
-const NAV_ROUTES = ['/home', '/chat', '/schedule', '/profile', '/stats'];
 
 // Cache limits
 const DYNAMIC_CACHE_LIMIT = 50;
@@ -41,10 +38,13 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Listen for skip waiting message from client
+// Listen for messages from client
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'CLEAR_DYNAMIC_CACHE') {
+    event.waitUntil(caches.delete(DYNAMIC_CACHE));
   }
 });
 
@@ -128,14 +128,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 3: Stale-while-revalidate for navigation routes
-  // Serves cached page instantly, fetches fresh version in background.
-  // Auth state is managed client-side by Supabase SDK, not by the cached HTML.
+  // Strategy 3: Network-first for navigation requests
+  // Auth-gated apps must always check the server for auth state.
+  // Only cache non-redirected OK responses to prevent caching login pages
+  // under authenticated route keys.
   if (request.mode === 'navigate') {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const networkFetch = fetch(request).then((response) => {
-          if (response.ok) {
+      fetch(request)
+        .then((response) => {
+          if (response.ok && !response.redirected) {
             const clone = response.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => {
               cache.put(request, clone);
@@ -143,15 +144,12 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return response;
-        }).catch(() => cached || caches.match('/offline.html'));
-
-        // Return cached immediately if available, otherwise wait for network
-        if (cached) {
-          event.waitUntil(networkFetch);
-          return cached;
-        }
-        return networkFetch;
-      })
+        })
+        .catch(() => {
+          return caches.match(request).then((cached) => {
+            return cached || caches.match('/offline.html');
+          });
+        })
     );
     return;
   }

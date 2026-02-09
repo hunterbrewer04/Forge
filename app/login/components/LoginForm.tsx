@@ -15,7 +15,9 @@ export default function LoginForm() {
   const supabase = createClient()
 
   // Get return_to URL from query parameters (set by proxy.ts)
-  const returnTo = searchParams.get('return_to') || '/home'
+  // Validate it's a relative path to prevent open redirects
+  const rawReturnTo = searchParams.get('return_to') || '/home'
+  const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/home'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,18 +25,56 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      // Register auth listener BEFORE signIn to avoid missing the SIGNED_IN event.
+      // signInWithPassword may emit SIGNED_IN synchronously on completion.
+      const cleanup = { subscription: null as { unsubscribe: () => void } | null, timeout: null as ReturnType<typeof setTimeout> | null }
+      let signInSucceeded = false
 
-      if (signInError) throw signInError
+      try {
+        const authConfirmed = new Promise<void>((resolve) => {
+          cleanup.timeout = setTimeout(() => {
+            console.warn('Auth state confirmation timed out after 3s — proceeding with login')
+            cleanup.subscription?.unsubscribe()
+            resolve()
+          }, 3000)
 
-      // Redirect to the intended destination after successful login
+          const { data } = supabase.auth.onAuthStateChange((event) => {
+            if (event === 'SIGNED_IN') {
+              if (cleanup.timeout) clearTimeout(cleanup.timeout)
+              cleanup.subscription?.unsubscribe()
+              resolve()
+            }
+          })
+          cleanup.subscription = data.subscription
+        })
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (signInError) throw signInError
+
+        // Wait for auth state confirmation (cookies persisted)
+        await authConfirmed
+        signInSucceeded = true
+      } finally {
+        if (!signInSucceeded) {
+          cleanup.subscription?.unsubscribe()
+          if (cleanup.timeout) clearTimeout(cleanup.timeout)
+        }
+      }
+
+      // Clear SW navigation cache to prevent serving stale login page
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(
+          reg => reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+        ).catch((err) => { console.warn('Failed to clear SW cache:', err) })
+      }
+
       window.location.href = returnTo
     } catch (err: unknown) {
       setError(getErrorMessage(err))
-    } finally {
       setLoading(false)
     }
   }

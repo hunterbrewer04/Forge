@@ -28,8 +28,8 @@ export default function HomePage() {
   const [loadingStats, setLoadingStats] = useState(true)
   const supabase = useMemo(() => createClient(), [])
 
-  // Fetch real home data
-  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData()
+  // Fetch real home data — pass userId to avoid redundant getUser() call
+  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData(user?.id)
 
   // Use shared unread count hook for real-time message count
   const { unreadCount } = useUnreadCount({
@@ -102,8 +102,16 @@ export default function HomePage() {
     )
   }
 
-  if (!user || !profile) {
+  if (!user) {
     return null
+  }
+
+  if (!profile) {
+    return (
+      <MobileLayout hideTopBar>
+        <HomePageSkeleton />
+      </MobileLayout>
+    )
   }
 
   // Extract first name from full name
