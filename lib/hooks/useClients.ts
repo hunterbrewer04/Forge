@@ -43,8 +43,10 @@ export function useClientList(trainerId: string | undefined): UseClientListResul
   return { clients, loading, error }
 }
 
+type ClientDetail = ClientProfileJoin & { conversation_id: string }
+
 interface UseClientDetailResult {
-  client: ClientProfileJoin | null
+  client: ClientDetail | null
   loading: boolean
   error: string | null
 }
@@ -53,7 +55,7 @@ export function useClientDetail(
   trainerId: string | undefined,
   clientId: string
 ): UseClientDetailResult {
-  const [client, setClient] = useState<ClientProfileJoin | null>(null)
+  const [client, setClient] = useState<ClientDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

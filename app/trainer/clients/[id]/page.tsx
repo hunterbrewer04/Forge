@@ -106,7 +106,7 @@ export default function ClientDetailPage() {
 
           {/* Quick Action: Message */}
           <button
-            onClick={() => router.push('/chat')}
+            onClick={() => router.push(`/chat?conversation=${client.conversation_id}`)}
             className="w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors active:scale-[0.98]"
           >
             <MessageCircle size={20} />

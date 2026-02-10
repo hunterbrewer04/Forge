@@ -51,7 +51,7 @@ export async function fetchTrainerClientList(trainerId: string): Promise<ClientP
 export async function fetchClientDetail(
   trainerId: string,
   clientId: string
-): Promise<ClientProfileJoin> {
+): Promise<ClientProfileJoin & { conversation_id: string }> {
   const supabase = createClient()
 
   const { data, error } = await supabase
@@ -81,5 +81,5 @@ export async function fetchClientDetail(
 
   if (!profile) throw new Error('Client profile not found')
 
-  return profile
+  return { ...profile, conversation_id: conv.id }
 }
