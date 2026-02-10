@@ -150,7 +150,7 @@ export default function AdminSessionsPage() {
             />
           </button>
           <button
-            onClick={() => router.push('/admin/settings')}
+            onClick={() => router.push('/trainer/settings')}
             className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
           >
             <Settings size={20} />
@@ -225,7 +225,7 @@ export default function AdminSessionsPage() {
           </p>
           {filter === 'upcoming' && (
             <button
-              onClick={() => router.push('/admin/sessions/new')}
+              onClick={() => router.push('/trainer/sessions/new')}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium"
             >
               <Plus size={20} />
@@ -238,7 +238,7 @@ export default function AdminSessionsPage() {
           {sessions.map((session) => (
             <button
               key={session.id}
-              onClick={() => router.push(`/admin/sessions/${session.id}`)}
+              onClick={() => router.push(`/trainer/sessions/${session.id}`)}
               className="w-full bg-surface-dark rounded-xl p-4 text-left hover:bg-stone-800/80 transition-colors"
             >
               <div className="flex items-start justify-between gap-3">
@@ -290,7 +290,7 @@ export default function AdminSessionsPage() {
 
       {/* FAB - Create New Session */}
       <button
-        onClick={() => router.push('/admin/sessions/new')}
+        onClick={() => router.push('/trainer/sessions/new')}
         className="fixed bottom-24 right-4 size-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform lg:bottom-8"
         aria-label="Create new session"
       >

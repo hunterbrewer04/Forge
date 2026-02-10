@@ -352,7 +352,7 @@ export default function HomePage() {
               <p className="text-2xl font-bold text-text-primary">{stats.clientsCount || 0}</p>
             </div>
             <Link
-              href="/chat"
+              href="/trainer/clients"
               className="bg-primary text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors"
             >
               View All

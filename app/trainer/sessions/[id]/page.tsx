@@ -263,7 +263,7 @@ export default function EditSessionPage() {
 
       const data = await response.json()
       setActiveModal(null)
-      router.push(`/admin/sessions/${data.data.id}`)
+      router.push(`/trainer/sessions/${data.data.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to duplicate session')
     } finally {
@@ -308,7 +308,7 @@ export default function EditSessionPage() {
           <AlertCircle size={32} className="text-red-500 mb-4" />
           <p className="text-stone-400">{error}</p>
           <button
-            onClick={() => router.push('/admin/sessions')}
+            onClick={() => router.push('/trainer/sessions')}
             className="mt-4 px-4 py-2 bg-primary text-white rounded-lg font-medium"
           >
             Back to Sessions

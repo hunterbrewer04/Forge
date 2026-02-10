@@ -4,6 +4,7 @@ export interface Profile {
   full_name: string | null
   avatar_url: string | null
   username: string | null
+  email: string | null
   is_trainer: boolean
   is_client: boolean
   is_admin: boolean
@@ -74,4 +75,14 @@ export interface MessageWithSenderProfile {
   created_at: string
   read_at?: string | null
   profiles: ProfileJoin | null
+}
+
+// Client profile as returned via conversation FK join
+export interface ClientProfileJoin {
+  id: string
+  full_name: string | null
+  avatar_url: string | null
+  username: string | null
+  email: string | null
+  created_at: string
 }
