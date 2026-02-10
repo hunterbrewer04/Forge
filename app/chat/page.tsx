@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import ConversationList from './components/ConversationList'
 import ClientConversationList from './components/ClientConversationList'
@@ -24,13 +24,15 @@ interface ConversationInfo {
 export default function ChatPage() {
   const { user, profile, loading, signOut } = useAuth()
   const router = useRouter()
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const conversationParam = searchParams.get('conversation')
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(conversationParam)
   const [conversationInfo, setConversationInfo] = useState<ConversationInfo | null>(null)
   const [loadingConversation, setLoadingConversation] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingTimeout, setLoadingTimeout] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [showThread, setShowThread] = useState(false)
+  const [showThread, setShowThread] = useState(!!conversationParam)
 
   useEffect(() => {
     logger.debug('[ChatPage] Component mounted')
@@ -145,6 +147,9 @@ export default function ChatPage() {
 
   const handleBackToList = () => {
     setShowThread(false)
+    if (conversationParam) {
+      router.replace('/chat', { scroll: false })
+    }
   }
 
   if (loading) {

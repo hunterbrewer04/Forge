@@ -1,31 +1,28 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 
-export default async function AdminLayout({
+export default async function TrainerLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const supabase = await createClient()
 
-  // Get current user
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/auth/login')
+    redirect('/login')
   }
 
-  // Check if user is a trainer or admin
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_trainer, is_admin')
+    .select('is_trainer')
     .eq('id', user.id)
     .single()
 
-  if (!profile || (!profile.is_trainer && !profile.is_admin)) {
-    // Redirect non-trainers to home
+  if (!profile?.is_trainer) {
     redirect('/home')
   }
 

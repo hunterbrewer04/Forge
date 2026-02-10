@@ -14,7 +14,7 @@ const settingsItems = [
     title: 'Calendar Sync',
     description: 'Sync your sessions with Google Calendar, Apple Calendar, or Outlook',
     icon: Calendar,
-    href: '/admin/settings/calendar',
+    href: '/trainer/settings/calendar',
     color: 'text-primary',
     bgColor: 'bg-primary/20',
   },
@@ -32,7 +32,7 @@ export default function AdminSettingsPage() {
             <Settings size={24} className="text-stone-300" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Admin Settings</h2>
+            <h2 className="text-lg font-bold text-white">Trainer Settings</h2>
             <p className="text-sm text-stone-400">
               Configure your trainer account
             </p>

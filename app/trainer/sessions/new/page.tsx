@@ -133,7 +133,7 @@ export default function NewSessionPage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push('/admin/sessions')
+        router.push('/trainer/sessions')
       }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create session')

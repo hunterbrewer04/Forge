@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Home,
   Calendar,
   User,
+  Users,
   MessageCircle,
   LogOut,
 } from "@/components/ui/icons";
 
-type IconKey = "home" | "messages" | "calendar" | "profile";
+type IconKey = "home" | "messages" | "calendar" | "profile" | "clients";
 
 interface NavItem {
   href: string;
@@ -36,6 +38,8 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
       return <MessageCircle size={size} strokeWidth={strokeWidth} />;
     case "calendar":
       return <Calendar size={size} strokeWidth={strokeWidth} />;
+    case "clients":
+      return <Users size={size} strokeWidth={strokeWidth} />;
     case "profile":
       return <User size={size} strokeWidth={strokeWidth} />;
   }
@@ -47,6 +51,7 @@ interface SidebarProps {
 
 export default function Sidebar({ onSignOut }: SidebarProps) {
   const pathname = usePathname();
+  const { profile } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/home") {
@@ -54,6 +59,10 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
     }
     return pathname.startsWith(href);
   };
+
+  const trainerNavItems: NavItem[] = profile?.is_trainer
+    ? [{ href: "/trainer/clients", iconKey: "clients", label: "Clients" }]
+    : [];
 
   return (
     <aside className="hidden lg:flex flex-col w-64 xl:w-72 h-screen bg-[#1C1C1C] border-r border-steel/20 sticky top-0">
@@ -73,7 +82,7 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
       {/* Main Navigation */}
       <nav className="flex-1 px-3 py-6">
         <ul className="space-y-1">
-          {mainNavItems.map((item) => (
+          {[...mainNavItems, ...trainerNavItems].map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
