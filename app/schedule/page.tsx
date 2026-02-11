@@ -143,6 +143,17 @@ export default function SchedulePage() {
           bookedDates={bookedDates}
         />
 
+        {/* Trainer: Create Session Link */}
+        {profile?.is_trainer && (
+          <Link
+            href="/schedule/new"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all active:scale-[0.98]"
+          >
+            <Plus size={20} />
+            Create New Session
+          </Link>
+        )}
+
         {/* Selected Date Header */}
         <div className="flex items-center justify-between">
           <h2 className="text-text-primary font-semibold">{selectedDateLabel}</h2>
@@ -203,17 +214,6 @@ export default function SchedulePage() {
               </div>
             )}
           </div>
-        )}
-
-        {/* Trainer: Create Session Link */}
-        {profile?.is_trainer && (
-          <Link
-            href="/schedule/new"
-            className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all active:scale-[0.98]"
-          >
-            <Plus size={20} />
-            Create New Session
-          </Link>
         )}
       </MobileLayout>
 
