@@ -94,8 +94,9 @@ export default function CalendarStrip({
     }
   }
 
-  // Limit to 5 rows if possible (35 days), otherwise 6 rows
-  const visibleDays = monthDays.slice(0, monthDays.length > 35 ? 42 : 35)
+  // Trim to only the rows that contain current-month days
+  const lastCurrentIdx = monthDays.findLastIndex(d => d.isCurrentMonth)
+  const visibleDays = monthDays.slice(0, Math.ceil((lastCurrentIdx + 1) / 7) * 7)
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-border">
