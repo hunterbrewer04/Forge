@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { DEFAULT_BRAND_COLOR } from '@/lib/constants/branding'
 
 export interface FacilityTheme {
   name: string
@@ -21,7 +22,7 @@ const defaultTheme: FacilityTheme = {
   name: process.env.NEXT_PUBLIC_FACILITY_NAME || 'Forge Sports Performance',
   tagline: process.env.NEXT_PUBLIC_FACILITY_TAGLINE || 'Sports Performance',
   logoUrl: process.env.NEXT_PUBLIC_FACILITY_LOGO || '/logo.png',
-  primaryColor: process.env.NEXT_PUBLIC_FACILITY_PRIMARY || '#1973f0',
+  primaryColor: process.env.NEXT_PUBLIC_FACILITY_PRIMARY || DEFAULT_BRAND_COLOR,
   fontFamily: 'Lexend, Manrope, sans-serif',
 }
 
@@ -87,10 +88,10 @@ export function FacilityThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [isDark, mounted])
 
-  // Apply primary color CSS variable (only if customized)
+  // Apply primary color CSS variable (only if different from CSS default)
   useEffect(() => {
     if (!mounted) return
-    if (defaultTheme.primaryColor !== '#1973f0') {
+    if (defaultTheme.primaryColor !== DEFAULT_BRAND_COLOR) {
       document.documentElement.style.setProperty('--facility-primary', defaultTheme.primaryColor)
     }
   }, [mounted])

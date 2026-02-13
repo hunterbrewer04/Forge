@@ -65,6 +65,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{__html: `
+          try {
+            var s = localStorage.getItem('theme-mode');
+            if (s === 'dark' || (s === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+              document.documentElement.classList.add('dark');
+            }
+          } catch (e) {}
+        `}} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Forge" />
