@@ -19,7 +19,7 @@ interface ThemeContextValue {
 
 const defaultTheme: FacilityTheme = {
   name: process.env.NEXT_PUBLIC_FACILITY_NAME || 'Forge Sports Performance',
-  tagline: process.env.NEXT_PUBLIC_FACILITY_TAGLINE || 'Facility Pro',
+  tagline: process.env.NEXT_PUBLIC_FACILITY_TAGLINE || 'Sports Performance',
   logoUrl: process.env.NEXT_PUBLIC_FACILITY_LOGO || '/logo.png',
   primaryColor: process.env.NEXT_PUBLIC_FACILITY_PRIMARY || '#1973f0',
   fontFamily: 'Lexend, Manrope, sans-serif',
