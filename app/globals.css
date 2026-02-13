@@ -6,8 +6,8 @@
   --facility-primary: #1973f0;
   --facility-name: "Forge";
 
-  /* Primary Color */
-  --primary: var(--facility-primary);
+  /* Primary Color (fallback must match DEFAULT_BRAND_COLOR in lib/constants/branding.ts) */
+  --primary: var(--facility-primary, #1973f0);
 
   /* Light Mode (default) */
   --bg-primary: #ffffff;
