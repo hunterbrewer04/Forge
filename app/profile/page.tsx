@@ -10,7 +10,7 @@ import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
 import { toast } from 'sonner'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { ArrowLeft, Settings, User, ChevronRight, Clock, Bell, CreditCard, Sun, Moon, Lock, LogOut } from '@/components/ui/icons'
+import { ArrowLeft, User, ChevronRight, Clock, Bell, CreditCard, Sun, Moon, Lock, LogOut } from '@/components/ui/icons'
 import Image from 'next/image'
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
@@ -164,12 +164,7 @@ export default function ProfilePage() {
 
         <h1 className="text-lg font-semibold text-text-primary">Athlete Profile</h1>
 
-        <button
-          className="size-10 flex items-center justify-center text-text-secondary hover:text-text-primary transition-colors"
-          aria-label="Settings"
-        >
-          <Settings size={24} />
-        </button>
+        <div className="size-10" />
       </div>
     </header>
   )
@@ -224,7 +219,7 @@ export default function ProfilePage() {
         <div className="bg-text-primary text-bg-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
           {role}
         </div>
-        <p className="text-text-muted text-sm">{getMemberInfo()} • #14</p>
+        <p className="text-text-muted text-sm">{getMemberInfo()}</p>
       </section>
 
       {/* Account Management Section */}
@@ -324,10 +319,6 @@ export default function ProfilePage() {
           {signingOut ? 'Signing Out...' : 'Log Out'}
         </button>
 
-        {/* Version Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-text-muted">BASEPATH PRO V2.4.1</p>
-        </div>
       </section>
 
       {/* Reset Password Confirmation Modal */}

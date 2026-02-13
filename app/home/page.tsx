@@ -170,7 +170,7 @@ export default function HomePage() {
         {/* Facility Branding */}
         <div className="flex flex-col items-center">
           <span className="text-primary font-bold text-base tracking-tight uppercase">
-            {theme.name.split(' ')[0] || 'STRIKEZONE'}
+            {theme.name.split(' ')[0] || 'FORGE'}
           </span>
           <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">
             {theme.tagline}
@@ -201,7 +201,7 @@ export default function HomePage() {
             <span>Loading next session...</span>
           ) : nextSession ? (
             <>
-              Next practice: <span className="text-primary font-semibold">{formatNextSessionTime()}</span>
+              Next session: <span className="text-primary font-semibold">{formatNextSessionTime()}</span>
             </>
           ) : (
             <span>No upcoming sessions scheduled</span>
@@ -215,7 +215,6 @@ export default function HomePage() {
         className="block bg-primary rounded-2xl p-5 shadow-lg shadow-primary/20 transition-transform active:scale-[0.98]"
       >
         <h2 className="text-white text-xl font-bold">Book Sessions</h2>
-        <p className="text-white/80 text-sm mt-1">Secure your spot in the tunnel</p>
         <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
           Schedule Now
           <Calendar size={18} />
