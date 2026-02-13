@@ -51,7 +51,7 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
   return (
     <div
       className={`
-        bg-bg-card border border-border rounded-xl p-4 transition-all
+        bg-bg-card border border-border rounded-xl p-4 transition-[border-color,opacity]
         ${isFull ? 'opacity-60' : ''}
         ${isBooked ? 'border-success/30 bg-success/5' : ''}
       `}
@@ -130,7 +130,7 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
                 e.stopPropagation()
                 onBook()
               }}
-              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary/90 transition-colors active:scale-95"
+              className="px-4 py-2 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary/90 transition-transform active:scale-95"
               aria-label="Book session"
             >
               Book

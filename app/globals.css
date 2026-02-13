@@ -7,7 +7,7 @@
   --facility-name: "Forge";
 
   /* Primary Color */
-  --primary: var(--facility-primary);
+  --primary: var(--facility-primary, #1973f0);
 
   /* Light Mode (default) */
   --bg-primary: #ffffff;

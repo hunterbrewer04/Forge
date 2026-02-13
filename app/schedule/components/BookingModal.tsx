@@ -302,7 +302,7 @@ export default function BookingModal({
                 ) : (
                   <button
                     onClick={handleBook}
-                    className="flex-1 py-3 px-4 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-colors"
+                    className="flex-1 py-3 px-4 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-transform"
                   >
                     Book Session
                   </button>

@@ -87,10 +87,12 @@ export function FacilityThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [isDark, mounted])
 
-  // Apply primary color CSS variable
+  // Apply primary color CSS variable (only if customized)
   useEffect(() => {
     if (!mounted) return
-    document.documentElement.style.setProperty('--facility-primary', defaultTheme.primaryColor)
+    if (defaultTheme.primaryColor !== '#1973f0') {
+      document.documentElement.style.setProperty('--facility-primary', defaultTheme.primaryColor)
+    }
   }, [mounted])
 
   const toggleTheme = () => {
@@ -102,11 +104,6 @@ export function FacilityThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (mode: 'light' | 'dark' | 'system') => {
     setThemeMode(mode)
     localStorage.setItem('theme-mode', mode)
-  }
-
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return null
   }
 
   return (
