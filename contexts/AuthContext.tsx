@@ -134,12 +134,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(session?.user ?? null)
         setError(null)
-        setLoading(false)
 
         if (session?.user && !profileFetched.current) {
           profileFetched.current = true
-          fetchProfile(session.user.id)
+          await fetchProfile(session.user.id)
         }
+
+        setLoading(false)
       } catch (err) {
         console.error('Unexpected error getting session:', err)
         if (mounted) {
