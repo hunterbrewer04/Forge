@@ -65,11 +65,15 @@ export default function LoginForm() {
         }
       }
 
-      // Clear SW navigation cache to prevent serving stale login page
+      // Await SW cache clear before redirect to prevent serving stale login page
       if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(
-          reg => reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
-        ).catch((err) => { console.warn('Failed to clear SW cache:', err) })
+        try {
+          const reg = await navigator.serviceWorker.ready
+          reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+          await new Promise(resolve => setTimeout(resolve, 50))
+        } catch (err) {
+          console.warn('Failed to clear SW cache:', err)
+        }
       }
 
       window.location.href = returnTo

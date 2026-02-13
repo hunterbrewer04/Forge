@@ -1,13 +1,10 @@
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
 
-// Static assets to precache
+// Static assets to precache (auth-protected routes excluded — they must hit network)
 const STATIC_ASSETS = [
-  '/',
-  '/login',
-  '/signup',
   '/manifest.json',
   '/offline.html',
   '/icon-192x192.png'
@@ -27,8 +24,9 @@ async function limitCacheSize(cacheName, maxItems) {
   }
 }
 
-// Install event - precache static assets
+// Install event - precache static assets and activate immediately
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {

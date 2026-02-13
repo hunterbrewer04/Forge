@@ -24,5 +24,11 @@ export function createClient() {
     )
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: {
+      secure: true,
+      sameSite: 'lax' as const,
+      path: '/',
+    },
+  })
 }

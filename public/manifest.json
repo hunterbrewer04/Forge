@@ -2,7 +2,7 @@
   "name": "Forge Trainer",
   "short_name": "Forge",
   "description": "Book sessions, track progress, and train with Forge Sports Performance",
-  "start_url": "/home",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#1C1C1C",
   "theme_color": "#ff6714",
