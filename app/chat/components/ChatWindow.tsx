@@ -305,6 +305,7 @@ export default function ChatWindow({
                       src={otherUserAvatar}
                       alt={otherUserName}
                       fill
+                      sizes="40px"
                       className="object-cover"
                     />
                   ) : (
@@ -438,6 +439,7 @@ export default function ChatWindow({
                           src={otherUserAvatar}
                           alt={otherUserName}
                           fill
+                          sizes="28px"
                           className="object-cover"
                         />
                       ) : (

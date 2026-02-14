@@ -34,7 +34,7 @@ export default function ProfilePage() {
   const handleSignOut = async () => {
     setSigningOut(true)
     await signOut()
-    router.push('/login')
+    window.location.href = '/login'
   }
 
   const handleAvatarClick = () => {

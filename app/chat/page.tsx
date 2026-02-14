@@ -72,6 +72,11 @@ export default function ChatPage() {
         const data = await fetchClientConversation(user.id)
         if (!mounted) return
 
+        if (!data) {
+          setError('No conversation found. Please contact support to set up your trainer.')
+          return
+        }
+
         const convInfo: ConversationInfo = {
           id: data.id,
           client_id: data.client_id,
@@ -84,12 +89,8 @@ export default function ChatPage() {
         setSelectedConversationId(data.id)
       } catch (err) {
         if (!mounted) return
-        const error = err as { code?: string; message?: string }
-        if (error.code === 'PGRST116') {
-          setError('No conversation found. Please contact support to set up your trainer.')
-        } else {
-          setError(`Failed to load conversation: ${error.message || 'Unknown error'}`)
-        }
+        const error = err as { message?: string }
+        setError(`Failed to load conversation: ${error.message || 'Unknown error'}`)
       } finally {
         if (mounted) setLoadingConversation(false)
       }

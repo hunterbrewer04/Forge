@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { fetchClientConversation } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
-import { AlertCircle, RefreshCw, User } from '@/components/ui/icons'
+import { AlertCircle, MessageSquare, RefreshCw, User } from '@/components/ui/icons'
 
 interface Conversation {
   id: string
@@ -38,6 +38,11 @@ export default function ClientConversationList({
     try {
       // Fetch conversation where current user is the client
       const data = await fetchClientConversation(currentUserId)
+
+      if (!data) {
+        setConversation(null)
+        return
+      }
 
       const conv: Conversation = {
         id: data.id,
@@ -95,8 +100,12 @@ export default function ClientConversationList({
   if (!conversation) {
     return (
       <div className="h-full flex items-center justify-center bg-background-dark p-4">
-        <div className="text-stone-500 text-sm text-center">
-          No trainer assigned
+        <div className="flex flex-col items-center text-center">
+          <div className="size-14 rounded-full bg-white/5 flex items-center justify-center mb-3">
+            <MessageSquare size={28} className="text-stone-500" />
+          </div>
+          <div className="text-stone-400 text-sm font-medium">No conversations yet</div>
+          <div className="text-stone-500 text-xs mt-1">Your trainer will appear here</div>
         </div>
       </div>
     )

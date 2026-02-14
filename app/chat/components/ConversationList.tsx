@@ -152,12 +152,13 @@ export default function ConversationList({
           >
             {/* Avatar */}
             <div className="relative shrink-0">
-              <div className="size-12 rounded-full bg-bg-secondary overflow-hidden">
+              <div className="size-12 rounded-full bg-bg-secondary overflow-hidden relative">
                 {conversation.avatar_url ? (
                   <Image
                     src={conversation.avatar_url}
                     alt={conversation.client_name || 'Avatar'}
                     fill
+                    sizes="48px"
                     className="object-cover"
                   />
                 ) : (
