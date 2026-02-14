@@ -5,7 +5,7 @@ import type { ConversationWithTrainerProfile, ConversationWithClientProfile } fr
  * Fetch a client's conversation with their trainer
  * Used by clients who have a single trainer
  */
-export async function fetchClientConversation(userId: string): Promise<ConversationWithTrainerProfile> {
+export async function fetchClientConversation(userId: string): Promise<ConversationWithTrainerProfile | null> {
   const supabase = createClient()
 
   const { data, error } = await supabase
@@ -21,9 +21,10 @@ export async function fetchClientConversation(userId: string): Promise<Conversat
       )
     `)
     .eq('client_id', userId)
-    .single()
+    .maybeSingle()
 
   if (error) throw error
+  if (!data) return null
 
   // Supabase returns object for single FK relations, but TS infers array
   const profilesData = data.profiles
