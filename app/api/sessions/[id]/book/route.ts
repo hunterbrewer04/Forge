@@ -85,6 +85,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    // 4c. Prevent trainer from booking their own sessions (BRE-16)
+    if (user.id === session.trainer_id) {
+      return createApiError(
+        'Trainers cannot book their own sessions',
+        403,
+        'TRAINER_SELF_BOOKING'
+      )
+    }
+
     // 5. Call atomic booking function
     const { data: bookingResult, error: bookingError } = await supabase.rpc(
       'book_session',

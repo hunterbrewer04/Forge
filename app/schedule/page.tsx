@@ -68,12 +68,14 @@ export default function SchedulePage() {
   }, [])
 
   const handleTapSession = useCallback((session: SessionWithDetails) => {
+    // Prevent trainers from booking their own sessions (BRE-16)
+    if (user?.id === session.trainer_id) return
     if (session.user_booking) {
       handleCancelBooking(session)
     } else {
       handleBookSession(session)
     }
-  }, [handleCancelBooking, handleBookSession])
+  }, [handleCancelBooking, handleBookSession, user?.id])
 
   const handleBookingSuccess = useCallback(() => {
     fetchSessions()
@@ -196,6 +198,7 @@ export default function SchedulePage() {
                   <SessionCard
                     key={session.id}
                     session={session}
+                    userId={user?.id}
                     onBook={() => handleBookSession(session)}
                     onCancel={() => handleCancelBooking(session)}
                     onTap={() => handleTapSession(session)}

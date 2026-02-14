@@ -6,17 +6,19 @@ import Image from 'next/image'
 
 interface SessionCardProps {
   session: SessionWithDetails
+  userId?: string
   onBook: () => void
   onCancel: () => void
   onTap: () => void
 }
 
-export default function SessionCard({ session, onBook, onCancel, onTap }: SessionCardProps) {
+export default function SessionCard({ session, userId, onBook, onCancel, onTap }: SessionCardProps) {
   const { trainer, availability, user_booking } = session
 
   // Determine card state
   const isBooked = !!user_booking
   const isFull = availability.is_full && !user_booking
+  const isOwnSession = userId === session.trainer_id
 
   // Format time
   const startTime = new Date(session.starts_at)
@@ -116,6 +118,10 @@ export default function SessionCard({ session, onBook, onCancel, onTap }: Sessio
             >
               Booked
             </button>
+          ) : isOwnSession ? (
+            <span className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold">
+              Your Session
+            </span>
           ) : isFull ? (
             <button
               disabled
