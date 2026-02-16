@@ -7,18 +7,19 @@ import Image from 'next/image'
 interface SessionCardProps {
   session: SessionWithDetails
   userId?: string
+  isTrainer?: boolean
   onBook: () => void
   onCancel: () => void
   onTap: () => void
+  onDetails?: () => void
 }
 
-export default function SessionCard({ session, userId, onBook, onCancel, onTap }: SessionCardProps) {
+export default function SessionCard({ session, userId, isTrainer, onBook, onCancel, onTap, onDetails }: SessionCardProps) {
   const { trainer, availability, user_booking } = session
 
   // Determine card state
   const isBooked = !!user_booking
   const isFull = availability.is_full && !user_booking
-  const isOwnSession = userId === session.trainer_id
 
   // Format time
   const startTime = new Date(session.starts_at)
@@ -107,21 +108,28 @@ export default function SessionCard({ session, userId, onBook, onCancel, onTap }
 
         {/* Action Button */}
         <div className="shrink-0">
-          {isBooked ? (
+          {isTrainer ? (
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                onCancel()
+                onDetails?.()
+              }}
+              className="px-4 py-2 bg-primary/10 border border-primary/30 text-primary rounded-full text-sm font-semibold hover:bg-primary/20 transition-colors"
+              aria-label="View session details"
+            >
+              Details
+            </button>
+          ) : isBooked ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDetails?.()
               }}
               className="px-4 py-2 bg-success/10 border border-success/30 text-success rounded-full text-sm font-semibold hover:bg-success/20 transition-colors"
-              aria-label="Cancel booking"
+              aria-label="View booking details"
             >
-              Booked
+              Details
             </button>
-          ) : isOwnSession ? (
-            <span className="px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold">
-              Your Session
-            </span>
           ) : isFull ? (
             <button
               disabled
