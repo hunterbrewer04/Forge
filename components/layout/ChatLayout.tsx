@@ -21,7 +21,7 @@ export default function ChatLayout({
   onSignOut,
 }: ChatLayoutProps) {
   return (
-    <div className="min-h-screen h-screen bg-bg-primary flex overflow-hidden transition-colors duration-200">
+    <div className="fixed inset-0 bg-bg-primary flex overflow-hidden transition-colors duration-200">
       {/* Sidebar - only visible on large screens */}
       <Sidebar onSignOut={onSignOut} />
 
