@@ -285,7 +285,7 @@ export default function ChatPage() {
   const activeChatComponent = (() => {
     if (error) {
       return (
-        <div className="h-full flex flex-col bg-bg-primary">
+        <div className="flex-1 min-h-0 flex flex-col bg-bg-primary">
           <div className="flex-none border-b border-border bg-bg-primary pt-safe-top">
             <div className="flex items-center px-4 py-3">
               <button
@@ -315,7 +315,7 @@ export default function ChatPage() {
 
     if (loadingConversation) {
       return (
-        <div className="h-full flex flex-col bg-bg-primary">
+        <div className="flex-1 min-h-0 flex flex-col bg-bg-primary">
           <div className="flex-none border-b border-border bg-bg-primary pt-safe-top">
             <div className="flex items-center px-4 py-3">
               <button
