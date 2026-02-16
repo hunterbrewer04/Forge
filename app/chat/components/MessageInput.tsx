@@ -28,6 +28,7 @@ export default function MessageInput({
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   // Auto-clear error after 5 seconds
@@ -39,6 +40,27 @@ export default function MessageInput({
       return () => clearTimeout(timeout)
     }
   }, [error])
+
+  // Keyboard-aware positioning for iOS Safari PWA
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+
+    const onViewportResize = () => {
+      const inputContainer = containerRef.current
+      if (!inputContainer) return
+
+      const keyboardHeight = window.innerHeight - viewport.height
+      if (keyboardHeight > 100) {
+        inputContainer.style.transform = `translateY(-${keyboardHeight}px)`
+      } else {
+        inputContainer.style.transform = 'translateY(0)'
+      }
+    }
+
+    viewport.addEventListener('resize', onViewportResize)
+    return () => viewport.removeEventListener('resize', onViewportResize)
+  }, [])
 
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024
   const MAX_VIDEO_SIZE = 50 * 1024 * 1024
@@ -221,6 +243,12 @@ export default function MessageInput({
     fileInputRef.current?.click()
   }
 
+  const handleTextareaFocus = () => {
+    setTimeout(() => {
+      textareaRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }, 300)
+  }
+
   const handleTextareaChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value)
     // Auto-resize textarea
@@ -229,7 +257,7 @@ export default function MessageInput({
   }
 
   return (
-    <div className="flex-none bg-bg-primary border-t border-border pb-safe-bottom pt-2">
+    <div ref={containerRef} className="flex-none bg-bg-primary border-t border-border pb-safe-bottom pt-2 transition-transform duration-200">
       {/* Error banner */}
       {error && (
         <div className="mx-4 mb-3 px-3 py-2 bg-error/10 text-error text-sm rounded-lg flex items-center justify-between">
@@ -279,7 +307,7 @@ export default function MessageInput({
       />
 
       {/* Input Field */}
-      <form onSubmit={handleSubmit} className="px-4 flex items-end gap-2 pb-4">
+      <form onSubmit={handleSubmit} className="px-4 flex items-end gap-2 pb-2">
         {/* Attachment button */}
         <button
           type="button"
@@ -297,6 +325,7 @@ export default function MessageInput({
             ref={textareaRef}
             value={message}
             onChange={handleTextareaChange}
+            onFocus={handleTextareaFocus}
             placeholder="Type a message..."
             disabled={sending || uploading}
             rows={1}
