@@ -11,7 +11,7 @@ import { fetchMessages, fetchSenderProfile, markMessagesAsRead } from '@/lib/ser
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
 import { MessageListSkeleton } from '@/components/skeletons/MessageSkeleton'
-import { ArrowLeft, User, Video as VideoIcon, Info, AlertCircle, RefreshCw, CheckCheck, Check, Maximize } from '@/components/ui/icons'
+import { ArrowLeft, User, Info, AlertCircle, RefreshCw, CheckCheck, Check, Maximize, X, Mail, Calendar } from '@/components/ui/icons'
 import Image from 'next/image'
 
 interface Message {
@@ -30,6 +30,16 @@ interface Message {
 
 interface SenderProfile {
   full_name: string | null
+}
+
+interface UserProfile {
+  full_name: string | null
+  avatar_url: string | null
+  username: string | null
+  email: string | null
+  created_at: string
+  is_trainer: boolean
+  is_client: boolean
 }
 
 interface ChatWindowProps {
@@ -52,6 +62,8 @@ export default function ChatWindow({
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showUserInfo, setShowUserInfo] = useState(false)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const prevMessagesLength = useRef(0)
   const senderProfileCache = useRef<Map<string, SenderProfile>>(new Map())
@@ -66,6 +78,45 @@ export default function ChatWindow({
       container.scrollTop = container.scrollHeight
     }
   }, [])
+
+  const handleOpenUserInfo = useCallback(async () => {
+    if (!otherUserId) return
+    setShowUserInfo(true)
+
+    if (!userProfile) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url, username, email, created_at, is_trainer, is_client')
+        .eq('id', otherUserId)
+        .single()
+
+      if (data) setUserProfile(data)
+    }
+  }, [otherUserId, supabase, userProfile])
+
+  // Body scroll lock and escape key for user info panel
+  useEffect(() => {
+    if (!showUserInfo) return
+
+    document.body.style.overflow = 'hidden'
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowUserInfo(false)
+    }
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.body.style.overflow = 'unset'
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [showUserInfo])
+
+  const formatJoinDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
 
   const {
     isOpen: mediaViewerOpen,
@@ -334,10 +385,10 @@ export default function ChatWindow({
 
           {/* Action buttons */}
           <div className="flex items-center gap-1">
-            <button className="size-10 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors">
-              <VideoIcon size={22} />
-            </button>
-            <button className="size-10 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors">
+            <button
+              onClick={handleOpenUserInfo}
+              className="size-10 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
+            >
               <Info size={22} />
             </button>
           </div>
@@ -511,6 +562,95 @@ export default function ChatWindow({
         onMessageError={removeOptimisticMessage}
       />
         </>
+      )}
+
+      {/* User Info Panel */}
+      {showUserInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowUserInfo(false)}
+            aria-hidden="true"
+          />
+          <div
+            className="relative bg-bg-card border border-border rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-scale-up"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="user-info-title"
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowUserInfo(false)}
+              className="absolute top-4 right-4 size-8 rounded-full flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Profile Header */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="size-24 rounded-full bg-bg-secondary overflow-hidden mb-3 relative">
+                {(userProfile?.avatar_url || otherUserAvatar) ? (
+                  <Image
+                    src={userProfile?.avatar_url || otherUserAvatar!}
+                    alt={userProfile?.full_name || otherUserName}
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="size-full flex items-center justify-center">
+                    <User size={40} className="text-text-muted" />
+                  </div>
+                )}
+              </div>
+              <h3 id="user-info-title" className="text-xl font-bold text-text-primary">
+                {userProfile?.full_name || otherUserName}
+              </h3>
+              {userProfile?.username && (
+                <p className="text-text-secondary text-sm">@{userProfile.username}</p>
+              )}
+            </div>
+
+            {/* Info Cards */}
+            <div className="space-y-3">
+              {userProfile?.email && (
+                <div className="bg-bg-secondary border border-border rounded-xl p-4 flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <Mail size={20} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-text-muted text-xs font-medium uppercase tracking-wider">Email</p>
+                    <p className="text-text-primary text-sm truncate">{userProfile.email}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-bg-secondary border border-border rounded-xl p-4 flex items-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-lg">
+                  <User size={20} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-text-muted text-xs font-medium uppercase tracking-wider">Role</p>
+                  <p className="text-text-primary text-sm">
+                    {userProfile?.is_trainer ? 'Trainer' : userProfile?.is_client ? 'Client' : 'User'}
+                  </p>
+                </div>
+              </div>
+
+              {userProfile?.created_at && (
+                <div className="bg-bg-secondary border border-border rounded-xl p-4 flex items-center gap-3">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <Calendar size={20} className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-text-muted text-xs font-medium uppercase tracking-wider">Member Since</p>
+                    <p className="text-text-primary text-sm">{formatJoinDate(userProfile.created_at)}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Media Lightbox Viewer */}
