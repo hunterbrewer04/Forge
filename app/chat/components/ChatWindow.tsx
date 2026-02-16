@@ -52,11 +52,20 @@ export default function ChatWindow({
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const prevMessagesLength = useRef(0)
   const senderProfileCache = useRef<Map<string, SenderProfile>>(new Map())
   const supabase = useMemo(() => createClient(), [])
+
+  const scrollToBottom = useCallback((smooth = false) => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    if (smooth) {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    } else {
+      container.scrollTop = container.scrollHeight
+    }
+  }, [])
 
   const {
     isOpen: mediaViewerOpen,
@@ -114,7 +123,7 @@ export default function ChatWindow({
     if (container) {
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
       if (isNearBottom) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        scrollToBottom(true)
       }
     }
   }, [])
@@ -129,7 +138,7 @@ export default function ChatWindow({
     const isInitialLoad = prevMessagesLength.current === 0 && messages.length > 0
 
     if (isInitialLoad || isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: isInitialLoad ? 'auto' : 'smooth' })
+      scrollToBottom(!isInitialLoad)
     }
 
     prevMessagesLength.current = messages.length
@@ -171,7 +180,7 @@ export default function ChatWindow({
 
       // After messages load, scroll to bottom
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+        scrollToBottom(false)
       }, 100)
     } catch (err) {
       logger.error('Error fetching messages:', err)
@@ -492,7 +501,6 @@ export default function ChatWindow({
           })
         )}
 
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Message Input */}
