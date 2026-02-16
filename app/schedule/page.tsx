@@ -13,6 +13,7 @@ import SessionCard from './components/SessionCard'
 
 const BookingModal = dynamic(() => import('./components/BookingModal'), { ssr: false })
 const CancelBookingModal = dynamic(() => import('./components/CancelBookingModal'), { ssr: false })
+const SessionDetailsSheet = dynamic(() => import('./components/SessionDetailsSheet'), { ssr: false })
 import type { SessionWithDetails } from '@/lib/types/sessions'
 
 export default function SchedulePage() {
@@ -28,6 +29,7 @@ export default function SchedulePage() {
   const [selectedSession, setSelectedSession] = useState<SessionWithDetails | null>(null)
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showDetailsSheet, setShowDetailsSheet] = useState(false)
 
   // Data hook
   const {
@@ -67,15 +69,23 @@ export default function SchedulePage() {
     setShowCancelModal(true)
   }, [])
 
+  const handleViewDetails = useCallback((session: SessionWithDetails) => {
+    setSelectedSession(session)
+    setShowDetailsSheet(true)
+  }, [])
+
   const handleTapSession = useCallback((session: SessionWithDetails) => {
-    // Prevent trainers from booking their own sessions (BRE-16)
-    if (user?.id === session.trainer_id) return
-    if (session.user_booking) {
-      handleCancelBooking(session)
+    if (profile?.is_trainer) {
+      // Trainers always open details
+      handleViewDetails(session)
+    } else if (session.user_booking) {
+      // Client with booking opens details
+      handleViewDetails(session)
     } else {
+      // Client without booking opens booking modal
       handleBookSession(session)
     }
-  }, [handleCancelBooking, handleBookSession, user?.id])
+  }, [handleViewDetails, handleBookSession, profile?.is_trainer])
 
   const handleBookingSuccess = useCallback(() => {
     fetchSessions()
@@ -127,7 +137,9 @@ export default function SchedulePage() {
           <ArrowLeft size={24} />
         </button>
 
-        <h1 className="text-lg font-semibold text-text-primary">Book a Session</h1>
+        <h1 className="text-lg font-semibold text-text-primary">
+          {profile?.is_trainer ? 'Sessions' : 'Book a Session'}
+        </h1>
 
         <div className="size-10" /> {/* Spacer for centering */}
       </div>
@@ -199,9 +211,11 @@ export default function SchedulePage() {
                     key={session.id}
                     session={session}
                     userId={user?.id}
+                    isTrainer={profile?.is_trainer}
                     onBook={() => handleBookSession(session)}
                     onCancel={() => handleCancelBooking(session)}
                     onTap={() => handleTapSession(session)}
+                    onDetails={() => handleViewDetails(session)}
                   />
                 ))}
               </div>
@@ -243,6 +257,26 @@ export default function SchedulePage() {
             setSelectedSession(null)
           }}
           onCancelSuccess={handleCancelSuccess}
+        />
+      )}
+
+      {selectedSession && (
+        <SessionDetailsSheet
+          session={selectedSession}
+          isOpen={showDetailsSheet}
+          onClose={() => {
+            setShowDetailsSheet(false)
+            setSelectedSession(null)
+          }}
+          isTrainerView={!!profile?.is_trainer}
+          onBookSession={() => {
+            setShowDetailsSheet(false)
+            setShowBookingModal(true)
+          }}
+          onCancelBooking={() => {
+            setShowDetailsSheet(false)
+            setShowCancelModal(true)
+          }}
         />
       )}
     </>

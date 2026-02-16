@@ -10,8 +10,11 @@ import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
 import { toast } from 'sonner'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { ArrowLeft, User, ChevronRight, Clock, Bell, CreditCard, Sun, Moon, Lock, LogOut } from '@/components/ui/icons'
+import { ArrowLeft, User, ChevronRight, Clock, Bell, CreditCard, Calendar, Sun, Moon, Lock, LogOut } from '@/components/ui/icons'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
+
+const CalendarExportSheet = dynamic(() => import('./components/CalendarExportSheet'), { ssr: false })
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 
@@ -24,6 +27,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
+  const [showCalendarExport, setShowCalendarExport] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -269,6 +273,18 @@ export default function ProfilePage() {
             <span className="flex-1 text-text-primary font-medium">Payment Methods</span>
             <ChevronRight size={22} className="text-text-muted" />
           </button>
+
+          {/* Calendar Feed */}
+          <button
+            onClick={() => setShowCalendarExport(true)}
+            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
+          >
+            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+              <Calendar size={22} className="text-text-primary" />
+            </div>
+            <span className="flex-1 text-text-primary font-medium">Calendar Feed</span>
+            <ChevronRight size={22} className="text-text-muted" />
+          </button>
         </div>
       </section>
 
@@ -330,6 +346,14 @@ export default function ProfilePage() {
           cancelText="Cancel"
           onConfirm={confirmResetPassword}
           onCancel={() => setShowResetPasswordModal(false)}
+        />
+      )}
+
+      {/* Calendar Export Sheet */}
+      {showCalendarExport && (
+        <CalendarExportSheet
+          isOpen={showCalendarExport}
+          onClose={() => setShowCalendarExport(false)}
         />
       )}
     </MobileLayout>

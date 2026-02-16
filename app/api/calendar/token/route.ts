@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { validateRole } from '@/lib/api/auth'
+import { validateAuth } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { env } from '@/lib/env-validation'
@@ -15,13 +15,13 @@ import { env } from '@/lib/env-validation'
 /**
  * GET /api/calendar/token
  *
- * Returns the calendar token and feed URL for the current trainer.
+ * Returns the calendar token and feed URL for the current user.
  * Creates a token if one doesn't exist.
  */
 export async function GET(request: NextRequest) {
   try {
-    // 1. Validate trainer role
-    const authResult = await validateRole(request, 'trainer')
+    // 1. Validate authentication
+    const authResult = await validateAuth(request)
     if (authResult instanceof NextResponse) {
       return authResult
     }
@@ -62,15 +62,26 @@ export async function GET(request: NextRequest) {
       return createApiError('Failed to get calendar token', 500, 'DATABASE_ERROR')
     }
 
-    // 5. Build feed URL
+    // 5. Get user profile to determine role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_trainer')
+      .eq('id', user.id)
+      .single()
+
+    const isTrainer = profile?.is_trainer ?? false
+
+    // 6. Build feed URL based on role
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://forge-app.com'
-    const feedUrl = `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
+    const feedUrl = isTrainer
+      ? `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
+      : `${baseUrl}/api/calendar/client/${user.id}.ics?token=${token}`
 
     return NextResponse.json({
       success: true,
       token,
       feedUrl,
-      trainerId: user.id,
+      userId: user.id,
     })
   } catch (error) {
     return handleUnexpectedError(error, 'calendar-token-get')
@@ -84,8 +95,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Validate trainer role
-    const authResult = await validateRole(request, 'trainer')
+    // 1. Validate authentication
+    const authResult = await validateAuth(request)
     if (authResult instanceof NextResponse) {
       return authResult
     }
@@ -126,15 +137,26 @@ export async function POST(request: NextRequest) {
       return createApiError('Failed to regenerate calendar token', 500, 'DATABASE_ERROR')
     }
 
-    // 5. Build new feed URL
+    // 5. Get user profile to determine role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_trainer')
+      .eq('id', user.id)
+      .single()
+
+    const isTrainer = profile?.is_trainer ?? false
+
+    // 6. Build new feed URL based on role
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://forge-app.com'
-    const feedUrl = `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
+    const feedUrl = isTrainer
+      ? `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
+      : `${baseUrl}/api/calendar/client/${user.id}.ics?token=${token}`
 
     return NextResponse.json({
       success: true,
       token,
       feedUrl,
-      trainerId: user.id,
+      userId: user.id,
       message: 'Calendar token regenerated. Old feed URLs are now invalid.',
     })
   } catch (error) {
