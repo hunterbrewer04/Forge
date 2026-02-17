@@ -67,7 +67,7 @@ export default function CalendarExportSheet({
     }
   }
 
-  const webcalFeedUrl = feedUrl.replace('https://', 'webcal://')
+  const webcalFeedUrl = feedUrl.replace(/^https?:\/\//, 'webcal://')
 
   const handleCopyLink = async () => {
     try {

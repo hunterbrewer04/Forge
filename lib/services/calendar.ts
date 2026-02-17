@@ -1,7 +1,7 @@
 /**
  * Calendar Service
  *
- * Generates iCal (.ics) feeds for trainers to sync with external calendar apps
+ * Generates iCal (.ics) feeds for trainers and clients to sync with external calendar apps
  * like Google Calendar, Apple Calendar, and Outlook.
  */
 
@@ -129,7 +129,7 @@ function generateVEvent(session: SessionForCalendar, domain: string = 'forge-app
 }
 
 /**
- * Generate a complete iCal feed for a trainer's sessions
+ * Generate a complete iCal feed from a list of sessions
  */
 export function generateICalFeed(
   sessions: SessionForCalendar[],
