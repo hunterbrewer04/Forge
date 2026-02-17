@@ -172,15 +172,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     })
 
     // Generate iCal feed
-    const trainerName = profile.full_name || 'Trainer'
-    const ical = generateICalFeed(sessionsWithBookings, trainerName)
+    const ical = generateICalFeed(sessionsWithBookings)
 
     // Return iCal file with appropriate headers
     return new NextResponse(ical, {
       status: 200,
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${cleanTrainerId}.ics"`,
         // Cache for 15 minutes, stale while revalidate for 1 hour
         'Cache-Control': 'public, max-age=900, stale-while-revalidate=3600',
       },

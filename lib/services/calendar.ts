@@ -133,19 +133,18 @@ function generateVEvent(session: SessionForCalendar, domain: string = 'forge-app
  */
 export function generateICalFeed(
   sessions: SessionForCalendar[],
-  trainerName: string = 'Trainer',
   domain: string = 'forge-app.com'
 ): string {
-  const calendarName = `Forge Sessions - ${trainerName}`
-
   const header = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Forge Sports Performance//Sessions//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${escapeICalText(calendarName)}`,
+    'X-WR-CALNAME:Forge',
     'X-WR-TIMEZONE:UTC',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+    'X-PUBLISHED-TTL:PT15M',
   ].join('\r\n')
 
   const events = sessions
@@ -239,7 +238,7 @@ export async function generateTrainerICalFeed(
     })
   )
 
-  const ical = generateICalFeed(sessionsWithBookings, trainerName)
+  const ical = generateICalFeed(sessionsWithBookings)
 
   return { ical, trainerName }
 }
