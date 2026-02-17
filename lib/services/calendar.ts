@@ -1,7 +1,7 @@
 /**
  * Calendar Service
  *
- * Generates iCal (.ics) feeds for trainers to sync with external calendar apps
+ * Generates iCal (.ics) feeds for trainers and clients to sync with external calendar apps
  * like Google Calendar, Apple Calendar, and Outlook.
  */
 
@@ -129,23 +129,22 @@ function generateVEvent(session: SessionForCalendar, domain: string = 'forge-app
 }
 
 /**
- * Generate a complete iCal feed for a trainer's sessions
+ * Generate a complete iCal feed from a list of sessions
  */
 export function generateICalFeed(
   sessions: SessionForCalendar[],
-  trainerName: string = 'Trainer',
   domain: string = 'forge-app.com'
 ): string {
-  const calendarName = `Forge Sessions - ${trainerName}`
-
   const header = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Forge Sports Performance//Sessions//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${escapeICalText(calendarName)}`,
+    'X-WR-CALNAME:Forge',
     'X-WR-TIMEZONE:UTC',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+    'X-PUBLISHED-TTL:PT15M',
   ].join('\r\n')
 
   const events = sessions
@@ -239,7 +238,7 @@ export async function generateTrainerICalFeed(
     })
   )
 
-  const ical = generateICalFeed(sessionsWithBookings, trainerName)
+  const ical = generateICalFeed(sessionsWithBookings)
 
   return { ical, trainerName }
 }

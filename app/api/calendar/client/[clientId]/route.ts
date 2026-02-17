@@ -160,16 +160,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
 
     // Generate iCal feed
-    const clientName = profile.full_name || 'Client'
-    const calendarName = `Forge Sessions - ${clientName}`
-    const ical = generateICalFeed(sessionsWithBookings, calendarName)
+    const ical = generateICalFeed(sessionsWithBookings)
 
     // Return iCal file with appropriate headers
     return new NextResponse(ical, {
       status: 200,
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${cleanClientId}.ics"`,
         // Cache for 15 minutes, stale while revalidate for 1 hour
         'Cache-Control': 'public, max-age=900, stale-while-revalidate=3600',
       },

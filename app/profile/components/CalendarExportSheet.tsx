@@ -67,9 +67,11 @@ export default function CalendarExportSheet({
     }
   }
 
+  const webcalFeedUrl = feedUrl.replace(/^https?:\/\//, 'webcal://')
+
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(feedUrl)
+      await navigator.clipboard.writeText(webcalFeedUrl)
       toast.success('Link copied!')
     } catch (error) {
       toast.error('Failed to copy link')
@@ -77,14 +79,12 @@ export default function CalendarExportSheet({
   }
 
   const handleAddToGoogle = () => {
-    const webcalUrl = feedUrl.replace('https://', '')
-    const googleUrl = `https://calendar.google.com/calendar/r?cid=webcal://${webcalUrl}`
+    const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalFeedUrl)}`
     window.open(googleUrl, '_blank')
   }
 
   const handleAddToApple = () => {
-    const webcalUrl = feedUrl.replace('https://', '')
-    window.location.href = `webcal://${webcalUrl}`
+    window.location.href = webcalFeedUrl
   }
 
   const handleRegenerateLink = async () => {
@@ -217,7 +217,7 @@ export default function CalendarExportSheet({
         {sheetState === 'loaded' && (
           <>
             {/* Scrollable Body */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 min-h-0">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 pb-8 min-h-0">
               {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-3 mb-2">
@@ -237,7 +237,7 @@ export default function CalendarExportSheet({
                 <input
                   type="text"
                   readOnly
-                  value={feedUrl}
+                  value={webcalFeedUrl}
                   className="w-full bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300 font-mono border border-gray-700 focus:outline-none focus:border-primary"
                 />
               </div>
