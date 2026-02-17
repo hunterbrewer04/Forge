@@ -245,7 +245,7 @@ export default function ProfilePage() {
           </button>
 
           {/* Training History */}
-          <button className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
+          <button onClick={() => router.push('/profile/history')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
             <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
               <Clock size={22} className="text-text-primary" />
             </div>
@@ -254,7 +254,7 @@ export default function ProfilePage() {
           </button>
 
           {/* Notification Settings */}
-          <button className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
+          <button onClick={() => router.push('/profile/notifications')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
             <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
               <Bell size={22} className="text-text-primary" />
             </div>

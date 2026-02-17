@@ -179,6 +179,7 @@ export default function HomePage() {
 
         {/* Notifications */}
         <button
+          onClick={() => router.push('/profile/notifications')}
           className="relative flex items-center justify-center size-10 text-text-secondary hover:text-text-primary transition-colors"
           aria-label="Notifications"
         >
@@ -270,7 +271,7 @@ export default function HomePage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-text-primary font-semibold">Recent Activity</h2>
-          <Link href="/schedule?tab=history" className="text-primary text-sm font-medium">
+          <Link href="/profile/history" className="text-primary text-sm font-medium">
             View All
           </Link>
         </div>
