@@ -164,7 +164,7 @@ export default function CalendarExportSheet({
 
       {/* Sheet Content */}
       <div
-        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom max-h-[85dvh] flex flex-col"
+        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl animate-slide-up max-h-[85dvh] flex flex-col"
         style={{
           transform: `translateY(${translateY}px)`,
           transition: translateY === 0 ? 'transform 0.3s ease-out' : 'none',
@@ -217,7 +217,7 @@ export default function CalendarExportSheet({
         {sheetState === 'loaded' && (
           <>
             {/* Scrollable Body */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 pb-8 min-h-0">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 min-h-0">
               {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-3 mb-2">
@@ -289,14 +289,18 @@ export default function CalendarExportSheet({
                   This will invalidate your existing calendar subscription.
                 </p>
               </div>
+
+              {/* Bottom safe-area spacer */}
+              <div className="safe-area-spacer" />
             </div>
           </>
         )}
       </div>
 
       <style jsx>{`
-        .safe-area-bottom {
-          padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+        .safe-area-spacer {
+          height: max(2rem, env(safe-area-inset-bottom));
+          flex-shrink: 0;
         }
       `}</style>
     </div>
