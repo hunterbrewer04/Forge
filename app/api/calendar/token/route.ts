@@ -13,6 +13,20 @@ import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { env } from '@/lib/env-validation'
 
 /**
+ * Derive base URL from the incoming request.
+ * Uses X-Forwarded-Host (set by Vercel) or Host header.
+ * Falls back to NEXT_PUBLIC_APP_URL env var.
+ */
+function getBaseUrl(request: NextRequest): string {
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host')
+  if (host) {
+    const protocol = request.headers.get('x-forwarded-proto') || 'https'
+    return `${protocol}://${host}`
+  }
+  return process.env.NEXT_PUBLIC_APP_URL || 'https://forge-pwa.vercel.app'
+}
+
+/**
  * GET /api/calendar/token
  *
  * Returns the calendar token and feed URL for the current user.
@@ -72,7 +86,7 @@ export async function GET(request: NextRequest) {
     const isTrainer = profile?.is_trainer ?? false
 
     // 6. Build feed URL based on role
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://forge-app.com'
+    const baseUrl = getBaseUrl(request)
     const feedUrl = isTrainer
       ? `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
       : `${baseUrl}/api/calendar/client/${user.id}.ics?token=${token}`
@@ -147,7 +161,7 @@ export async function POST(request: NextRequest) {
     const isTrainer = profile?.is_trainer ?? false
 
     // 6. Build new feed URL based on role
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://forge-app.com'
+    const baseUrl = getBaseUrl(request)
     const feedUrl = isTrainer
       ? `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
       : `${baseUrl}/api/calendar/client/${user.id}.ics?token=${token}`
