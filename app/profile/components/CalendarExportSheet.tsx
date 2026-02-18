@@ -164,7 +164,7 @@ export default function CalendarExportSheet({
 
       {/* Sheet Content */}
       <div
-        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom max-h-[85dvh] flex flex-col"
+        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl animate-slide-up max-h-[85dvh] flex flex-col"
         style={{
           transform: `translateY(${translateY}px)`,
           transition: translateY === 0 ? 'transform 0.3s ease-out' : 'none',
@@ -298,9 +298,6 @@ export default function CalendarExportSheet({
       </div>
 
       <style jsx>{`
-        .safe-area-bottom {
-          padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-        }
         .safe-area-spacer {
           height: max(2rem, env(safe-area-inset-bottom));
           flex-shrink: 0;
