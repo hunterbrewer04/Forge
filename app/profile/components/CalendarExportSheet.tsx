@@ -299,7 +299,7 @@ export default function CalendarExportSheet({
 
       <style jsx>{`
         .safe-area-spacer {
-          height: max(2rem, env(safe-area-inset-bottom));
+          height: max(5rem, calc(env(safe-area-inset-bottom) + 4rem));
           flex-shrink: 0;
         }
       `}</style>

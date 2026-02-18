@@ -42,18 +42,6 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Calendar API routes serve iCal files consumed by calendar apps (not browsers).
-        // Browser-security headers like CSP and upgrade-insecure-requests are meaningless
-        // to calendar clients and may cause subscription failures — keep headers minimal.
-        source: '/api/calendar/:path*',
-        headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-        ],
-      },
-      {
         // Apply security headers to all routes
         source: '/(.*)',
         headers: [
@@ -85,6 +73,16 @@ const nextConfig: NextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains',
           },
+        ],
+      },
+      {
+        // Calendar feeds are consumed by calendar apps (Apple Calendar, Google Calendar),
+        // not browsers. Override the catch-all CSP (upgrade-insecure-requests breaks
+        // webcal:// protocol) with a minimal policy. Must come AFTER /(.*) to override.
+        source: '/api/calendar/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "default-src 'none'" },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
         ],
       },
       {
