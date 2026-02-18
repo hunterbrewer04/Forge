@@ -17,7 +17,7 @@ interface SessionForCalendar extends Session {
  * Generate an iCal UID for a session
  * UIDs must be globally unique and persistent
  */
-function generateUID(sessionId: string, domain: string = 'forge-app.com'): string {
+function generateUID(sessionId: string, domain: string = 'forge-pwa.vercel.app'): string {
   return `session-${sessionId}@${domain}`
 }
 
@@ -71,7 +71,7 @@ function getICalStatus(status: string): string {
 /**
  * Generate a single VEVENT block for a session
  */
-function generateVEvent(session: SessionForCalendar, domain: string = 'forge-app.com'): string {
+function generateVEvent(session: SessionForCalendar, domain: string = 'forge-pwa.vercel.app'): string {
   const uid = generateUID(session.id, domain)
   const dtstart = formatICalDate(new Date(session.starts_at))
   const dtend = formatICalDate(new Date(session.ends_at))
@@ -133,7 +133,7 @@ function generateVEvent(session: SessionForCalendar, domain: string = 'forge-app
  */
 export function generateICalFeed(
   sessions: SessionForCalendar[],
-  domain: string = 'forge-app.com'
+  domain: string = 'forge-pwa.vercel.app'
 ): string {
   const header = [
     'BEGIN:VCALENDAR',
