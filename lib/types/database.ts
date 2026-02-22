@@ -8,6 +8,7 @@ export interface Profile {
   is_trainer: boolean
   is_client: boolean
   is_admin: boolean
+  is_guest: boolean
   created_at: string
   updated_at: string
 }
