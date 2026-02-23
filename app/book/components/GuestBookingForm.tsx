@@ -203,7 +203,7 @@ export default function GuestBookingForm({
             </div>
 
             {/* Honeypot — hidden from real users with CSS, visible to bots */}
-            <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}>
+            <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}>
               <input
                 ref={honeypotRef}
                 type="text"
