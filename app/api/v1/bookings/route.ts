@@ -58,6 +58,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true }, { status: 200 })
     }
 
+    // Normalize email to prevent case-variant rate limit bypass and profile duplicates
+    const normalizedEmail = body.email.toLowerCase()
+
     // 3. IP-based rate limit (no userId — guest endpoint)
     const rateLimitResult = await checkRateLimit(request, GUEST_BOOKING_RATE_LIMIT)
     if (rateLimitResult) {
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
     const emailRateLimitResult = await checkRateLimit(
       request,
       { maxRequests: 3, windowSeconds: 86400, keyPrefix: 'guest-booking-email' },
-      body.email
+      normalizedEmail
     )
     if (emailRateLimitResult) {
       return emailRateLimitResult
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
     const { data: existingProfile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('email', body.email)
+      .eq('email', normalizedEmail)
       .maybeSingle()
 
     if (profileError) {
@@ -97,7 +100,7 @@ export async function POST(request: NextRequest) {
       const newId = crypto.randomUUID()
       const { error: insertError } = await supabase.from('profiles').insert({
         id: newId,
-        email: body.email,
+        email: normalizedEmail,
         full_name: body.fullName,
         is_guest: true,
         is_client: true,
@@ -154,7 +157,7 @@ export async function POST(request: NextRequest) {
       resourceId: result.booking_id ?? undefined,
       metadata: {
         session_id: body.sessionId,
-        guest_email: body.email,
+        guest_email: normalizedEmail,
         is_guest_booking: true,
       },
     })
