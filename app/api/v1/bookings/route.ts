@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (profileError) {
-      console.error('Error looking up guest profile:', profileError)
+      console.error('Error looking up guest profile:', { code: profileError?.code, message: profileError?.message })
       return createApiError('Failed to process guest profile', 500, 'DATABASE_ERROR')
     }
 
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (insertError) {
-        console.error('Error creating guest profile:', insertError)
+        console.error('Error creating guest profile:', { code: insertError?.code, message: insertError?.message })
         return createApiError('Failed to create guest profile', 500, 'DATABASE_ERROR')
       }
 
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (bookingError) {
-      console.error('Error booking session:', bookingError)
+      console.error('Error booking session:', { code: bookingError?.code, message: bookingError?.message })
       return createApiError('Failed to book session', 500, 'DATABASE_ERROR')
     }
 

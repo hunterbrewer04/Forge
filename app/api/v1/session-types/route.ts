@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       .order('name', { ascending: true })
 
     if (error) {
-      console.error('Error fetching session types:', error)
+      console.error('Error fetching session types:', { code: error?.code, message: error?.message })
       return createApiError('Failed to fetch session types', 500, 'DATABASE_ERROR')
     }
 

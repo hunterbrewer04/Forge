@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     const { data: sessions, error } = await query
 
     if (error) {
-      console.error('Error fetching public sessions:', error)
+      console.error('Error fetching public sessions:', { code: error?.code, message: error?.message })
       return createApiError('Failed to fetch sessions', 500, 'DATABASE_ERROR')
     }
 
