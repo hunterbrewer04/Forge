@@ -64,9 +64,19 @@ export async function POST(request: NextRequest) {
       return rateLimitResult
     }
 
+    // 4. Email-based rate limit: 3 bookings per email per day
+    const emailRateLimitResult = await checkRateLimit(
+      request,
+      { maxRequests: 3, windowSeconds: 86400, keyPrefix: 'guest-booking-email' },
+      body.email
+    )
+    if (emailRateLimitResult) {
+      return emailRateLimitResult
+    }
+
     const supabase = getAdminClient()
 
-    // 4. Find or create guest profile by email
+    // 5. Find or create guest profile by email
     const { data: existingProfile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
@@ -103,7 +113,7 @@ export async function POST(request: NextRequest) {
       guestProfileId = newId
     }
 
-    // 5. Call atomic booking function
+    // 6. Call atomic booking function
     const { data: bookingResult, error: bookingError } = await supabase.rpc('book_session', {
       p_session_id: body.sessionId,
       p_client_id: guestProfileId,
@@ -114,7 +124,7 @@ export async function POST(request: NextRequest) {
       return createApiError('Failed to book session', 500, 'DATABASE_ERROR')
     }
 
-    // 6. Map RPC result errors
+    // 7. Map RPC result errors
     const result = (bookingResult as BookSessionResult[] | null)?.[0]
 
     if (!result?.success) {
@@ -136,7 +146,7 @@ export async function POST(request: NextRequest) {
       return createApiError(errorMessage, 400, 'BOOKING_FAILED')
     }
 
-    // 7. Audit log the guest booking
+    // 8. Audit log the guest booking
     await logAuditEventFromRequest({
       userId: guestProfileId,
       action: 'BOOKING_CREATE',
@@ -149,7 +159,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // 8. Return success
+    // 9. Return success
     return NextResponse.json(
       { success: true, bookingId: result.booking_id },
       { status: 201 }
