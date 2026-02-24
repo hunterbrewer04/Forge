@@ -68,7 +68,13 @@ export default function PaymentForm({ tierName, priceMonthly, onBack }: PaymentF
       <div className="border-t border-stone-700" />
 
       {/* Stripe Payment Element — renders card fields, Apple Pay, Google Pay */}
-      <PaymentElement />
+      <PaymentElement
+        onLoadError={(e) => {
+          console.error('PaymentElement load error:', e.error)
+          setError(e.error.message ?? 'Failed to load payment form')
+        }}
+        onReady={() => console.log('PaymentElement ready')}
+      />
 
       {error && (
         <div className="rounded-md bg-red-500/10 border border-red-500/20 p-3">
