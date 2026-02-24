@@ -46,38 +46,46 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return rateLimitResult
     }
 
-    // 2b. Quota check for member accounts
-    const supabaseForQuota = createServerClient(
+    // 2b. Create Supabase client
+    const supabase = createServerClient(
       env.supabaseUrl(),
       env.supabaseAnonKey(),
       {
         cookies: {
-          get(name: string) { return request.cookies.get(name)?.value },
+          get(name: string) {
+            return request.cookies.get(name)?.value
+          },
           set() {},
           remove() {},
         },
       }
     )
 
-    const { data: memberProfile } = await supabaseForQuota
+    // 2c. Quota check for member accounts
+    const { data: memberProfile } = await supabase
       .from('profiles')
-      .select('is_member, membership_tier_id')
+      .select('is_member, membership_tier_id, membership_status')
       .eq('id', user.id)
       .single()
 
     if (memberProfile?.is_member && memberProfile.membership_tier_id) {
+      // Block inactive members at the API layer (belt-and-suspenders with client-side MembershipGuard)
+      if (memberProfile.membership_status !== 'active') {
+        return createApiError('Membership is not active', 403, 'MEMBERSHIP_INACTIVE')
+      }
+
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
+      const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString()
 
       const [{ count: bookingCount }, { data: tier }] = await Promise.all([
-        supabaseForQuota
+        supabase
           .from('bookings')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', user.id)
           .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth),
-        supabaseForQuota
+          .lt('created_at', startOfNextMonth),
+        supabase
           .from('membership_tiers')
           .select('monthly_booking_quota')
           .eq('id', memberProfile.membership_tier_id)
@@ -93,22 +101,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
-
-    // 4. Get session info for audit logging
+    // 3. Get session info for audit logging
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
       .select('id, title, starts_at, trainer_id')
@@ -123,7 +116,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return createApiError('Failed to fetch session', 500, 'DATABASE_ERROR')
     }
 
-    // 4b. Prevent booking past sessions (Issue #7 - defensive API layer check)
+    // 3b. Prevent booking past sessions (Issue #7 - defensive API layer check)
     if (new Date(session.starts_at) <= new Date()) {
       return createApiError(
         'Cannot book a session that has already started',
@@ -132,7 +125,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 4c. Prevent trainer from booking their own sessions (BRE-16)
+    // 3c. Prevent trainer from booking their own sessions (BRE-16)
     if (user.id === session.trainer_id) {
       return createApiError(
         'Trainers cannot book their own sessions',
@@ -141,7 +134,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 5. Call atomic booking function
+    // 4. Call atomic booking function
     const { data: bookingResult, error: bookingError } = await supabase.rpc(
       'book_session',
       {
@@ -155,7 +148,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return createApiError('Failed to book session', 500, 'DATABASE_ERROR')
     }
 
-    // 6. Check booking result
+    // 5. Check booking result
     const result = bookingResult?.[0]
 
     if (!result?.success) {
@@ -178,7 +171,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return createApiError(errorMessage, 400, 'BOOKING_FAILED')
     }
 
-    // 7. Fetch the created booking with details
+    // 6. Fetch the created booking with details
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
       .select(`
@@ -210,7 +203,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }, { status: 201 })
     }
 
-    // 8. Log audit event
+    // 7. Log audit event
     await logAuditEventFromRequest({
       userId: user.id,
       action: 'BOOKING_CREATE',
@@ -224,7 +217,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
     })
 
-    // 9. Handle FK join format
+    // 8. Handle FK join format
     const sessionData = Array.isArray(booking.session)
       ? booking.session[0] || null
       : booking.session

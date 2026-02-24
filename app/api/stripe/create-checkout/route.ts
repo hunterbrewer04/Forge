@@ -67,6 +67,12 @@ export async function POST(request: NextRequest) {
         supabase_user_id: auth.id,
         membership_tier_id: tier.id,
       },
+      subscription_data: {
+        metadata: {
+          supabase_user_id: auth.id,
+          membership_tier_id: tier.id,
+        },
+      },
     })
 
     return NextResponse.json({ url: session.url })

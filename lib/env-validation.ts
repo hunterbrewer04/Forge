@@ -66,13 +66,13 @@ const ENV_VARS: EnvVarConfig[] = [
   },
   {
     name: 'STRIPE_SECRET_KEY',
-    required: false,
+    required: true,
     description: 'Stripe secret key for server-side API calls (sk_test_... or sk_live_...)',
     clientSide: false,
   },
   {
     name: 'STRIPE_WEBHOOK_SECRET',
-    required: false,
+    required: true,
     description: 'Stripe webhook signing secret (whsec_...)',
     clientSide: false,
   },
@@ -234,4 +234,5 @@ export const env = {
   // Stripe
   stripeSecretKey: () => getEnvVar('STRIPE_SECRET_KEY'),
   stripeWebhookSecret: () => getEnvVar('STRIPE_WEBHOOK_SECRET'),
+  stripePublishableKey: () => getEnvVar('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'),
 } as const
