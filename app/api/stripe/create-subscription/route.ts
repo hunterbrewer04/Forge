@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       items: [{ price: tier.stripe_price_id }],
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice'],
+      expand: ['latest_invoice.confirmation_secret'],
       metadata: {
         supabase_user_id: auth.id,
         membership_tier_id: tier.id,
