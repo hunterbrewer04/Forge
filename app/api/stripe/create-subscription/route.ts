@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 import { validateAuth } from '@/lib/api/auth'
 import { getAdminClient } from '@/lib/supabase-admin'
 import { stripe } from '@/lib/stripe'
@@ -74,23 +74,23 @@ export async function POST(request: NextRequest) {
       items: [{ price: tier.stripe_price_id }],
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
+      expand: ['latest_invoice'],
       metadata: {
         supabase_user_id: auth.id,
         membership_tier_id: tier.id,
       },
     })
 
-    // 5. Extract client_secret from the expanded PaymentIntent
+    // 5. Extract client_secret from confirmation_secret (Stripe v20 — replaces payment_intent expand)
     const invoice = subscription.latest_invoice as Stripe.Invoice
-    const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent
+    const clientSecret = invoice.confirmation_secret?.client_secret
 
-    if (!paymentIntent?.client_secret) {
+    if (!clientSecret) {
       return createApiError('Failed to initialise payment', 500, 'PAYMENT_INTENT_FAILED')
     }
 
     return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
+      clientSecret,
       subscriptionId: subscription.id,
     })
   } catch (error) {
