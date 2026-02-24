@@ -46,6 +46,53 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return rateLimitResult
     }
 
+    // 2b. Quota check for member accounts
+    const supabaseForQuota = createServerClient(
+      env.supabaseUrl(),
+      env.supabaseAnonKey(),
+      {
+        cookies: {
+          get(name: string) { return request.cookies.get(name)?.value },
+          set() {},
+          remove() {},
+        },
+      }
+    )
+
+    const { data: memberProfile } = await supabaseForQuota
+      .from('profiles')
+      .select('is_member, membership_tier_id')
+      .eq('id', user.id)
+      .single()
+
+    if (memberProfile?.is_member && memberProfile.membership_tier_id) {
+      const now = new Date()
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
+
+      const [{ count: bookingCount }, { data: tier }] = await Promise.all([
+        supabaseForQuota
+          .from('bookings')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', user.id)
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth),
+        supabaseForQuota
+          .from('membership_tiers')
+          .select('monthly_booking_quota')
+          .eq('id', memberProfile.membership_tier_id)
+          .single(),
+      ])
+
+      if (tier && (bookingCount ?? 0) >= tier.monthly_booking_quota) {
+        return createApiError(
+          `Monthly booking quota of ${tier.monthly_booking_quota} sessions reached`,
+          429,
+          'QUOTA_EXCEEDED'
+        )
+      }
+    }
+
     // 3. Create Supabase client
     const supabase = createServerClient(
       env.supabaseUrl(),

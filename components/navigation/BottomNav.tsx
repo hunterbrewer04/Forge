@@ -13,17 +13,20 @@ interface NavItem {
   label: string;
 }
 
-const navItems: NavItem[] = [
-  { href: "/home", icon: Home, label: "Home" },
-  { href: "/chat", icon: MessageCircle, label: "Messages" },
-  { href: "/schedule", icon: Calendar, label: "Sessions" },
-  { href: "/profile", icon: User, label: "Profile" },
-];
-
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile } = useAuth();
+
+  const navItems: NavItem[] = [
+    { href: "/home", icon: Home, label: "Home" },
+    // Chat only for trainers and full-access accounts (not plain members)
+    ...(profile?.is_trainer || profile?.has_full_access
+      ? [{ href: "/chat", icon: MessageCircle, label: "Messages" }]
+      : []),
+    { href: "/schedule", icon: Calendar, label: "Sessions" },
+    { href: "/profile", icon: User, label: "Profile" },
+  ];
   const { unreadCount } = useUnreadCount({
     userId: user?.id,
     isTrainer: profile?.is_trainer,
