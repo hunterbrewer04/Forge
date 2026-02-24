@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
             membership_status: status,
             stripe_subscription_id: subscription.id,
             ...(tierId ? { membership_tier_id: tierId } : {}),
+            ...(status === 'active' ? { is_member: true } : {}),
           })
           .eq('id', userId)
         break
