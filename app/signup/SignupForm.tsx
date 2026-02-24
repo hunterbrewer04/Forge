@@ -90,21 +90,16 @@ export default function SignupForm() {
           data: {
             full_name: fullName,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
 
       if (signUpError) throw signUpError
 
       if (data.user) {
-        // Attempt to migrate any guest bookings made with this email (non-fatal)
-        try {
-          await fetch('/api/auth/upgrade-guest', { method: 'POST' })
-        } catch {
-          console.warn('Guest profile upgrade failed (non-fatal)')
-        }
-
-        // Database trigger will automatically create profile with is_client: true
-        window.location.href = '/chat'
+        // Database trigger creates profile with has_full_access: false by default.
+        // Members use /member/signup instead; this form is for direct trainer clients.
+        window.location.href = '/home'
       }
     } catch (err: unknown) {
       setError(getErrorMessage(err))

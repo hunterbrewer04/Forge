@@ -8,18 +8,17 @@ interface SessionCardProps {
   session: SessionWithDetails
   userId?: string
   isTrainer?: boolean
-  publicMode?: boolean
   onBook: () => void
   onCancel: () => void
   onTap: () => void
   onDetails?: () => void
 }
 
-export default function SessionCard({ session, userId, isTrainer, publicMode, onBook, onCancel, onTap, onDetails }: SessionCardProps) {
+export default function SessionCard({ session, userId, isTrainer, onBook, onCancel, onTap, onDetails }: SessionCardProps) {
   const { trainer, availability, user_booking } = session
 
   // Determine card state
-  const isBooked = !publicMode && !!user_booking
+  const isBooked = !!user_booking
   const isFull = availability.is_full && !user_booking
 
   // Format time
@@ -109,28 +108,7 @@ export default function SessionCard({ session, userId, isTrainer, publicMode, on
 
         {/* Action Button */}
         <div className="shrink-0">
-          {publicMode ? (
-            availability.is_full ? (
-              <button
-                disabled
-                className="px-4 py-2 bg-bg-secondary text-text-muted rounded-full text-sm font-semibold cursor-not-allowed"
-                aria-label="Session full"
-              >
-                Full
-              </button>
-            ) : (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onBook()
-                }}
-                className="px-4 py-2 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary/90 transition-transform active:scale-95"
-                aria-label="Book session"
-              >
-                Book
-              </button>
-            )
-          ) : isTrainer ? (
+          {isTrainer ? (
             <button
               onClick={(e) => {
                 e.stopPropagation()
