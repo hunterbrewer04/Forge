@@ -86,6 +86,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip third-party requests (Stripe.js, Vercel, etc.) — let browser handle directly
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   // Strategy 1: Cache-first for static assets (JS, CSS, fonts)
   if (request.destination === 'script' ||
       request.destination === 'style' ||
