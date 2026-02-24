@@ -64,9 +64,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // 2c. Quota check for member accounts
     const { data: memberProfile } = await supabase
       .from('profiles')
-      .select('is_member, membership_tier_id, membership_status')
+      .select('is_member, membership_tier_id, membership_status, has_full_access, is_trainer, is_admin')
       .eq('id', user.id)
       .single()
+
+    // Access check — reject users without any valid access tier
+    const hasAccess =
+      memberProfile?.is_trainer ||
+      memberProfile?.is_admin ||
+      memberProfile?.has_full_access ||
+      (memberProfile?.is_member && memberProfile?.membership_status === 'active')
+
+    if (!hasAccess) {
+      return createApiError(
+        'Active membership or full access required to book sessions',
+        403,
+        'ACCESS_REQUIRED'
+      )
+    }
 
     if (memberProfile?.is_member && memberProfile.membership_tier_id) {
       // Block inactive members at the API layer (belt-and-suspenders with client-side MembershipGuard)

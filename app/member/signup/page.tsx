@@ -67,9 +67,12 @@ export default function MemberSignupPage() {
       if (data.user && data.session) {
         // Email confirmation disabled — active session, claim member flag immediately
         try {
-          await fetch('/api/member/claim', { method: 'POST' })
-        } catch {
-          // Non-fatal — can be fixed manually
+          const claimRes = await fetch('/api/member/claim', { method: 'POST' })
+          if (!claimRes.ok) {
+            console.error('Member claim failed:', claimRes.status, await claimRes.text())
+          }
+        } catch (err) {
+          console.error('Member claim request failed:', err)
         }
         window.location.href = '/member/plans'
       } else if (data.user) {
