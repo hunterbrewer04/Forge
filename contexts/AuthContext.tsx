@@ -11,7 +11,9 @@ interface Profile {
   username: string | null
   is_trainer: boolean
   is_admin: boolean
-  is_client: boolean
+  has_full_access: boolean   // renamed from is_client
+  is_member: boolean
+  membership_status: 'active' | 'past_due' | 'canceled' | null
   created_at: string
 }
 
@@ -59,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, username, is_trainer, is_admin, is_client, created_at')
+        .select('id, full_name, avatar_url, username, is_trainer, is_admin, has_full_access, is_member, membership_status, created_at')
         .eq('id', userId)
         .single()
 

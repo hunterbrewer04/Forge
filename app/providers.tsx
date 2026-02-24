@@ -5,6 +5,7 @@ import { isServer, QueryClient, QueryClientProvider } from '@tanstack/react-quer
 import { AuthProvider } from '@/contexts/AuthContext'
 import { FacilityThemeProvider } from '@/contexts/FacilityThemeContext'
 import { registerServiceWorker } from '@/lib/register-sw'
+import MembershipGuard from '@/components/MembershipGuard'
 
 function makeQueryClient() {
   return new QueryClient({
@@ -44,7 +45,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <FacilityThemeProvider>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <MembershipGuard>{children}</MembershipGuard>
+        </AuthProvider>
       </FacilityThemeProvider>
     </QueryClientProvider>
   )

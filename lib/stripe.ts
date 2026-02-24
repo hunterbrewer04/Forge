@@ -1,0 +1,7 @@
+import 'server-only'
+import Stripe from 'stripe'
+import { env } from '@/lib/env-validation'
+
+export const stripe = new Stripe(env.stripeSecretKey(), {
+  apiVersion: '2026-01-28.clover',
+})

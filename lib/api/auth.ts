@@ -134,7 +134,7 @@ export async function validateRole(
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('is_trainer, is_client, is_admin')
+      .select('is_trainer, has_full_access, is_member, is_admin')
       .eq('id', user.id)
       .single()
 
@@ -158,7 +158,7 @@ export async function validateRole(
     // Check if user has required role
     const hasRole =
       (requiredRole === 'trainer' && profile.is_trainer) ||
-      (requiredRole === 'client' && profile.is_client) ||
+      (requiredRole === 'client' && (profile.has_full_access || profile.is_member)) ||
       (requiredRole === 'admin' && profile.is_admin)
 
     if (!hasRole) {

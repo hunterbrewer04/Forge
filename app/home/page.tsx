@@ -35,7 +35,7 @@ export default function HomePage() {
   const { unreadCount } = useUnreadCount({
     userId: user?.id,
     isTrainer: profile?.is_trainer,
-    isClient: profile?.is_client,
+    isClient: profile?.has_full_access,
   })
 
   // Redirect to login if not authenticated
@@ -64,7 +64,7 @@ export default function HomePage() {
             clientsCount: conversations.length,
           })
         }
-      } else if (profile.is_client) {
+      } else if (profile.has_full_access) {
         const { data: conversation, error } = await supabase
           .from('conversations')
           .select(`

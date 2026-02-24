@@ -64,6 +64,24 @@ const ENV_VARS: EnvVarConfig[] = [
     description: 'VAPID private key for Web Push notifications (server-side only)',
     clientSide: false,
   },
+  {
+    name: 'STRIPE_SECRET_KEY',
+    required: true,
+    description: 'Stripe secret key for server-side API calls (sk_test_... or sk_live_...)',
+    clientSide: false,
+  },
+  {
+    name: 'STRIPE_WEBHOOK_SECRET',
+    required: true,
+    description: 'Stripe webhook signing secret (whsec_...)',
+    clientSide: false,
+  },
+  {
+    name: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+    required: false,
+    description: 'Stripe publishable key exposed to the browser (pk_test_... or pk_live_...)',
+    clientSide: true,
+  },
 ]
 
 class EnvironmentValidationError extends Error {
@@ -212,4 +230,9 @@ export const env = {
   nodeEnv: () => process.env.NODE_ENV || 'development',
   isDevelopment: () => process.env.NODE_ENV === 'development',
   isProduction: () => process.env.NODE_ENV === 'production',
+
+  // Stripe
+  stripeSecretKey: () => getEnvVar('STRIPE_SECRET_KEY'),
+  stripeWebhookSecret: () => getEnvVar('STRIPE_WEBHOOK_SECRET'),
+  stripePublishableKey: () => getEnvVar('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'),
 } as const

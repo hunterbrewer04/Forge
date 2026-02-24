@@ -39,7 +39,7 @@ interface UserProfile {
   email: string | null
   created_at: string
   is_trainer: boolean
-  is_client: boolean
+  has_full_access: boolean
 }
 
 interface ChatWindowProps {
@@ -86,7 +86,7 @@ export default function ChatWindow({
     if (!userProfile) {
       const { data } = await supabase
         .from('profiles')
-        .select('full_name, avatar_url, username, email, created_at, is_trainer, is_client')
+        .select('full_name, avatar_url, username, email, created_at, is_trainer, has_full_access')
         .eq('id', otherUserId)
         .single()
 
@@ -632,7 +632,7 @@ export default function ChatWindow({
                 <div>
                   <p className="text-text-muted text-xs font-medium uppercase tracking-wider">Role</p>
                   <p className="text-text-primary text-sm">
-                    {userProfile?.is_trainer ? 'Trainer' : userProfile?.is_client ? 'Client' : 'User'}
+                    {userProfile?.is_trainer ? 'Trainer' : userProfile?.has_full_access ? 'Client' : 'Member'}
                   </p>
                 </div>
               </div>
