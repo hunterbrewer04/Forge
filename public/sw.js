@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v10';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
@@ -83,6 +83,11 @@ self.addEventListener('fetch', (event) => {
 
   // Skip local API routes
   if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  // Skip third-party requests (Stripe.js, Vercel, etc.) — let browser handle directly
+  if (url.origin !== self.location.origin) {
     return;
   }
 
