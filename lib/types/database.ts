@@ -6,9 +6,26 @@ export interface Profile {
   username: string | null
   email: string | null
   is_trainer: boolean
-  is_client: boolean
+  has_full_access: boolean   // renamed from is_client
   is_admin: boolean
   is_guest: boolean
+  is_member: boolean
+  membership_status: 'active' | 'past_due' | 'canceled' | null
+  membership_tier_id: string | null
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MembershipTier {
+  id: string
+  name: string
+  slug: string
+  stripe_price_id: string
+  monthly_booking_quota: number
+  price_monthly: number
+  is_active: boolean
   created_at: string
   updated_at: string
 }

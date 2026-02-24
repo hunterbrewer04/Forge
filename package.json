@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@stripe/stripe-js": "^8.8.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "@tanstack/react-query": "^5.90.16",
@@ -19,6 +20,7 @@
     "react-dom": "19.2.0",
     "server-only": "^0.0.1",
     "sonner": "^2.0.7",
+    "stripe": "^20.3.1",
     "web-push": "^3.6.7",
     "yet-another-react-lightbox": "^3.28.0",
     "zod": "^3.23.8"
