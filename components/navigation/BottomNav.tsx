@@ -27,7 +27,7 @@ export default function BottomNav() {
   const { unreadCount } = useUnreadCount({
     userId: user?.id,
     isTrainer: profile?.is_trainer,
-    isClient: profile?.is_client,
+    isClient: profile?.has_full_access,
   });
 
   // Prefetch all nav routes on mount for instant navigation

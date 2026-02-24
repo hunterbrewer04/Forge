@@ -63,7 +63,7 @@ export default function ChatPage() {
     let mounted = true
 
     const loadClientConversation = async () => {
-      if (!profile || !profile.is_client || profile.is_trainer || !user?.id) return
+      if (!profile || !profile.has_full_access || profile.is_trainer || !user?.id) return
 
       setLoadingConversation(true)
       setError(null)
@@ -96,7 +96,7 @@ export default function ChatPage() {
       }
     }
 
-    if (profile && profile.is_client && !profile.is_trainer) {
+    if (profile && profile.has_full_access && !profile.is_trainer) {
       loadClientConversation()
     }
 
@@ -222,7 +222,7 @@ export default function ChatPage() {
   }
 
   const isTrainer = profile.is_trainer
-  const isClient = profile.is_client && !profile.is_trainer
+  const isClient = profile.has_full_access && !profile.is_trainer
 
   // Mobile header component
   const mobileHeader = (
