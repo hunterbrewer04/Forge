@@ -37,7 +37,7 @@ export default function AuthLayout({ children, title, description }: AuthLayoutP
       >
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <Image src="/forge-logo.png" alt="Forge" width={160} height={80} className="h-16 w-auto" priority />
+          <Image src="/forge-logo.png" alt="Forge" width={320} height={160} className="h-32 w-auto" priority />
         </div>
 
         {/* Heading */}

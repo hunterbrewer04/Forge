@@ -55,7 +55,7 @@ export default function DesktopAuthLayout({ children, title, description }: Desk
               background: 'linear-gradient(135deg, var(--facility-primary), color-mix(in srgb, var(--facility-primary) 70%, #000))',
             }}
           >
-            <Image src="/forge-logo.png" alt="Forge Sports Performance" width={220} height={110} className="h-24 w-auto mb-4" priority />
+            <Image src="/forge-logo.png" alt="Forge Sports Performance" width={360} height={180} className="h-40 w-auto mb-4" priority />
             <p className="text-white/70 text-sm text-center">
               Premium sports performance training
             </p>
