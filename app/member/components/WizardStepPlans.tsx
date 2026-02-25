@@ -35,9 +35,7 @@ export default function WizardStepPlans({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tiers.map((tier, index) => {
           const isSubscribing = subscribing === tier.id
-          const features: string[] = tier.description
-            ? [tier.description]
-            : [`${tier.monthly_booking_quota} sessions per month`]
+          const features: string[] = [`${tier.monthly_booking_quota} sessions per month`]
 
           return (
             <motion.div
