@@ -3,11 +3,11 @@
 /* Forge Design System - White Label Ready */
 :root {
   /* Facility Branding (configurable per facility) */
-  --facility-primary: #1973f0;
+  --facility-primary: #E8923A;
   --facility-name: "Forge";
 
   /* Primary Color (fallback must match DEFAULT_BRAND_COLOR in lib/constants/branding.ts) */
-  --primary: var(--facility-primary, #1973f0);
+  --primary: var(--facility-primary, #E8923A);
 
   /* Light Mode (default) */
   --bg-primary: #ffffff;

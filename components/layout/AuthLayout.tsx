@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import DesktopAuthLayout from './DesktopAuthLayout'
@@ -34,11 +35,9 @@ export default function AuthLayout({ children, title, description }: AuthLayoutP
           ease: [0.25, 0.4, 0.25, 1],
         }}
       >
-        {/* Logo badge */}
+        {/* Logo */}
         <div className="flex justify-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary rounded-xl">
-            <span className="text-white text-2xl font-bold font-[--font-lexend]">F</span>
-          </div>
+          <Image src="/forge-logo.png" alt="Forge" width={160} height={80} className="h-16 w-auto" priority />
         </div>
 
         {/* Heading */}

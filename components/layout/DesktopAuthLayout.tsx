@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import GlassCard from '@/components/ui/GlassCard'
 
@@ -54,10 +55,7 @@ export default function DesktopAuthLayout({ children, title, description }: Desk
               background: 'linear-gradient(135deg, var(--facility-primary), color-mix(in srgb, var(--facility-primary) 70%, #000))',
             }}
           >
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6">
-              <span className="text-white text-3xl font-bold font-[--font-lexend]">F</span>
-            </div>
-            <h2 className="text-2xl font-bold font-[--font-lexend] mb-2">Forge</h2>
+            <Image src="/forge-logo.png" alt="Forge Sports Performance" width={220} height={110} className="h-24 w-auto mb-4" priority />
             <p className="text-white/70 text-sm text-center">
               Premium sports performance training
             </p>

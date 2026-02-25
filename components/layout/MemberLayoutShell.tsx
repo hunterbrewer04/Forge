@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import DesktopMemberLayout from './DesktopMemberLayout'
 
@@ -22,10 +23,8 @@ export default function MemberLayoutShell({ children }: MemberLayoutShellProps) 
         backgroundColor: 'var(--bg-secondary)',
       }}
     >
-      <header className="flex items-center justify-center py-8">
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-          <span className="text-white text-xl font-bold font-[--font-lexend]">F</span>
-        </div>
+      <header className="flex items-center justify-center py-6">
+        <Image src="/forge-logo.png" alt="Forge" width={140} height={70} className="h-12 w-auto" priority />
       </header>
 
       <main className="flex-1 flex flex-col items-center px-4 pb-12">

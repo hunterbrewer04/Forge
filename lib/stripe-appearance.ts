@@ -5,7 +5,7 @@ export function getStripeAppearance(isDark: boolean): Appearance {
     return {
       theme: 'night',
       variables: {
-        colorPrimary: '#1973f0',
+        colorPrimary: '#E8923A',
         colorBackground: '#1a2235',
         colorText: '#ffffff',
         colorTextSecondary: '#9ca3af',
@@ -20,7 +20,7 @@ export function getStripeAppearance(isDark: boolean): Appearance {
           boxShadow: 'none',
         },
         '.Input:focus': {
-          border: '1px solid #1973f0',
+          border: '1px solid #E8923A',
           boxShadow: 'none',
         },
         '.Label': {
@@ -34,7 +34,7 @@ export function getStripeAppearance(isDark: boolean): Appearance {
   return {
     theme: 'stripe',
     variables: {
-      colorPrimary: '#1973f0',
+      colorPrimary: '#E8923A',
       colorBackground: '#ffffff',
       colorText: '#111418',
       colorTextSecondary: '#60728a',
@@ -49,7 +49,7 @@ export function getStripeAppearance(isDark: boolean): Appearance {
         boxShadow: 'none',
       },
       '.Input:focus': {
-        border: '1px solid #1973f0',
+        border: '1px solid #E8923A',
         boxShadow: 'none',
       },
       '.Label': {
