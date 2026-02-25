@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
 import { Button } from '@/components/ui/shadcn/button'
-import { Card, CardContent } from '@/components/ui/shadcn/card'
+import { Card } from '@/components/ui/shadcn/card'
 
 interface PaymentFormProps {
   tierName: string
@@ -18,22 +18,37 @@ interface PaymentFormProps {
 
 function OrderSummaryCard({ tierName, priceMonthly }: { tierName: string; priceMonthly: number }) {
   return (
-    <Card className="p-0 gap-0">
-      <CardContent className="p-6 space-y-3">
-        <h3 className="text-sm font-semibold text-text-primary">Order summary</h3>
-        <div className="flex justify-between">
+    <Card className="p-0 gap-0 overflow-hidden">
+      {/* Header */}
+      <div className="bg-bg-secondary/60 px-6 py-4 border-b border-border">
+        <h3 className="text-base font-semibold text-text-primary font-[--font-lexend]">
+          Order Summary
+        </h3>
+      </div>
+
+      {/* Body */}
+      <div className="px-6 py-5 space-y-4">
+        <div className="flex items-center justify-between">
           <span className="text-text-secondary text-sm">Plan</span>
           <span className="text-text-primary text-sm font-medium">{tierName}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-text-secondary text-sm">Billed</span>
+
+        <div className="flex items-center justify-between">
+          <span className="text-text-secondary text-sm">Billing cycle</span>
+          <span className="text-text-primary text-sm font-medium">Monthly</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-text-secondary text-sm">Price</span>
           <span className="text-text-primary text-sm font-medium">${priceMonthly}/month</span>
         </div>
-        <div className="border-t border-border pt-3 flex justify-between">
-          <span className="text-text-primary text-sm font-semibold">Total</span>
-          <span className="text-text-primary text-sm font-semibold">${priceMonthly}/mo</span>
-        </div>
-      </CardContent>
+      </div>
+
+      {/* Footer / Total */}
+      <div className="bg-bg-secondary/40 px-6 py-4 border-t border-border flex items-center justify-between">
+        <span className="text-text-primary font-semibold">Total due today</span>
+        <span className="text-lg font-bold text-primary">${priceMonthly}</span>
+      </div>
     </Card>
   )
 }

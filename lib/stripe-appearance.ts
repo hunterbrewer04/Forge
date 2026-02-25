@@ -27,6 +27,16 @@ export function getStripeAppearance(isDark: boolean): Appearance {
           color: '#9ca3af',
           fontSize: '13px',
         },
+        '.Tab--selected': {
+          borderColor: '#ffffff',
+          color: '#ffffff',
+        },
+        '.Tab--selected .TabIcon': {
+          fill: '#ffffff',
+        },
+        '.Tab--selected .TabLabel': {
+          color: '#ffffff',
+        },
       },
     }
   }
@@ -55,6 +65,16 @@ export function getStripeAppearance(isDark: boolean): Appearance {
       '.Label': {
         color: '#60728a',
         fontSize: '13px',
+      },
+      '.Tab--selected': {
+        borderColor: '#111418',
+        color: '#111418',
+      },
+      '.Tab--selected .TabIcon': {
+        fill: '#111418',
+      },
+      '.Tab--selected .TabLabel': {
+        color: '#111418',
       },
     },
   }
