@@ -5,30 +5,21 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { getStripeAppearance } from '@/lib/stripe-appearance'
+import { stripePromise } from '@/lib/stripe-client'
 import type { MembershipTier } from '@/lib/types/database'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import WizardProgressBar from './WizardProgressBar'
 import WizardStepAccount from './WizardStepAccount'
 import WizardStepPlans from './WizardStepPlans'
 import WizardStepSuccess from './WizardStepSuccess'
 import PaymentForm from './PaymentForm'
-
-// Created once at module scope — never recreated on re-render
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
-
-type WizardStep = 'account' | 'plans' | 'payment' | 'success'
-
-const STEP_LABELS = ['Create Account', 'Choose Plan', 'Payment', 'Confirmation']
-const STEP_ORDER: WizardStep[] = ['account', 'plans', 'payment', 'success']
-
-function stepIndex(step: WizardStep): number {
-  return STEP_ORDER.indexOf(step)
-}
+import DesktopMembershipWizard from './DesktopMembershipWizard'
+import { type WizardStep, STEP_LABELS, stepIndex, STEP_HEADINGS } from './wizard-constants'
 
 // Slide direction based on step transition
 const slideVariants = {
@@ -59,6 +50,7 @@ export default function MembershipWizard() {
   const [subscribing, setSubscribing] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [direction, setDirection] = useState(1) // 1 = forward, -1 = back
+  const isDesktop = useIsDesktop()
 
   // Already active — skip to schedule
   useEffect(() => {
@@ -129,14 +121,6 @@ export default function MembershipWizard() {
   // Stripe appearance keyed to theme for remount on toggle
   const stripeAppearance = useMemo(() => getStripeAppearance(isDark), [isDark])
 
-  // Headings per step
-  const stepHeadings: Record<WizardStep, { title: string; description?: string }> = {
-    account: { title: 'Create your account', description: 'Join to book sessions and manage your training.' },
-    plans: { title: 'Choose your plan', description: 'Pick a membership to unlock the full booking calendar.' },
-    payment: { title: 'Payment details', description: 'Your membership starts immediately after payment.' },
-    success: { title: '', description: '' },
-  }
-
   if (authLoading || loadingTiers) {
     return (
       <div className="flex justify-center py-16">
@@ -145,7 +129,26 @@ export default function MembershipWizard() {
     )
   }
 
-  const heading = stepHeadings[step]
+  if (isDesktop) {
+    return (
+      <DesktopMembershipWizard
+        step={step}
+        direction={direction}
+        tiers={tiers}
+        selectedTier={selectedTier}
+        clientSecret={clientSecret}
+        subscribing={subscribing}
+        error={error}
+        isDark={isDark}
+        onAccountComplete={handleAccountComplete}
+        onSelectTier={handleSelectTier}
+        onPaymentBack={handlePaymentBack}
+        onPaymentSuccess={() => goTo('success')}
+      />
+    )
+  }
+
+  const heading = STEP_HEADINGS[step]
 
   return (
     <div className="space-y-8">

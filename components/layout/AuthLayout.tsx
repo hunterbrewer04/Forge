@@ -1,6 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
+import DesktopAuthLayout from './DesktopAuthLayout'
 
 interface AuthLayoutProps {
   children: React.ReactNode
@@ -9,6 +11,12 @@ interface AuthLayoutProps {
 }
 
 export default function AuthLayout({ children, title, description }: AuthLayoutProps) {
+  const isDesktop = useIsDesktop()
+
+  if (isDesktop) {
+    return <DesktopAuthLayout title={title} description={description}>{children}</DesktopAuthLayout>
+  }
+
   return (
     <div
       className="min-h-screen flex items-center justify-center overflow-y-auto bg-bg-secondary px-4 py-12"
