@@ -24,6 +24,7 @@ interface AuthContextType {
   error: AuthError | null
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   error: null,
   signOut: async () => {},
   refreshSession: async () => {},
+  refreshProfile: async () => {},
 })
 
 /**
@@ -202,6 +204,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase, fetchProfile])
 
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await fetchProfile(user.id)
+    }
+  }, [user, fetchProfile])
+
   const signOut = async () => {
     try {
       // Clear SW navigation cache before signing out
@@ -228,7 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, error, signOut, refreshSession }}>
+    <AuthContext.Provider value={{ user, profile, loading, error, signOut, refreshSession, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )
