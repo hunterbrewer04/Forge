@@ -13,7 +13,7 @@ export default async function TrainerLayout({
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login')
+    redirect('/member/login')
   }
 
   const { data: profile } = await supabase

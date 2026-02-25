@@ -53,7 +53,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!loading && !user) {
       setError('No user found. Redirecting to login...')
-      router.push('/login')
+      router.push('/member/login')
     } else if (!loading && user && !profile) {
       setError('Profile not found. Please contact support.')
     }
@@ -179,7 +179,7 @@ export default function ChatPage() {
                   Refresh
                 </button>
                 <button
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push('/member/login')}
                   className="flex-1 px-4 py-2.5 text-text-secondary bg-bg-secondary rounded-lg font-medium text-sm transition-colors"
                 >
                   Re-login
@@ -200,7 +200,7 @@ export default function ChatPage() {
           <p className="text-text-secondary mb-6">{error || 'Your user profile could not be loaded.'}</p>
           <div className="space-y-3">
             <button
-              onClick={() => signOut().then(() => router.push('/login'))}
+              onClick={() => signOut().then(() => router.push('/member/login'))}
               className="w-full px-6 py-3 text-error bg-error/10 border border-error/20 rounded-lg font-medium"
             >
               Sign Out
@@ -376,7 +376,7 @@ export default function ChatPage() {
       conversationList={conversationListComponent}
       activeChat={activeChatComponent}
       showActiveChat={showThread}
-      onSignOut={() => signOut().then(() => router.push('/login'))}
+      onSignOut={() => signOut().then(() => router.push('/member/login'))}
     />
   )
 }

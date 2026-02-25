@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 // Routes members without active subscriptions can still visit
-const PAYWALL_EXEMPT = ['/member/', '/login', '/signup', '/auth/', '/profile']
+const PAYWALL_EXEMPT = ['/member/', '/auth/', '/profile']
 
 function hasAccess(profile: { is_trainer: boolean; is_admin: boolean; has_full_access: boolean; is_member: boolean; membership_status: string | null }) {
   if (profile.is_trainer || profile.is_admin) return true

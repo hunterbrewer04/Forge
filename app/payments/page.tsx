@@ -35,7 +35,7 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login')
+      router.push('/member/login')
     }
   }, [user, loading, router])
 

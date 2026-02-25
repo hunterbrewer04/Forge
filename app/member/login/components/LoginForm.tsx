@@ -79,11 +79,16 @@ export default function LoginForm() {
       }
 
       // Await SW cache clear before redirect to prevent serving stale login page
+      // Use Promise.race with timeout because navigator.serviceWorker.ready
+      // never rejects and waits indefinitely if no SW is active
       if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
         try {
-          const reg = await navigator.serviceWorker.ready
-          reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
-          await new Promise(resolve => setTimeout(resolve, 50))
+          const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 1000))
+          const reg = await Promise.race([navigator.serviceWorker.ready, timeout])
+          if (reg) {
+            reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+            await new Promise(resolve => setTimeout(resolve, 50))
+          }
         } catch (err) {
           console.warn('Failed to clear SW cache:', err)
         }
@@ -150,7 +155,7 @@ export default function LoginForm() {
         className="text-center text-sm"
       >
         <span className="text-text-secondary">Don&apos;t have an account? </span>
-        <Link href="/signup" className="font-medium text-primary hover:text-primary/80">
+        <Link href="/member/signup" className="font-medium text-primary hover:text-primary/80">
           Sign up
         </Link>
       </motion.div>

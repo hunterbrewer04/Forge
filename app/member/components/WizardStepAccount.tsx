@@ -233,7 +233,7 @@ export default function WizardStepAccount({ onComplete }: WizardStepAccountProps
         className="text-center text-sm text-muted-foreground"
       >
         Already have an account?{' '}
-        <Link href="/login" className="text-primary font-medium hover:underline underline-offset-4">
+        <Link href="/member/login" className="text-primary font-medium hover:underline underline-offset-4">
           Sign in
         </Link>
       </motion.p>
