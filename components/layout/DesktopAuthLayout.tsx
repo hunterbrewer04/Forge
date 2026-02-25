@@ -11,7 +11,7 @@ interface DesktopAuthLayoutProps {
 
 export default function DesktopAuthLayout({ children, title, description }: DesktopAuthLayoutProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center overflow-y-auto px-4 py-12 relative">
+    <div className="h-screen overflow-y-auto">
       {/* Gradient mesh background */}
       <div className="gradient-mesh" />
 
@@ -35,7 +35,8 @@ export default function DesktopAuthLayout({ children, title, description }: Desk
         transition={{ duration: 10, ease: 'easeInOut', repeat: Infinity }}
       />
 
-      {/* Main content */}
+      {/* Main content — min-h-full + flex centers when short, scrolls when tall */}
+      <div className="min-h-full flex items-center justify-center px-4 py-12 relative">
       <motion.div
         className="relative z-10 w-full max-w-5xl"
         initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -76,6 +77,7 @@ export default function DesktopAuthLayout({ children, title, description }: Desk
           </div>
         </GlassCard>
       </motion.div>
+      </div>
     </div>
   )
 }

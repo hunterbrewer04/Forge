@@ -6,7 +6,7 @@ interface DesktopMemberLayoutProps {
 
 export default function DesktopMemberLayout({ children }: DesktopMemberLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col relative">
+    <div className="h-screen overflow-y-auto relative">
       {/* Gradient mesh background */}
       <div className="gradient-mesh" />
 
@@ -16,7 +16,7 @@ export default function DesktopMemberLayout({ children }: DesktopMemberLayoutPro
         </div>
       </header>
 
-      <main className="relative z-10 flex-1 flex flex-col items-center px-4 pb-12">
+      <main className="relative z-10 flex flex-col items-center px-4 pb-12">
         <div className="w-full max-w-5xl">{children}</div>
       </main>
     </div>
