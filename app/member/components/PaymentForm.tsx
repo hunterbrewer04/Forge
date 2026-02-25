@@ -6,11 +6,35 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
+import { Button } from '@/components/ui/shadcn/button'
+import { Card, CardContent } from '@/components/ui/shadcn/card'
 
 interface PaymentFormProps {
   tierName: string
   priceMonthly: number
   onBack: () => void
+}
+
+function OrderSummaryCard({ tierName, priceMonthly }: { tierName: string; priceMonthly: number }) {
+  return (
+    <Card className="p-0 gap-0">
+      <CardContent className="p-6 space-y-3">
+        <h3 className="text-sm font-semibold text-text-primary">Order summary</h3>
+        <div className="flex justify-between">
+          <span className="text-text-secondary text-sm">Plan</span>
+          <span className="text-text-primary text-sm font-medium">{tierName}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-text-secondary text-sm">Billed</span>
+          <span className="text-text-primary text-sm font-medium">${priceMonthly}/month</span>
+        </div>
+        <div className="border-t border-border pt-3 flex justify-between">
+          <span className="text-text-primary text-sm font-semibold">Total</span>
+          <span className="text-text-primary text-sm font-semibold">${priceMonthly}/mo</span>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function PaymentForm({ tierName, priceMonthly, onBack }: PaymentFormProps) {
@@ -51,53 +75,54 @@ export default function PaymentForm({ tierName, priceMonthly, onBack }: PaymentF
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Order summary */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-stone-400 text-sm">Plan</span>
-          <span className="text-white text-sm font-medium">{tierName}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-stone-400 text-sm">Billed</span>
-          <span className="text-white text-sm font-medium">
-            ${priceMonthly}/month
-          </span>
-        </div>
+      {/* Mobile: order summary above payment element */}
+      <div className="md:hidden">
+        <OrderSummaryCard tierName={tierName} priceMonthly={priceMonthly} />
       </div>
 
-      <div className="border-t border-stone-700" />
+      <div className="grid md:grid-cols-5 gap-8">
+        {/* Left col (desktop: 3/5): Stripe PaymentElement + submit */}
+        <div className="md:col-span-3 space-y-6">
+          {/* Stripe Payment Element — renders card fields, Apple Pay, Google Pay */}
+          <PaymentElement
+            onLoadError={(e) => {
+              console.error('PaymentElement load error:', e.error)
+              setError(e.error.message ?? 'Failed to load payment form')
+            }}
+            onReady={() => console.log('PaymentElement ready')}
+          />
 
-      {/* Stripe Payment Element — renders card fields, Apple Pay, Google Pay */}
-      <PaymentElement
-        onLoadError={(e) => {
-          console.error('PaymentElement load error:', e.error)
-          setError(e.error.message ?? 'Failed to load payment form')
-        }}
-        onReady={() => console.log('PaymentElement ready')}
-      />
+          {error && (
+            <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
 
-      {error && (
-        <div className="rounded-md bg-red-500/10 border border-red-500/20 p-3">
-          <p className="text-sm text-red-400">{error}</p>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={!stripe || !elements || loading}
+          >
+            {loading ? 'Processing...' : `Subscribe — $${priceMonthly}/mo`}
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            onClick={onBack}
+          >
+            ← Back to plans
+          </Button>
         </div>
-      )}
 
-      <button
-        type="submit"
-        disabled={!stripe || !elements || loading}
-        className="flex w-full justify-center rounded-xl py-3 px-4 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ backgroundColor: 'var(--facility-primary)' }}
-      >
-        {loading ? 'Processing…' : `Subscribe — $${priceMonthly}/mo`}
-      </button>
-
-      <button
-        type="button"
-        onClick={onBack}
-        className="w-full text-center text-sm text-stone-500 hover:text-stone-300 transition-colors"
-      >
-        ← Back to plans
-      </button>
+        {/* Right col (desktop: 2/5): order summary */}
+        <div className="hidden md:block md:col-span-2">
+          <OrderSummaryCard tierName={tierName} priceMonthly={priceMonthly} />
+        </div>
+      </div>
     </form>
   )
 }
