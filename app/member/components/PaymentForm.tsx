@@ -28,9 +28,9 @@ function OrderSummaryCard({ tierName, priceMonthly }: { tierName: string; priceM
 
       {/* Body */}
       <div className="px-6 py-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-text-secondary text-sm">Plan</span>
-          <span className="text-text-primary text-sm font-medium">{tierName}</span>
+        <div className="flex items-start justify-between gap-4">
+          <span className="text-text-secondary text-sm shrink-0">Plan</span>
+          <span className="text-text-primary text-sm font-medium text-right">{tierName}</span>
         </div>
 
         <div className="flex items-center justify-between">

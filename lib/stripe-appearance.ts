@@ -31,10 +31,11 @@ export function getStripeAppearance(isDark: boolean): Appearance {
           borderColor: '#ffffff',
           color: '#ffffff',
         },
-        '.Tab--selected .TabIcon': {
+        '.TabIcon--selected': {
           fill: '#ffffff',
+          color: '#ffffff',
         },
-        '.Tab--selected .TabLabel': {
+        '.TabLabel--selected': {
           color: '#ffffff',
         },
       },
@@ -70,10 +71,11 @@ export function getStripeAppearance(isDark: boolean): Appearance {
         borderColor: '#111418',
         color: '#111418',
       },
-      '.Tab--selected .TabIcon': {
+      '.TabIcon--selected': {
         fill: '#111418',
+        color: '#111418',
       },
-      '.Tab--selected .TabLabel': {
+      '.TabLabel--selected': {
         color: '#111418',
       },
     },
