@@ -208,6 +208,7 @@ export default function MembershipWizard() {
                   tierName={selectedTier.name}
                   priceMonthly={selectedTier.price_monthly}
                   onBack={handlePaymentBack}
+                  onSuccess={() => goTo('success')}
                 />
               </Elements>
             </motion.div>

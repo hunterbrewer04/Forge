@@ -13,6 +13,7 @@ interface PaymentFormProps {
   tierName: string
   priceMonthly: number
   onBack: () => void
+  onSuccess?: () => void
 }
 
 function OrderSummaryCard({ tierName, priceMonthly }: { tierName: string; priceMonthly: number }) {
@@ -37,7 +38,7 @@ function OrderSummaryCard({ tierName, priceMonthly }: { tierName: string; priceM
   )
 }
 
-export default function PaymentForm({ tierName, priceMonthly, onBack }: PaymentFormProps) {
+export default function PaymentForm({ tierName, priceMonthly, onBack, onSuccess }: PaymentFormProps) {
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
@@ -69,8 +70,12 @@ export default function PaymentForm({ tierName, priceMonthly, onBack }: PaymentF
       return
     }
 
-    // Payment confirmed without redirect — navigate to success
-    router.push('/member/success')
+    // Payment confirmed without redirect — advance wizard or navigate
+    if (onSuccess) {
+      onSuccess()
+    } else {
+      router.push('/member/success')
+    }
   }
 
   return (
@@ -89,7 +94,6 @@ export default function PaymentForm({ tierName, priceMonthly, onBack }: PaymentF
               console.error('PaymentElement load error:', e.error)
               setError(e.error.message ?? 'Failed to load payment form')
             }}
-            onReady={() => console.log('PaymentElement ready')}
           />
 
           {error && (
