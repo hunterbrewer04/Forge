@@ -8,7 +8,6 @@ export interface Profile {
   is_trainer: boolean
   has_full_access: boolean   // renamed from is_client
   is_admin: boolean
-  is_guest: boolean
   is_member: boolean
   membership_status: 'active' | 'past_due' | 'canceled' | null
   membership_tier_id: string | null
