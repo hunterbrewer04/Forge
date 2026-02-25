@@ -24,7 +24,7 @@ export default function MemberLayoutShell({ children }: MemberLayoutShellProps) 
       }}
     >
       <header className="flex items-center justify-center py-6">
-        <Image src="/forge-logo.png" alt="Forge" width={280} height={140} className="h-24 w-auto" priority />
+        <Image src="/forge-logo.png" alt="Forge" width={560} height={280} className="h-56 w-auto" priority />
       </header>
 
       <main className="flex-1 flex flex-col items-center px-4 pb-12">

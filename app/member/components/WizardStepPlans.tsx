@@ -31,18 +31,17 @@ export default function WizardStepPlans({
         </div>
       )}
 
-      {/* ── Plans grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* ── Plans ── */}
+      <div className="flex flex-col gap-6">
         {tiers.map((tier, index) => {
           const isSubscribing = subscribing === tier.id
-          const features: string[] = [`${tier.monthly_booking_quota} sessions per month`]
 
           return (
             <motion.div
               key={tier.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              whileHover={{ y: -2, transition: { duration: 0.2 } }}
               transition={{
                 delay: index * 0.1,
                 duration: 0.4,
@@ -50,50 +49,43 @@ export default function WizardStepPlans({
               }}
             >
               <Card className="p-6 gap-0 relative overflow-hidden hover:border-primary/50 transition-colors">
-                {/* ── Tier header ── */}
-                <div>
-                  <h2 className="text-lg font-semibold text-text-primary">
-                    {tier.name}
-                  </h2>
-                  <p className="text-text-secondary text-sm mt-0.5">
-                    {tier.monthly_booking_quota} sessions per month
-                  </p>
-                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  {/* Left: tier info */}
+                  <div className="flex items-center gap-5">
+                    <div>
+                      <h2 className="text-lg font-semibold text-text-primary">
+                        {tier.name}
+                      </h2>
+                      <p className="text-text-secondary text-sm mt-0.5 flex items-center gap-2">
+                        <Check
+                          size={14}
+                          strokeWidth={2.5}
+                          className="shrink-0 text-primary"
+                          aria-hidden="true"
+                        />
+                        {tier.monthly_booking_quota} lessons per month
+                      </p>
+                    </div>
+                  </div>
 
-                {/* ── Price ── */}
-                <div className="mt-4">
-                  <span className="text-3xl font-bold text-text-primary">
-                    ${tier.price_monthly}
-                  </span>
-                  <span className="text-text-secondary text-base font-normal">/mo</span>
-                </div>
-
-                {/* ── Feature list ── */}
-                <ul className="mt-4 space-y-2">
-                  {features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <Check
-                        size={15}
-                        strokeWidth={2.5}
-                        className="mt-0.5 shrink-0 text-primary"
-                        aria-hidden="true"
-                      />
-                      <span className="text-sm text-text-secondary leading-snug">
-                        {feature}
+                  {/* Right: price + button */}
+                  <div className="flex items-center gap-5 sm:flex-shrink-0">
+                    <div className="text-right">
+                      <span className="text-3xl font-bold text-text-primary">
+                        ${tier.price_monthly}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* ── CTA ── */}
-                <Button
-                  className="w-full mt-4"
-                  size="lg"
-                  disabled={subscribing !== null}
-                  onClick={() => onSelectTier(tier)}
-                >
-                  {isSubscribing ? 'Setting up...' : `Get ${tier.name}`}
-                </Button>
+                      <span className="text-text-secondary text-base font-normal">/mo</span>
+                    </div>
+                    <Button
+                      size="lg"
+                      disabled={subscribing !== null}
+                      onClick={() => onSelectTier(tier)}
+                      className="min-w-[130px]"
+                    >
+                      {isSubscribing ? 'Setting up...' : 'Subscribe'}
+                    </Button>
+                  </div>
+                </div>
               </Card>
             </motion.div>
           )
