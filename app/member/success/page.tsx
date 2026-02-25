@@ -1,29 +1,43 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { CheckCircle } from '@/components/ui/icons'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import WizardStepSuccess from '@/app/member/components/WizardStepSuccess'
 
 export default function MemberSuccessPage() {
   const { profile, refreshProfile } = useAuth()
   const [activated, setActivated] = useState(
     profile?.membership_status === 'active'
   )
+  const activatedRef = useRef(activated)
 
+  // Keep ref in sync so the poll loop can read the latest value
+  useEffect(() => {
+    activatedRef.current = activated
+  }, [activated])
+
+  // Watch for profile update from polling
+  useEffect(() => {
+    if (profile?.membership_status === 'active') {
+      setActivated(true)
+    }
+  }, [profile?.membership_status])
+
+  // Poll for membership activation after payment
   useEffect(() => {
     if (activated) return
 
     let cancelled = false
-    let attempt = 0
     const maxAttempts = 5
     const interval = 1500
 
     const poll = async () => {
-      while (!cancelled && attempt < maxAttempts) {
-        attempt++
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        if (cancelled || activatedRef.current) return
+
         await refreshProfile()
-        // refreshProfile updates profile in context; wait for next render
+        if (cancelled || activatedRef.current) return
+
         await new Promise(resolve => setTimeout(resolve, interval))
       }
       // After max attempts, stop blocking regardless
@@ -33,64 +47,23 @@ export default function MemberSuccessPage() {
     poll()
 
     return () => { cancelled = true }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Watch for profile update from polling
-  useEffect(() => {
-    if (profile?.membership_status === 'active') {
-      setActivated(true)
-    }
-  }, [profile?.membership_status])
+  }, [activated, refreshProfile])
 
   if (!activated) {
     return (
-      <div className="space-y-8 text-center">
+      <div className="flex flex-col items-center text-center gap-6 py-4">
         <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-full border-4 border-stone-600 border-t-[var(--facility-primary)] animate-spin" />
+          <div className="w-20 h-20 rounded-full border-4 border-border border-t-primary animate-spin" />
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-white font-[--font-lexend]">
-            Activating your membership...
-          </h1>
-          <p className="mt-3 text-stone-400 text-sm leading-relaxed">
-            This usually takes just a few seconds.
-          </p>
-        </div>
+        <h2 className="text-3xl font-bold text-text-primary font-[--font-display]">
+          Activating your membership...
+        </h2>
+        <p className="text-text-secondary text-sm leading-relaxed">
+          This usually takes just a few seconds.
+        </p>
       </div>
     )
   }
 
-  return (
-    <div className="space-y-8 text-center">
-      <div className="flex justify-center">
-        <CheckCircle className="w-16 h-16 text-green-500" />
-      </div>
-
-      <div>
-        <h1 className="text-3xl font-bold text-white font-[--font-lexend]">
-          You&apos;re all set!
-        </h1>
-        <p className="mt-3 text-stone-400 text-sm leading-relaxed">
-          Your membership is active. Browse the session calendar and book
-          your first lesson below.
-        </p>
-      </div>
-
-      <Link
-        href="/schedule"
-        className="flex w-full justify-center rounded-xl py-3 px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: 'var(--facility-primary)' }}
-      >
-        Browse Sessions
-      </Link>
-
-      <p className="text-stone-500 text-xs">
-        Manage your membership at any time from your{' '}
-        <Link href="/member/portal" className="underline text-stone-400">
-          billing portal
-        </Link>
-        .
-      </p>
-    </div>
-  )
+  return <WizardStepSuccess />
 }

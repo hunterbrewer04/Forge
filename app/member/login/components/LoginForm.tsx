@@ -3,8 +3,21 @@
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase-browser'
 import { getErrorMessage } from '@/lib/utils/errors'
+import { Input } from '@/components/ui/shadcn/input'
+import { Label } from '@/components/ui/shadcn/label'
+import { Button } from '@/components/ui/shadcn/button'
+
+const stagger = {
+  hidden: { opacity: 0, y: 10 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.3, ease: 'easeOut' as const },
+  }),
+}
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
@@ -89,28 +102,17 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-white font-[--font-lexend]">
-          Sign in to your account
-        </h1>
-        <p className="mt-2 text-stone-400 text-sm">
-          Welcome back. Enter your credentials below.
-        </p>
-      </div>
+    <form className="space-y-6" onSubmit={handleLogin}>
+      {error && (
+        <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
 
-      <form
-        className="space-y-6 bg-[#2a2a2a] border border-stone-700 rounded-2xl p-6"
-        onSubmit={handleLogin}
-      >
-        {error && (
-          <div className="rounded-md bg-red-500/10 border border-red-500/20 p-4">
-            <p className="text-sm text-red-400">{error}</p>
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <input
+      <div className="space-y-4">
+        <motion.div custom={0} variants={stagger} initial="hidden" animate="show">
+          <Label htmlFor="email">Email address</Label>
+          <Input
             id="email"
             name="email"
             type="email"
@@ -118,11 +120,14 @@ export default function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset ring-stone-700 placeholder:text-stone-500 focus:ring-2 focus:ring-inset focus:ring-[--facility-primary] sm:text-sm"
             placeholder="Email address"
+            className="h-12 text-base mt-1.5"
           />
+        </motion.div>
 
-          <input
+        <motion.div custom={1} variants={stagger} initial="hidden" animate="show">
+          <Label htmlFor="password">Password</Label>
+          <Input
             id="password"
             name="password"
             type="password"
@@ -130,27 +135,30 @@ export default function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset ring-stone-700 placeholder:text-stone-500 focus:ring-2 focus:ring-inset focus:ring-[--facility-primary] sm:text-sm"
             placeholder="Password"
+            className="h-12 text-base mt-1.5"
           />
-        </div>
+        </motion.div>
+      </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex w-full justify-center rounded-lg py-3 px-4 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ backgroundColor: 'var(--facility-primary)' }}
-        >
+      <motion.div custom={2} variants={stagger} initial="hidden" animate="show">
+        <Button type="submit" size="lg" className="w-full" disabled={loading}>
           {loading ? 'Signing in...' : 'Sign in'}
-        </button>
+        </Button>
+      </motion.div>
 
-        <p className="text-center text-sm text-stone-400">
-          Don&apos;t have an account?{' '}
-          <Link href="/member/signup" className="font-medium" style={{ color: 'var(--facility-primary)' }}>
-            Sign up
-          </Link>
-        </p>
-      </form>
-    </div>
+      <motion.div
+        custom={3}
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="text-center text-sm"
+      >
+        <span className="text-text-secondary">Don&apos;t have an account? </span>
+        <Link href="/member/signup" className="font-medium text-primary hover:text-primary/80">
+          Sign up
+        </Link>
+      </motion.div>
+    </form>
   )
 }

@@ -60,6 +60,20 @@ export async function POST(request: NextRequest) {
         break
       }
 
+      case 'price.updated': {
+        const price = event.data.object
+        if (price.unit_amount != null) {
+          await supabase
+            .from('membership_tiers')
+            .update({
+              price_monthly: price.unit_amount / 100,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('stripe_price_id', price.id)
+        }
+        break
+      }
+
       case 'invoice.payment_failed': {
         const invoice = event.data.object
         const customerId = typeof invoice.customer === 'string' ? invoice.customer : null

@@ -54,7 +54,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#1973f0",
+  themeColor: "#E8923A",
 };
 
 export default function RootLayout({
@@ -144,13 +144,12 @@ export default function RootLayout({
       >
         <Providers>{children}</Providers>
         <Toaster
-          theme="dark"
           position="top-center"
           toastOptions={{
             style: {
-              background: '#2C2C2C',
-              border: '1px solid #3f3f46',
-              color: '#fff',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
             },
           }}
         />

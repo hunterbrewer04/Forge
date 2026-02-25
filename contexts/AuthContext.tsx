@@ -170,9 +170,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setError(null)
           setLoading(false)
           // Clear SW navigation cache to prevent serving stale authenticated pages
+          // Use Promise.race to avoid hanging if no SW is active
           if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(
-              reg => reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+            const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 1000))
+            Promise.race([navigator.serviceWorker.ready, timeout]).then(
+              reg => reg?.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
             ).catch((err) => { console.warn('Failed to clear SW cache:', err) })
           }
         } else if (event === 'TOKEN_REFRESHED') {
@@ -205,17 +207,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, fetchProfile])
 
   const refreshProfile = useCallback(async () => {
-    if (user) {
-      await fetchProfile(user.id)
+    if (!user) {
+      console.warn('refreshProfile called with no authenticated user')
+      return
     }
+    await fetchProfile(user.id)
   }, [user, fetchProfile])
 
   const signOut = async () => {
     try {
       // Clear SW navigation cache before signing out
+      // Use Promise.race to avoid hanging if no SW is active
       if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(
-          reg => reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+        const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 1000))
+        Promise.race([navigator.serviceWorker.ready, timeout]).then(
+          reg => reg?.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
         ).catch((err) => { console.warn('Failed to clear SW cache:', err) })
       }
 
