@@ -3,8 +3,13 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { Check, Circle } from 'lucide-react'
 import { createClient } from '@/lib/supabase-browser'
 import { getErrorMessage } from '@/lib/utils/errors'
+import { Input } from '@/components/ui/shadcn/input'
+import { Label } from '@/components/ui/shadcn/label'
+import { Button } from '@/components/ui/shadcn/button'
 
 // Password validation requirements
 interface PasswordRequirement {
@@ -33,6 +38,15 @@ function validatePassword(password: string): string | null {
     return 'Password must contain at least one number'
   }
   return null
+}
+
+const stagger = {
+  hidden: { opacity: 0, y: 10 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.3, ease: 'easeOut' },
+  }),
 }
 
 export default function SignupForm() {
@@ -109,178 +123,171 @@ export default function SignupForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#1C1C1C] px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          {/* Forge logo placeholder */}
-          <div className="w-12 h-12 bg-[#ff6714] rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl font-bold">F</span>
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-white">
-            Create your account
-          </h2>
+    <form className="space-y-6" onSubmit={handleSignup}>
+      {error && (
+        <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4">
+          <p className="text-sm text-destructive">{error}</p>
         </div>
+      )}
 
-        <form className="mt-8 space-y-6 bg-[#2a2a2a] border border-stone-700 rounded-2xl p-6" onSubmit={handleSignup}>
-          {error && (
-            <div className="rounded-md bg-red-500/10 border border-red-500/20 p-4">
-              <p className="text-sm text-red-400">{error}</p>
+      <div className="space-y-4">
+        <motion.div
+          custom={0}
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+        >
+          <Label htmlFor="full-name">Full name</Label>
+          <Input
+            id="full-name"
+            name="full-name"
+            type="text"
+            autoComplete="name"
+            required
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Full name"
+            className="h-12 text-base mt-1.5"
+          />
+        </motion.div>
+
+        <motion.div
+          custom={1}
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+        >
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email address"
+            className="h-12 text-base mt-1.5"
+          />
+        </motion.div>
+
+        <motion.div
+          custom={2}
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+        >
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onFocus={() => setShowPasswordRequirements(true)}
+            onBlur={() => setShowPasswordRequirements(false)}
+            placeholder="Password"
+            className={`h-12 text-base mt-1.5 ${
+              password.length > 0
+                ? passwordStatus.allMet
+                  ? 'border-green-500 focus-visible:ring-green-500/50'
+                  : 'border-amber-500 focus-visible:ring-amber-500/50'
+                : ''
+            }`}
+          />
+          {(showPasswordRequirements || password.length > 0) && (
+            <div className="bg-bg-input rounded-lg p-3 mt-2">
+              <p className="text-xs font-medium text-text-secondary mb-2">
+                Password requirements:
+              </p>
+              <ul className="space-y-1">
+                {passwordStatus.requirements.map((req) => (
+                  <li
+                    key={req.label}
+                    className={`text-xs flex items-center gap-2 ${
+                      req.met ? 'text-green-600' : 'text-text-muted'
+                    }`}
+                  >
+                    <span className="flex-shrink-0">
+                      {req.met ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Circle className="w-4 h-4" />
+                      )}
+                    </span>
+                    {req.label}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
+        </motion.div>
 
-          <div className="space-y-4 rounded-md shadow-sm">
-            <div>
-              <label htmlFor="full-name" className="sr-only">
-                Full name
-              </label>
-              <input
-                id="full-name"
-                name="full-name"
-                type="text"
-                autoComplete="name"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="relative block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset ring-stone-700 placeholder:text-stone-500 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-[#ff6714] sm:text-sm sm:leading-6"
-                placeholder="Full name"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="relative block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset ring-stone-700 placeholder:text-stone-500 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-[#ff6714] sm:text-sm sm:leading-6"
-                placeholder="Email address"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setShowPasswordRequirements(true)}
-                onBlur={() => setShowPasswordRequirements(false)}
-                className={`relative block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset placeholder:text-stone-500 focus:z-10 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
-                  password.length > 0
-                    ? passwordStatus.allMet
-                      ? 'ring-green-500 focus:ring-green-600'
-                      : 'ring-amber-500 focus:ring-amber-600'
-                    : 'ring-stone-700 focus:ring-[#ff6714]'
-                }`}
-                placeholder="Password"
-              />
-              {/* Password requirements indicator */}
-              {(showPasswordRequirements || password.length > 0) && (
-                <div className="mt-2 p-3 bg-[#1C1C1C] rounded-lg">
-                  <p className="text-xs font-medium text-stone-300 mb-2">
-                    Password requirements:
-                  </p>
-                  <ul className="space-y-1">
-                    {passwordStatus.requirements.map((req) => (
-                      <li
-                        key={req.label}
-                        className={`text-xs flex items-center gap-2 ${
-                          req.met ? 'text-green-600' : 'text-stone-500'
-                        }`}
-                      >
-                        <span className="flex-shrink-0">
-                          {req.met ? (
-                            <svg
-                              className="w-4 h-4"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          ) : (
-                            <svg
-                              className="w-4 h-4"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <circle cx="10" cy="10" r="3" />
-                            </svg>
-                          )}
-                        </span>
-                        {req.label}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="confirm-password" className="sr-only">
-                Confirm password
-              </label>
-              <input
-                id="confirm-password"
-                name="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`relative block w-full rounded-lg border-0 py-3 px-4 bg-[#1C1C1C] text-white ring-1 ring-inset placeholder:text-stone-500 focus:z-10 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6 ${
-                  confirmPassword.length > 0
-                    ? passwordsMatch
-                      ? 'ring-green-500 focus:ring-green-600'
-                      : 'ring-red-500 focus:ring-red-600'
-                    : 'ring-stone-700 focus:ring-[#ff6714]'
-                }`}
-                placeholder="Confirm password"
-              />
-              {confirmPassword.length > 0 && !passwordsMatch && (
-                <p className="mt-1 text-xs text-red-600">
-                  Passwords do not match
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading || !passwordStatus.allMet || !passwordsMatch}
-              className="group relative flex w-full justify-center rounded-lg bg-[#ff6714] py-3 px-4 text-sm font-semibold text-white hover:bg-orange-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff6714] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating account...' : 'Sign up'}
-            </button>
-          </div>
-
-          <div className="text-center text-sm">
-            <span className="text-stone-400">Already have an account? </span>
-            <Link
-              href="/login"
-              className="font-medium text-[#ff6714] hover:text-orange-400"
-            >
-              Sign in
-            </Link>
-          </div>
-        </form>
+        <motion.div
+          custom={3}
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+        >
+          <Label htmlFor="confirm-password">Confirm password</Label>
+          <Input
+            id="confirm-password"
+            name="confirm-password"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm password"
+            className={`h-12 text-base mt-1.5 ${
+              confirmPassword.length > 0
+                ? passwordsMatch
+                  ? 'border-green-500 focus-visible:ring-green-500/50'
+                  : 'border-red-500 focus-visible:ring-red-500/50'
+                : ''
+            }`}
+          />
+          {confirmPassword.length > 0 && !passwordsMatch && (
+            <p className="mt-1 text-xs text-destructive">
+              Passwords do not match
+            </p>
+          )}
+        </motion.div>
       </div>
-    </div>
+
+      <motion.div
+        custom={4}
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+      >
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={loading || !passwordStatus.allMet || !passwordsMatch}
+        >
+          {loading ? 'Creating account...' : 'Sign up'}
+        </Button>
+      </motion.div>
+
+      <motion.div
+        custom={5}
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="text-center text-sm"
+      >
+        <span className="text-text-secondary">Already have an account? </span>
+        <Link
+          href="/login"
+          className="font-medium text-primary hover:text-primary/80"
+        >
+          Sign in
+        </Link>
+      </motion.div>
+    </form>
   )
 }
