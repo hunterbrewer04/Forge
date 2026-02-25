@@ -31,14 +31,14 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login')
+      router.push('/member/login')
     }
   }, [user, loading, router])
 
   const handleSignOut = async () => {
     setSigningOut(true)
     await signOut()
-    window.location.href = '/login'
+    window.location.href = '/member/login'
   }
 
   const handleAvatarClick = () => {

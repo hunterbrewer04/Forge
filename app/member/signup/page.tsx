@@ -194,7 +194,7 @@ export default function MemberSignupPage() {
 
         <p className="text-center text-sm text-stone-400">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium" style={{ color: 'var(--facility-primary)' }}>
+          <Link href="/member/login" className="font-medium" style={{ color: 'var(--facility-primary)' }}>
             Sign in
           </Link>
         </p>

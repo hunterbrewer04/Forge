@@ -12,8 +12,8 @@ import { env } from '@/lib/env-validation'
  * - Prevents authenticated users from accessing auth pages
  */
 
-const PUBLIC_ROUTES = ['/', '/login', '/signup', '/api/calendar']
-const AUTH_ROUTES = ['/login', '/signup']
+const PUBLIC_ROUTES = ['/', '/member/login', '/member/signup', '/api/calendar']
+const AUTH_ROUTES = ['/member/login', '/member/signup']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
@@ -71,7 +71,7 @@ export async function proxy(request: NextRequest) {
   // Redirect unauthenticated users away from protected routes
   if (!user || authError) {
     if (!isPublicRoute && !isStaticAsset) {
-      const loginUrl = new URL('/login', request.url)
+      const loginUrl = new URL('/member/login', request.url)
       loginUrl.searchParams.set('return_to', request.nextUrl.pathname)
       return NextResponse.redirect(loginUrl)
     }

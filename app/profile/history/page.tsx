@@ -42,7 +42,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login')
+      router.push('/member/login')
     }
   }, [user, loading, router])
 

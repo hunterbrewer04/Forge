@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 // Routes members without active subscriptions can still visit
-const PAYWALL_EXEMPT = ['/member/', '/login', '/signup', '/auth/', '/profile']
+const PAYWALL_EXEMPT = ['/member/', '/auth/', '/profile']
 
 export default function MembershipGuard({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth()

@@ -23,7 +23,7 @@ export default function EditProfilePage() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login')
+      router.push('/member/login')
     }
   }, [user, loading, router])
 

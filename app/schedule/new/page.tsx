@@ -60,7 +60,7 @@ export default function NewSessionPage() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login')
+      router.push('/member/login')
     }
   }, [user, authLoading, router])
 
