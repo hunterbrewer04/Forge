@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
       return createApiError('Membership tier not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
+    if (!tier.stripe_price_id || tier.stripe_price_id === 'price_PLACEHOLDER') {
+      return createApiError('This tier is not yet configured for payments', 503, 'TIER_NOT_CONFIGURED')
+    }
+
     // 2. Load profile — check for existing active subscription
     const { data: profile } = await supabase
       .from('profiles')

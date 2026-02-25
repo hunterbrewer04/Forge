@@ -3,11 +3,11 @@
 /* Forge Design System - White Label Ready */
 :root {
   /* Facility Branding (configurable per facility) */
-  --facility-primary: #1973f0;
+  --facility-primary: #E8923A;
   --facility-name: "Forge";
 
   /* Primary Color (fallback must match DEFAULT_BRAND_COLOR in lib/constants/branding.ts) */
-  --primary: var(--facility-primary, #1973f0);
+  --primary: var(--facility-primary, #E8923A);
 
   /* Light Mode (default) */
   --bg-primary: #ffffff;
@@ -52,6 +52,25 @@
   /* Semantic aliases */
   --background: var(--bg-primary);
   --foreground: var(--text-primary);
+
+  /* shadcn/ui CSS variables */
+  --card: var(--bg-card);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-card);
+  --popover-foreground: var(--text-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--bg-secondary);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-secondary);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--bg-secondary);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--error);
+  --destructive-foreground: #ffffff;
+  --border: var(--border-color);
+  --input: var(--bg-input);
+  --ring: var(--primary);
+  --radius: 0.75rem;
 }
 
 /* Dark Mode */
@@ -75,6 +94,8 @@
   /* Legacy dark mode overrides */
   --background: var(--bg-primary);
   --foreground: var(--text-primary);
+
+  /* shadcn/ui dark overrides auto-adapt via --bg-*, --text-*, --border-color vars above */
 }
 
 @theme inline {
@@ -98,6 +119,24 @@
   --color-warning: var(--warning);
   --color-error: var(--error);
   --color-info: var(--info);
+  /* shadcn/ui theme mappings */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --radius: var(--radius);
+
   /* Legacy */
   --color-background-dark: var(--background-dark);
   --color-background-light: var(--background-light);
@@ -111,6 +150,110 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: "Lexend", "Manrope", sans-serif;
+}
+
+/* ── Glassmorphism Utilities ── */
+.glass {
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+.glass-subtle {
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.50);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+/* Dark mode glass variants */
+.dark .glass {
+  background: rgba(26, 34, 53, 0.70);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark .glass-subtle {
+  background: rgba(26, 34, 53, 0.45);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+}
+
+.dark .glass-input {
+  background: rgba(26, 34, 53, 0.60);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* ── Gradient Mesh Background ── */
+.gradient-mesh {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.gradient-mesh::before,
+.gradient-mesh::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  will-change: transform;
+}
+
+.gradient-mesh::before {
+  width: 60%;
+  height: 60%;
+  top: -10%;
+  left: -10%;
+  background: color-mix(in srgb, var(--facility-primary) 25%, transparent);
+  animation: mesh-shift 20s ease-in-out infinite;
+}
+
+.gradient-mesh::after {
+  width: 50%;
+  height: 50%;
+  bottom: -10%;
+  right: -10%;
+  background: color-mix(in srgb, var(--facility-primary) 15%, transparent);
+  animation: mesh-shift 20s ease-in-out infinite reverse;
+}
+
+@keyframes mesh-shift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, -20px) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-mesh::before,
+  .gradient-mesh::after {
+    animation: none;
+  }
 }
 
 html, body {
