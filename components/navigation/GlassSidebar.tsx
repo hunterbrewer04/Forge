@@ -93,20 +93,18 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
       initial={false}
     >
       {/* Facility Branding */}
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-border">
-        <div className="flex-1">
-          <Image
-            src="/Forge-Full-Logo.PNG"
-            alt="Forge Sports Performance"
-            width={200}
-            height={134}
-            className="h-14 w-auto object-contain rounded-lg"
-          />
-        </div>
+      <div className="relative flex items-center justify-center px-6 py-6 border-b border-border">
+        <Image
+          src="/forge-logo.png"
+          alt="Forge Sports Performance"
+          width={200}
+          height={200}
+          className="h-24 w-auto object-contain"
+        />
         {onClose && (
           <button
             onClick={onClose}
-            className="size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
+            className="absolute right-4 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
             aria-label="Close sidebar"
           >
             <X size={18} />
