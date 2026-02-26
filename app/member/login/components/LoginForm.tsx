@@ -102,63 +102,79 @@ export default function LoginForm() {
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleLogin}>
-      {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4">
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        <motion.div custom={0} variants={stagger} initial="hidden" animate="show">
-          <Label htmlFor="email">Email address</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email address"
-            className="h-12 text-base mt-1.5"
-          />
-        </motion.div>
-
-        <motion.div custom={1} variants={stagger} initial="hidden" animate="show">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="h-12 text-base mt-1.5"
-          />
-        </motion.div>
+    <div className="space-y-8 w-full max-w-md mx-auto">
+      {/* Heading */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-text-primary font-[--font-lexend]">
+          Sign in to your account
+        </h1>
+        <p className="mt-2 text-text-secondary text-sm">
+          Welcome back. Enter your credentials below.
+        </p>
       </div>
 
-      <motion.div custom={2} variants={stagger} initial="hidden" animate="show">
-        <Button type="submit" size="lg" className="w-full" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign in'}
-        </Button>
-      </motion.div>
-
-      <motion.div
-        custom={3}
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="text-center text-sm"
+      {/* Form card */}
+      <form
+        className="space-y-6 bg-bg-card border border-border rounded-2xl p-6"
+        onSubmit={handleLogin}
       >
-        <span className="text-text-secondary">Don&apos;t have an account? </span>
-        <Link href="/member/signup" className="font-medium text-primary hover:text-primary/80">
-          Sign up
-        </Link>
-      </motion.div>
-    </form>
+        {error && (
+          <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <motion.div custom={0} variants={stagger} initial="hidden" animate="show">
+            <Label htmlFor="email">Email address</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address"
+              className="h-12 text-base mt-1.5"
+            />
+          </motion.div>
+
+          <motion.div custom={1} variants={stagger} initial="hidden" animate="show">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="h-12 text-base mt-1.5"
+            />
+          </motion.div>
+        </div>
+
+        <motion.div custom={2} variants={stagger} initial="hidden" animate="show">
+          <Button type="submit" size="lg" className="w-full" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign in'}
+          </Button>
+        </motion.div>
+
+        <motion.div
+          custom={3}
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="text-center text-sm"
+        >
+          <span className="text-text-secondary">Don&apos;t have an account? </span>
+          <Link href="/member/signup" className="font-medium text-primary hover:text-primary/80">
+            Sign up
+          </Link>
+        </motion.div>
+      </form>
+    </div>
   )
 }

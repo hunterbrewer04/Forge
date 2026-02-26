@@ -200,6 +200,23 @@
   border-color: rgba(255, 255, 255, 0.10);
 }
 
+/* ── Gradient Mesh Background (auth/member pages only) ── */
+.gradient-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, color-mix(in srgb, var(--facility-primary) 8%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, color-mix(in srgb, var(--facility-primary) 6%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse at 40% 80%, color-mix(in srgb, var(--facility-primary) 4%, transparent) 0%, transparent 50%);
+  background-color: var(--bg-primary);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-mesh { animation: none; }
+}
+
 /* ── Entrance & Interaction Animations ── */
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(8px); }
