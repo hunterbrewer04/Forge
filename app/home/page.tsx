@@ -371,25 +371,30 @@ export default function HomePage() {
           <div className={hasMessaging ? "grid grid-cols-5 gap-6 items-start" : "grid grid-cols-2 gap-6 items-start"}>
             {/* Left column */}
             <div className={hasMessaging ? "col-span-3 space-y-4" : "space-y-4"}>
-              {/* Book Sessions CTA */}
+              {/* Sessions CTA */}
               <GlassCard
                 variant="subtle"
                 className="p-6 overflow-hidden"
                 interactive
               >
                 <Link
-                  href="/schedule"
+                  href={profile.is_trainer ? '/trainer/sessions' : '/schedule'}
                   className="block rounded-2xl p-6"
                   style={{
                     background: 'linear-gradient(135deg, var(--facility-primary), color-mix(in srgb, var(--facility-primary) 70%, #000))',
                   }}
                 >
-                  <h2 className="text-white text-xl font-bold">Book Sessions</h2>
+                  <h2 className="text-white text-xl font-bold">
+                    {profile.is_trainer ? 'Create Sessions' : 'Book Sessions'}
+                  </h2>
                   <p className="text-white/70 text-sm mt-1">
-                    Browse available training slots and reserve your spot.
+                    {profile.is_trainer
+                      ? 'View current available sessions & create new ones.'
+                      : 'Browse available training slots and reserve your spot.'
+                    }
                   </p>
                   <div className="mt-5 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
-                    Schedule Now
+                    {profile.is_trainer ? 'View Sessions' : 'Schedule Now'}
                     <Calendar size={18} />
                   </div>
                 </Link>
@@ -514,14 +519,21 @@ export default function HomePage() {
             </p>
           </section>
 
-          {/* Book Sessions CTA Card */}
+          {/* Sessions CTA Card */}
           <Link
-            href="/schedule"
+            href={profile.is_trainer ? '/trainer/sessions' : '/schedule'}
             className="block bg-primary rounded-2xl p-5 shadow-lg shadow-primary/20 transition-transform interactive-card"
           >
-            <h2 className="text-white text-xl font-bold">Book Sessions</h2>
+            <h2 className="text-white text-xl font-bold">
+              {profile.is_trainer ? 'Create Sessions' : 'Book Sessions'}
+            </h2>
+            {profile.is_trainer && (
+              <p className="text-white/70 text-sm mt-1">
+                View current available sessions & create new ones.
+              </p>
+            )}
             <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
-              Schedule Now
+              {profile.is_trainer ? 'View Sessions' : 'Schedule Now'}
               <Calendar size={18} />
             </div>
           </Link>

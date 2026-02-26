@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
-import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import GlassCard from '@/components/ui/GlassCard'
 import {
@@ -48,7 +48,6 @@ interface GlassSidebarProps {
 export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) {
   const pathname = usePathname()
   const { user, profile } = useAuth()
-  const { theme } = useFacilityTheme()
 
   const { unreadCount } = useUnreadCount({
     userId: user?.id,
@@ -94,19 +93,15 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
       initial={false}
     >
       {/* Facility Branding */}
-      <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
-        <div className="size-10 rounded-xl bg-primary flex items-center justify-center">
-          <span className="text-white font-bold text-xl">
-            {theme.name.charAt(0).toUpperCase()}
-          </span>
-        </div>
+      <div className="flex items-center gap-2 px-6 py-5 border-b border-border">
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-text-primary tracking-tight uppercase">
-            {theme.name.split(' ')[0] || 'FORGE'}
-          </h1>
-          <p className="text-xs text-text-muted uppercase tracking-wider">
-            {theme.tagline}
-          </p>
+          <Image
+            src="/Forge-Full-Logo.PNG"
+            alt="Forge Sports Performance"
+            width={200}
+            height={134}
+            className="h-14 w-auto object-contain rounded-lg"
+          />
         </div>
         {onClose && (
           <button
