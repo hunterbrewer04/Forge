@@ -10,7 +10,7 @@ export default function DesktopMemberLayout({ children }: DesktopMemberLayoutPro
       {/* Gradient mesh background */}
       <div className="gradient-mesh" />
 
-      <main className="relative z-10 flex flex-col items-center px-4 pb-12">
+      <main className="relative z-10 min-h-full flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-5xl">{children}</div>
       </main>
     </div>
