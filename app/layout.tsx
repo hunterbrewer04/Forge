@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Lexend, Manrope } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Toaster } from "sonner";
+import ResponsiveToaster from "@/components/ui/ResponsiveToaster";
 import "./globals.css";
 import { Providers } from "./providers";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -143,16 +143,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${lexend.variable} ${manrope.variable} font-[--font-lexend] antialiased`}
       >
         <Providers>{children}</Providers>
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            style: {
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
-            },
-          }}
-        />
+        <ResponsiveToaster />
         <InstallPrompt />
         <UpdatePrompt />
         <NotificationPrompt />

@@ -151,7 +151,7 @@ export default function SchedulePage() {
     <>
       <GlassAppLayout customHeader={customHeader} desktopTitle={profile?.is_trainer ? 'Sessions' : 'Book a Session'}>
         {/* Calendar */}
-        <GlassCard variant="subtle" className="p-4">
+        <GlassCard variant="subtle" className="p-4 lg:p-3">
           <CalendarStrip
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}

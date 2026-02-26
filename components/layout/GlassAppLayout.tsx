@@ -1,10 +1,12 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { useAuth } from '@/contexts/AuthContext'
 import GlassSidebar from '@/components/navigation/GlassSidebar'
 import MobileLayout from '@/components/layout/MobileLayout'
+import { Menu } from '@/components/ui/icons'
 
 interface GlassAppLayoutProps {
   children: React.ReactNode
@@ -35,6 +37,17 @@ export default function GlassAppLayout({
 }: GlassAppLayoutProps) {
   const isDesktop = useIsDesktop()
   const { signOut } = useAuth()
+
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebar-open') !== 'false'
+    }
+    return true
+  })
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-open', String(sidebarOpen))
+  }, [sidebarOpen])
 
   // On mobile/tablet (<1024px), render existing MobileLayout unchanged
   if (!isDesktop) {
@@ -72,17 +85,38 @@ export default function GlassAppLayout({
       />
 
       {/* Glass Sidebar */}
-      <GlassSidebar onSignOut={handleSignOut} />
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 'auto', opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.25, 0.4, 0.25, 1] }}
+            className="overflow-hidden"
+          >
+            <GlassSidebar onSignOut={handleSignOut} onClose={() => setSidebarOpen(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative z-10">
         {/* Desktop page header */}
         {!hideDesktopHeader && (
-          <div className="glass-subtle border-b border-white/10 px-8 py-5 sticky top-0 z-20">
+          <div className="glass border-b border-white/20 px-8 py-5 sticky top-0 z-20">
             <div className="max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-text-primary tracking-tight">
-                {desktopTitle || mobileProps.title || ''}
-              </h1>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSidebarOpen(prev => !prev)}
+                  className="size-9 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-white/10 transition-all"
+                  aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                >
+                  <Menu size={20} />
+                </button>
+                <h1 className="text-2xl font-bold text-text-primary tracking-tight">
+                  {desktopTitle || mobileProps.title || ''}
+                </h1>
+              </div>
               {desktopHeaderRight}
             </div>
           </div>

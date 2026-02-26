@@ -14,6 +14,7 @@ import {
   Users,
   MessageCircle,
   LogOut,
+  X,
 } from '@/components/ui/icons'
 
 type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients'
@@ -41,9 +42,10 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
 
 interface GlassSidebarProps {
   onSignOut?: () => void
+  onClose?: () => void
 }
 
-export default function GlassSidebar({ onSignOut }: GlassSidebarProps) {
+export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) {
   const pathname = usePathname()
   const { user, profile } = useAuth()
   const { theme } = useFacilityTheme()
@@ -98,7 +100,7 @@ export default function GlassSidebar({ onSignOut }: GlassSidebarProps) {
             {theme.name.charAt(0).toUpperCase()}
           </span>
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-bold text-text-primary tracking-tight uppercase">
             {theme.name.split(' ')[0] || 'FORGE'}
           </h1>
@@ -106,6 +108,15 @@ export default function GlassSidebar({ onSignOut }: GlassSidebarProps) {
             {theme.tagline}
           </p>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-white/10 transition-all"
+            aria-label="Close sidebar"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Main Navigation */}

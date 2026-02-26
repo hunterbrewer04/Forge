@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import type { ProfileJoin } from '@/lib/types/database'
@@ -15,6 +16,7 @@ import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
 import { User, Bell, Calendar, MessageCircle, Wallet, Dumbbell, CalendarOff } from '@/components/ui/icons'
+import { fetchRecentInvoices } from '@/lib/services/payments'
 
 interface Stats {
   totalConversations: number
@@ -39,6 +41,13 @@ export default function HomePage() {
     userId: user?.id,
     isTrainer: profile?.is_trainer,
     isClient: profile?.has_full_access,
+  })
+
+  // Fetch recent payments for the Payments card
+  const { data: recentPayments } = useQuery({
+    queryKey: ['recent-payments'],
+    queryFn: () => fetchRecentInvoices(3),
+    enabled: !!user,
   })
 
   // Redirect to login if not authenticated
@@ -434,17 +443,33 @@ export default function HomePage() {
                 whileHover={{ y: -2 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link href="/payments" className="block">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="bg-success/10 p-2 rounded-lg">
-                      <Wallet size={24} className="text-success" />
-                    </div>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="bg-success/10 p-2 rounded-lg">
+                    <Wallet size={24} className="text-success" />
                   </div>
-                  <h3 className="text-text-primary font-semibold">Payments</h3>
-                  <p className="text-text-secondary text-xs mt-0.5">
+                  <Link href="/payments" className="text-primary text-sm font-medium hover:underline">
+                    View All
+                  </Link>
+                </div>
+                <h3 className="text-text-primary font-semibold mb-3">Payments</h3>
+                {recentPayments && recentPayments.length > 0 ? (
+                  <div className="space-y-2">
+                    {recentPayments.map((inv) => (
+                      <div key={inv.id} className="flex items-center justify-between text-sm">
+                        <span className="text-text-secondary truncate mr-2">
+                          {new Date(inv.created * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-text-primary font-medium">
+                          ${(inv.amount_paid / 100).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-text-secondary text-xs">
                     Manage billing &amp; payments
                   </p>
-                </Link>
+                )}
               </GlassCard>
 
               {/* Trainer-specific: Active Clients stat */}
