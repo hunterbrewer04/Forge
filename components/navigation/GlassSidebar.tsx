@@ -105,7 +105,7 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
           alt="Forge Sports Performance"
           width={240}
           height={160}
-          className="h-20 w-auto object-contain"
+          className="h-28 w-auto object-contain"
         />
         {onClose && (
           <button
