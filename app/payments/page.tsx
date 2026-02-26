@@ -257,7 +257,7 @@ export default function PaymentsPage() {
       <section className="mt-8 mb-8 text-center">
         <div className="flex items-center justify-center gap-2 text-text-muted">
           <Lock size={16} />
-          <span className="text-xs">SECURE SSL ENCRYPTION</span>
+          <span className="text-xs">SECURE PAYMENTS POWERED BY STRIPE</span>
         </div>
         <p className="text-[10px] text-text-muted mt-2 uppercase tracking-wider">
           {theme.name}
