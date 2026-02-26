@@ -166,7 +166,7 @@ export default function SchedulePage() {
         {/* Trainer: Create Session Link */}
         {profile?.is_trainer && (
           <Link
-            href="/schedule/new"
+            href="/trainer/sessions/new"
             className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all interactive-card"
           >
             <Plus size={20} />

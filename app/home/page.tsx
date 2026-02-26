@@ -378,7 +378,7 @@ export default function HomePage() {
                 interactive
               >
                 <Link
-                  href={profile.is_trainer ? '/trainer/sessions' : '/schedule'}
+                  href={'/schedule'}
                   className="block rounded-2xl p-6"
                   style={{
                     background: 'linear-gradient(135deg, var(--facility-primary), color-mix(in srgb, var(--facility-primary) 70%, #000))',
@@ -521,7 +521,7 @@ export default function HomePage() {
 
           {/* Sessions CTA Card */}
           <Link
-            href={profile.is_trainer ? '/trainer/sessions' : '/schedule'}
+            href={'/schedule'}
             className="block bg-primary rounded-2xl p-5 shadow-lg shadow-primary/20 transition-transform interactive-card"
           >
             <h2 className="text-white text-xl font-bold">
