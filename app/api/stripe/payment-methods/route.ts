@@ -57,9 +57,11 @@ export async function GET(request: NextRequest) {
 
     if (profile.stripe_subscription_id) {
       try {
-        const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id)
+        const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id, {
+          expand: ['items'],
+        })
         hasActiveSubscription = sub.status === 'active'
-        currentPeriodEnd = sub.current_period_end
+        currentPeriodEnd = sub.items.data[0]?.current_period_end ?? null
       } catch {
         // Subscription may have been deleted
       }
