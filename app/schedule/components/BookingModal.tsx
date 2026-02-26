@@ -149,7 +149,7 @@ export default function BookingModal({
       <div
         className={`relative w-full max-h-[85dvh] flex flex-col ${
           isDesktop
-            ? 'max-w-xl glass rounded-2xl animate-scale-up'
+            ? 'max-w-xl bg-surface-dark rounded-2xl animate-scale-up'
             : 'max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom'
         }`}
         style={!isDesktop ? {
