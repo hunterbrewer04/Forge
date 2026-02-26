@@ -16,7 +16,7 @@ import {
   AlertCircle,
 } from '@/components/ui/icons'
 import { motion } from 'framer-motion'
-import { staggerContainer, fadeUpItem } from '@/lib/motion'
+import { staggerContainer } from '@/lib/motion'
 
 export default function ClientListPage() {
   const { user } = useAuth()

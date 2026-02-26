@@ -73,7 +73,7 @@ export default function CalendarExportSheet({
     try {
       await navigator.clipboard.writeText(webcalFeedUrl)
       toast.success('Link copied!')
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy link')
     }
   }

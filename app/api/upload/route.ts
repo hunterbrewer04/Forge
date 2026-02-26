@@ -21,26 +21,6 @@ import { env } from '@/lib/env-validation'
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
 
-// Magic bytes for file type validation
-// These are the first bytes of each file format
-const MAGIC_BYTES: Record<string, { bytes: number[]; mask?: number[] }[]> = {
-  // Images
-  'image/jpeg': [{ bytes: [0xff, 0xd8, 0xff] }],
-  'image/png': [{ bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] }],
-  'image/gif': [{ bytes: [0x47, 0x49, 0x46, 0x38] }], // GIF87a or GIF89a
-  'image/webp': [
-    { bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF header (WebP starts with RIFF)
-  ],
-  // Videos
-  'video/mp4': [
-    { bytes: [0x00, 0x00, 0x00] }, // ftyp box (variable 4th byte)
-    { bytes: [0x66, 0x74, 0x79, 0x70] }, // "ftyp" at offset 4
-  ],
-  'video/quicktime': [
-    { bytes: [0x00, 0x00, 0x00] }, // Similar to MP4
-  ],
-}
-
 // Allowed MIME types
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime']

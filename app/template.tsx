@@ -13,7 +13,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
       if (typeof document !== 'undefined' && 'startViewTransition' in document) {
         // The transition is already happening since Next.js has swapped the content
         // We just need to signal the browser to animate
-        (document as any).startViewTransition(() => {
+        (document as Document & { startViewTransition?: (cb: () => void) => void }).startViewTransition?.(() => {
           // Content is already updated by Next.js
           return Promise.resolve()
         })

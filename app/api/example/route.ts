@@ -17,7 +17,6 @@ import {
   validateAuth,
   checkRateLimit,
   validateRequestBody,
-  createApiError,
   handleUnexpectedError,
   RateLimitPresets,
 } from '@/lib/api'

@@ -204,6 +204,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       subscription.unsubscribe()
     }
+  // loading intentionally excluded — re-running this effect during loading transitions would re-bootstrap auth and re-subscribe to realtime events.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, fetchProfile])
 
   const refreshProfile = useCallback(async () => {

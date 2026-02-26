@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * PWA Asset Generator
  * Converts SVG icons and splash screens to PNG format for iOS/Android compatibility

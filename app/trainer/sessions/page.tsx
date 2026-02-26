@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/icons'
 import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
 import { motion } from 'framer-motion'
-import { staggerContainer, fadeUpItem } from '@/lib/motion'
+import { staggerContainer } from '@/lib/motion'
 
 type FilterType = 'all' | 'upcoming' | 'past' | 'cancelled'
 

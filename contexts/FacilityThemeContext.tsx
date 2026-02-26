@@ -50,6 +50,8 @@ export function FacilityThemeProvider({ children }: { children: ReactNode }) {
   // Initialize theme on mount
   useEffect(() => {
     const initialMode = getInitialTheme()
+    // SSR-safe: localStorage/system-theme reads must happen after mount to avoid client/server mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setThemeMode(initialMode)
     setMounted(true)
   }, [])

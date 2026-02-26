@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import Image from 'next/image'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import {
@@ -53,14 +54,10 @@ export default function EditSessionPage() {
   // Form state for editing
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
     session_type_id: '',
-    location: '',
     starts_at: '',
     starts_time: '',
     duration_minutes: 60,
-    capacity: 8,
-    is_premium: false,
   })
 
   const fetchSession = useCallback(async () => {
@@ -79,14 +76,10 @@ export default function EditSessionPage() {
       const { date: localDate, time: localTime } = utcToLocalInputs(s.starts_at)
       setFormData({
         title: s.title || '',
-        description: s.description || '',
         session_type_id: s.session_type_id || '',
-        location: s.location || '',
         starts_at: localDate,
         starts_time: localTime,
         duration_minutes: s.duration_minutes || 60,
-        capacity: s.capacity || 8,
-        is_premium: s.is_premium || false,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load session')
@@ -100,7 +93,12 @@ export default function EditSessionPage() {
       const response = await fetch('/api/sessions?types_only=true')
       if (response.ok) {
         const data = await response.json()
-        setSessionTypes(data.session_types || [])
+        const types = data.session_types || []
+        setSessionTypes(types)
+        const lessonType = types.find((t: SessionType) => t.name.toLowerCase() === 'lesson')
+        if (lessonType) {
+          setFormData(prev => ({ ...prev, session_type_id: prev.session_type_id || lessonType.id }))
+        }
       }
     } catch (err) {
       console.error('Failed to fetch session types:', err)
@@ -140,14 +138,10 @@ export default function EditSessionPage() {
 
       const body = {
         title: formData.title,
-        description: formData.description || null,
         session_type_id: formData.session_type_id || null,
-        location: formData.location || null,
         starts_at: startsAtUtc,
         ends_at: endsAtUtc,
         duration_minutes: formData.duration_minutes,
-        capacity: formData.capacity,
-        is_premium: formData.is_premium,
       }
 
       const response = await fetch(`/api/sessions/${sessionId}`, {
@@ -241,14 +235,10 @@ export default function EditSessionPage() {
 
       const body = {
         title: formData.title,
-        description: formData.description || null,
         session_type_id: formData.session_type_id || null,
-        location: formData.location || null,
         starts_at: startDateTime.toISOString(),
         ends_at: endDateTime.toISOString(),
         duration_minutes: formData.duration_minutes,
-        capacity: formData.capacity,
-        is_premium: formData.is_premium,
       }
 
       const response = await fetch('/api/sessions', {
@@ -320,9 +310,11 @@ export default function EditSessionPage() {
             >
               <div className="w-10 h-10 rounded-full bg-bg-secondary flex items-center justify-center flex-shrink-0">
                 {booking.client?.avatar_url ? (
-                  <img
+                  <Image
                     src={booking.client.avatar_url}
                     alt=""
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
@@ -549,15 +541,16 @@ export default function EditSessionPage() {
                 {/* Title */}
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">
-                    Session Title *
+                    Session Name *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="title"
                     value={formData.title}
                     onChange={handleChange}
                     className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                  />
+                  >
+                    <option value="Lesson">Lesson</option>
+                  </select>
                 </div>
 
                 {/* Session Type */}
@@ -571,27 +564,15 @@ export default function EditSessionPage() {
                     onChange={handleChange}
                     className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                   >
-                    <option value="">Select a type</option>
-                    {sessionTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
+                    {sessionTypes
+                      .filter(t => t.name.toLowerCase() === 'lesson')
+                      .map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))
+                    }
                   </select>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium text-text-primary mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
-                  />
                 </div>
 
                 {/* Date and Time */}
@@ -622,69 +603,21 @@ export default function EditSessionPage() {
                   </div>
                 </div>
 
-                {/* Duration and Capacity */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Duration (min)
-                    </label>
-                    <input
-                      type="number"
-                      name="duration_minutes"
-                      value={formData.duration_minutes}
-                      onChange={handleChange}
-                      min={15}
-                      max={180}
-                      step={15}
-                      className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-text-primary mb-2">
-                      Capacity
-                    </label>
-                    <input
-                      type="number"
-                      name="capacity"
-                      value={formData.capacity}
-                      onChange={handleChange}
-                      min={1}
-                      max={50}
-                      className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Location */}
+                {/* Duration */}
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">
-                    Location
+                    Duration (min)
                   </label>
                   <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
+                    type="number"
+                    name="duration_minutes"
+                    value={formData.duration_minutes}
                     onChange={handleChange}
+                    min={15}
+                    max={180}
+                    step={15}
                     className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                   />
-                </div>
-
-                {/* Premium Toggle */}
-                <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg border border-border">
-                  <div>
-                    <p className="font-medium text-text-primary">Premium Session</p>
-                    <p className="text-sm text-text-secondary">Mark this as a premium session</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="is_premium"
-                      checked={formData.is_premium}
-                      onChange={handleChange}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-bg-input peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
                 </div>
 
                 {/* Action Buttons */}

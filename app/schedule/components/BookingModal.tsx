@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Clock, MapPin, User, Calendar, CheckCircle, AlertCircle, Loader2 } from '@/components/ui/icons'
+import { X, Clock, MapPin, User, Calendar, AlertCircle, Loader2 } from '@/components/ui/icons'
 import { toast } from 'sonner'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import type { SessionWithDetails } from '@/lib/types/sessions'
