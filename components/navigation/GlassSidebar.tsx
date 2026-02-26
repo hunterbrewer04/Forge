@@ -95,11 +95,11 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
       {/* Facility Branding */}
       <div className="relative flex items-center justify-center px-6 py-6 border-b border-border">
         <Image
-          src="/forge-logo.png"
+          src="/Forge-Full-Logo.PNG"
           alt="Forge Sports Performance"
-          width={200}
-          height={200}
-          className="h-24 w-auto object-contain"
+          width={240}
+          height={160}
+          className="h-20 w-auto object-contain"
         />
         {onClose && (
           <button
