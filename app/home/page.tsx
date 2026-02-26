@@ -4,15 +4,21 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import type { ProfileJoin } from '@/lib/types/database'
-import MobileLayout from '@/components/layout/MobileLayout'
+import GlassAppLayout from '@/components/layout/GlassAppLayout'
+import GlassCard from '@/components/ui/GlassCard'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import { useHomeData } from '@/lib/hooks/useHomeData'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
 import { User, Bell, Calendar, MessageCircle, Wallet, Dumbbell, CalendarOff } from '@/components/ui/icons'
+import { fetchRecentInvoices } from '@/lib/services/payments'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 interface Stats {
   totalConversations: number
@@ -24,8 +30,9 @@ export default function HomePage() {
   const { user, profile, loading } = useAuth()
   const { theme } = useFacilityTheme()
   const router = useRouter()
-  const [stats, setStats] = useState<Stats>({ totalConversations: 0 })
-  const [loadingStats, setLoadingStats] = useState(true)
+  const isDesktop = useIsDesktop()
+  const [messagingStats, setMessagingStats] = useState<Stats>({ totalConversations: 0 })
+  const [loadingMessagingStats, setLoadingMessagingStats] = useState(true)
   const supabase = useMemo(() => createClient(), [])
 
   // Fetch real home data — pass userId to avoid redundant getUser() call
@@ -38,6 +45,13 @@ export default function HomePage() {
     isClient: profile?.has_full_access,
   })
 
+  // Fetch recent payments for the Payments card
+  const { data: recentPayments } = useQuery({
+    queryKey: ['recent-payments'],
+    queryFn: () => fetchRecentInvoices(3),
+    enabled: !!user,
+  })
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -45,12 +59,16 @@ export default function HomePage() {
     }
   }, [user, loading, router])
 
-  // Fetch user stats
+  // Fetch messaging-related stats (only for users with chat access)
   useEffect(() => {
     const fetchStats = async () => {
       if (!user || !profile) return
+      if (!profile.is_trainer && !profile.has_full_access) {
+        setLoadingMessagingStats(false)
+        return
+      }
 
-      setLoadingStats(true)
+      setLoadingMessagingStats(true)
 
       if (profile.is_trainer) {
         const { data: conversations, error } = await supabase
@@ -59,7 +77,7 @@ export default function HomePage() {
           .eq('trainer_id', user.id)
 
         if (!error && conversations) {
-          setStats({
+          setMessagingStats({
             totalConversations: conversations.length,
             clientsCount: conversations.length,
           })
@@ -81,14 +99,14 @@ export default function HomePage() {
           const trainer = Array.isArray(trainerData)
             ? trainerData[0] as ProfileJoin | undefined
             : trainerData as ProfileJoin | null
-          setStats({
+          setMessagingStats({
             totalConversations: 1,
             trainerName: trainer?.full_name || 'Coach',
           })
         }
       }
 
-      setLoadingStats(false)
+      setLoadingMessagingStats(false)
     }
 
     fetchStats()
@@ -96,9 +114,9 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <MobileLayout hideTopBar>
+      <GlassAppLayout hideTopBar hideDesktopHeader>
         <HomePageSkeleton />
-      </MobileLayout>
+      </GlassAppLayout>
     )
   }
 
@@ -108,11 +126,14 @@ export default function HomePage() {
 
   if (!profile) {
     return (
-      <MobileLayout hideTopBar>
+      <GlassAppLayout hideTopBar hideDesktopHeader>
         <HomePageSkeleton />
-      </MobileLayout>
+      </GlassAppLayout>
     )
   }
+
+  // Whether the user has access to the messaging feature
+  const hasMessaging = profile.is_trainer || profile.has_full_access
 
   // Extract first name from full name
   const firstName = profile.full_name?.split(' ')[0] || 'User'
@@ -192,182 +213,408 @@ export default function HomePage() {
     </header>
   )
 
-  return (
-    <MobileLayout customHeader={customHeader}>
-      {/* Greeting Section */}
-      <section className="mt-2">
-        <h1 className="text-2xl font-bold text-text-primary">Hello, {firstName}</h1>
-        <p className="text-text-secondary text-sm mt-1">
-          {loadingHomeData ? (
-            <span>Loading next session...</span>
-          ) : nextSession ? (
-            <>
-              Next session: <span className="text-primary font-semibold">{formatNextSessionTime()}</span>
-            </>
-          ) : (
-            <span>No upcoming sessions scheduled</span>
-          )}
-        </p>
-      </section>
-
-      {/* Book Sessions CTA Card */}
-      <Link
-        href="/schedule"
-        className="block bg-primary rounded-2xl p-5 shadow-lg shadow-primary/20 transition-transform active:scale-[0.98]"
-      >
-        <h2 className="text-white text-xl font-bold">Book Sessions</h2>
-        <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
-          Schedule Now
-          <Calendar size={18} />
-        </div>
-      </Link>
-
-      {/* Messages & Payments Grid */}
-      <section className="grid grid-cols-2 gap-3">
-        {/* Messages Card */}
-        <Link
-          href="/chat"
-          className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 active:scale-[0.98]"
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className="bg-primary/10 p-2 rounded-lg">
-              <MessageCircle size={24} className="text-primary" />
-            </div>
-            {unreadCount > 0 && (
-              <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {unreadCount} NEW
-              </span>
-            )}
-          </div>
-          <h3 className="text-text-primary font-semibold">Messages</h3>
-          <p className="text-text-secondary text-xs mt-0.5 truncate">
-            {unreadCount > 0
-              ? `${unreadCount} unread messages`
-              : stats.trainerName
-                ? `Chat with ${stats.trainerName}`
-                : 'View conversations'
-            }
-          </p>
-        </Link>
-
-        {/* Payments Card */}
-        <Link
-          href="/payments"
-          className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 active:scale-[0.98]"
-        >
-          <div className="flex items-start justify-between mb-3">
-            <div className="bg-success/10 p-2 rounded-lg">
-              <Wallet size={24} className="text-success" />
-            </div>
-          </div>
-          <h3 className="text-text-primary font-semibold">Payments</h3>
-          <p className="text-text-secondary text-xs mt-0.5">
-            Manage billing & payments
-          </p>
-        </Link>
-      </section>
-
-      {/* Recent Activity */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-text-primary font-semibold">Recent Activity</h2>
-          <Link href="/profile/history" className="text-primary text-sm font-medium">
-            View All
-          </Link>
-        </div>
-
-        {loadingHomeData ? (
-          <div className="space-y-2">
-            {[1, 2].map((i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3 animate-pulse"
-              >
-                <div className="bg-bg-secondary size-10 rounded-full" />
-                <div className="flex-1 min-w-0">
-                  <div className="h-4 bg-bg-secondary rounded w-3/4 mb-1" />
-                  <div className="h-3 bg-bg-secondary rounded w-1/2" />
-                </div>
-                <div className="h-6 w-16 bg-bg-secondary rounded" />
+  // Shared recent activity renderer used in both mobile and desktop layouts
+  const renderRecentActivityItems = () => {
+    if (loadingHomeData) {
+      return (
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3 animate-pulse"
+            >
+              <div className="bg-bg-secondary size-10 rounded-full" />
+              <div className="flex-1 min-w-0">
+                <div className="h-4 bg-bg-secondary rounded w-3/4 mb-1" />
+                <div className="h-3 bg-bg-secondary rounded w-1/2" />
               </div>
-            ))}
-          </div>
-        ) : recentActivity.length > 0 ? (
-          <div className="space-y-2">
-            {recentActivity.map((activity) => {
-              const activityDate = new Date(activity.completed_at)
-              const now = new Date()
-              const diffDays = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60 * 60 * 24))
+              <div className="h-6 w-16 bg-bg-secondary rounded" />
+            </div>
+          ))}
+        </div>
+      )
+    }
 
-              let timeAgo = ''
-              if (diffDays === 0) {
-                timeAgo = 'Today'
-              } else if (diffDays === 1) {
-                timeAgo = 'Yesterday'
-              } else if (diffDays < 7) {
-                timeAgo = `${diffDays} days ago`
-              } else {
-                timeAgo = activityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              }
+    if (recentActivity.length > 0) {
+      return (
+        <div className="space-y-2">
+          {recentActivity.map((activity) => {
+            const activityDate = new Date(activity.completed_at)
+            const now = new Date()
+            const diffDays = Math.floor((now.getTime() - activityDate.getTime()) / (1000 * 60 * 60 * 24))
 
-              return (
-                <div
-                  key={activity.id}
-                  className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3"
-                >
-                  <div className="bg-bg-secondary p-2.5 rounded-full">
-                    <Dumbbell size={22} className="text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-text-primary font-medium text-sm truncate">{activity.title}</h4>
-                    <p className="text-text-muted text-xs">
-                      {timeAgo}
-                      {activity.trainer_name && ` • ${activity.trainer_name}`}
-                    </p>
-                  </div>
-                  <span className="text-[10px] font-semibold px-2 py-1 rounded-md bg-success/10 text-success">
-                    COMPLETED
+            let timeAgo = ''
+            if (diffDays === 0) {
+              timeAgo = 'Today'
+            } else if (diffDays === 1) {
+              timeAgo = 'Yesterday'
+            } else if (diffDays < 7) {
+              timeAgo = `${diffDays} days ago`
+            } else {
+              timeAgo = activityDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            }
+
+            return (
+              <div
+                key={activity.id}
+                className="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-3"
+              >
+                <div className="bg-bg-secondary p-2.5 rounded-full">
+                  <Dumbbell size={22} className="text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-text-primary font-medium text-sm truncate">{activity.title}</h4>
+                  <p className="text-text-muted text-xs">
+                    {timeAgo}
+                    {activity.trainer_name && ` • ${activity.trainer_name}`}
+                  </p>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-1 rounded-md bg-success/10 text-success">
+                  COMPLETED
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex flex-col items-center justify-center bg-bg-card border border-border rounded-xl p-8 text-center">
+        <div className="bg-bg-secondary p-4 rounded-full mb-3">
+          <CalendarOff size={32} className="text-text-muted" />
+        </div>
+        <h3 className="text-text-primary font-medium mb-1">No Recent Activity</h3>
+        <p className="text-text-secondary text-sm mb-4">
+          Your completed sessions will appear here
+        </p>
+        <Link
+          href="/schedule"
+          className="text-primary text-sm font-semibold hover:underline"
+        >
+          Book Your First Session
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <GlassAppLayout customHeader={customHeader} hideDesktopHeader>
+      {isDesktop ? (
+        /* ── Desktop layout ── */
+        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
+          {/* Desktop greeting header card */}
+          <motion.div variants={fadeUpItem}>
+          <GlassCard variant="subtle" className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {/* Avatar */}
+                <div className="size-14 rounded-full overflow-hidden bg-bg-secondary border-2 border-border shrink-0">
+                  {profile.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt={profile.full_name || 'User'}
+                      width={56}
+                      height={56}
+                      className="object-cover size-full"
+                    />
+                  ) : (
+                    <div className="size-full flex items-center justify-center text-text-secondary">
+                      <User size={24} />
+                    </div>
+                  )}
+                </div>
+                {/* Greeting text */}
+                <div>
+                  <h1 className="text-2xl font-bold text-text-primary">Hello, {firstName}</h1>
+                  <p className="text-text-secondary text-sm mt-0.5">
+                    {loadingHomeData ? (
+                      <span>Loading next session...</span>
+                    ) : nextSession ? (
+                      <>
+                        Next session:{' '}
+                        <span className="text-primary font-semibold">{formatNextSessionTime()}</span>
+                      </>
+                    ) : (
+                      <span>No upcoming sessions scheduled</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              {/* Facility branding + notifications */}
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-end">
+                  <span className="text-primary font-bold text-base tracking-tight uppercase">
+                    {theme.name.split(' ')[0] || 'FORGE'}
+                  </span>
+                  <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">
+                    {theme.tagline}
                   </span>
                 </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center bg-bg-card border border-border rounded-xl p-8 text-center">
-            <div className="bg-bg-secondary p-4 rounded-full mb-3">
-              <CalendarOff size={32} className="text-text-muted" />
+                <button
+                  onClick={() => router.push('/profile/notifications')}
+                  className="relative flex items-center justify-center size-10 text-text-secondary hover:text-text-primary transition-colors"
+                  aria-label="Notifications"
+                >
+                  <Bell size={24} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+                  )}
+                </button>
+              </div>
             </div>
-            <h3 className="text-text-primary font-medium mb-1">No Recent Activity</h3>
-            <p className="text-text-secondary text-sm mb-4">
-              Your completed sessions will appear here
-            </p>
-            <Link
-              href="/schedule"
-              className="text-primary text-sm font-semibold hover:underline"
-            >
-              Book Your First Session
-            </Link>
-          </div>
-        )}
-      </section>
+          </GlassCard>
+          </motion.div>
 
-      {/* Trainer-specific: My Clients stat */}
-      {profile.is_trainer && !loadingStats && (
-        <section className="bg-bg-card border border-border rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-text-secondary text-sm">Active Clients</p>
-              <p className="text-2xl font-bold text-text-primary">{stats.clientsCount || 0}</p>
+          {/* Main grid: 5-col (3+2) when messaging is available, balanced 2-col otherwise */}
+          <motion.div variants={fadeUpItem}>
+          <div className={hasMessaging ? "grid grid-cols-5 gap-6 items-start" : "grid grid-cols-2 gap-6 items-start"}>
+            {/* Left column */}
+            <div className={hasMessaging ? "col-span-3 space-y-4" : "space-y-4"}>
+              {/* Sessions CTA */}
+              <GlassCard
+                variant="subtle"
+                className="p-6 overflow-hidden"
+                interactive
+              >
+                <Link
+                  href={'/schedule'}
+                  className="block rounded-2xl p-6"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--facility-primary), color-mix(in srgb, var(--facility-primary) 70%, #000))',
+                  }}
+                >
+                  <h2 className="text-white text-xl font-bold">
+                    {profile.is_trainer ? 'Create Sessions' : 'Book Sessions'}
+                  </h2>
+                  <p className="text-white/70 text-sm mt-1">
+                    {profile.is_trainer
+                      ? 'View current available sessions & create new ones.'
+                      : 'Browse available training slots and reserve your spot.'
+                    }
+                  </p>
+                  <div className="mt-5 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
+                    {profile.is_trainer ? 'View Sessions' : 'Schedule Now'}
+                    <Calendar size={18} />
+                  </div>
+                </Link>
+              </GlassCard>
+
+              {/* Recent Activity */}
+              <GlassCard variant="subtle" className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-text-primary font-semibold text-base">Recent Activity</h2>
+                  <Link href="/profile/history" className="text-primary text-sm font-medium hover:underline">
+                    View All
+                  </Link>
+                </div>
+                {renderRecentActivityItems()}
+              </GlassCard>
             </div>
-            <Link
-              href="/trainer/clients"
-              className="bg-primary text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors"
-            >
-              View All
-            </Link>
+
+            {/* Right column */}
+            <div className={hasMessaging ? "col-span-2 space-y-4" : "space-y-4"}>
+              {/* Messages Card — only for trainers and full-access users */}
+              {hasMessaging && (
+                <GlassCard
+                  variant="subtle"
+                  className="p-6"
+                  interactive
+                >
+                  <Link href="/chat" className="block">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="bg-primary/10 p-2 rounded-lg">
+                        <MessageCircle size={24} className="text-primary" />
+                      </div>
+                      {unreadCount > 0 && (
+                        <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          {unreadCount} NEW
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-text-primary font-semibold">Messages</h3>
+                    <p className="text-text-secondary text-xs mt-0.5 truncate">
+                      {unreadCount > 0
+                        ? `${unreadCount} unread messages`
+                        : messagingStats.trainerName
+                          ? `Chat with ${messagingStats.trainerName}`
+                          : 'View conversations'}
+                    </p>
+                  </Link>
+                </GlassCard>
+              )}
+
+              {/* Payments Card */}
+              <GlassCard
+                variant="subtle"
+                className="p-6"
+                interactive
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="bg-success/10 p-2 rounded-lg">
+                    <Wallet size={24} className="text-success" />
+                  </div>
+                  <Link href="/payments" className="text-primary text-sm font-medium hover:underline">
+                    View All
+                  </Link>
+                </div>
+                <h3 className="text-text-primary font-semibold mb-3">Payments</h3>
+                {recentPayments && recentPayments.length > 0 ? (
+                  <div className="space-y-2">
+                    {recentPayments.map((inv) => (
+                      <div key={inv.id} className="flex items-center justify-between text-sm">
+                        <span className="text-text-secondary truncate mr-2">
+                          {new Date(inv.created * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-text-primary font-medium">
+                          ${(inv.amount_paid / 100).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-text-secondary text-xs">
+                    Manage billing &amp; payments
+                  </p>
+                )}
+              </GlassCard>
+
+              {/* Trainer-specific: Active Clients stat */}
+              {profile.is_trainer && !loadingMessagingStats && (
+                <GlassCard variant="subtle" className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-text-secondary text-sm">Active Clients</p>
+                      <p className="text-2xl font-bold text-text-primary">{messagingStats.clientsCount || 0}</p>
+                    </div>
+                    <Link
+                      href="/trainer/clients"
+                      className="bg-primary text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors"
+                    >
+                      View All
+                    </Link>
+                  </div>
+                </GlassCard>
+              )}
+            </div>
           </div>
-        </section>
+          </motion.div>
+        </motion.div>
+      ) : (
+        /* ── Mobile layout (unchanged) ── */
+        <>
+          {/* Greeting Section */}
+          <section className="mt-2">
+            <h1 className="text-2xl font-bold text-text-primary">Hello, {firstName}</h1>
+            <p className="text-text-secondary text-sm mt-1">
+              {loadingHomeData ? (
+                <span>Loading next session...</span>
+              ) : nextSession ? (
+                <>
+                  Next session: <span className="text-primary font-semibold">{formatNextSessionTime()}</span>
+                </>
+              ) : (
+                <span>No upcoming sessions scheduled</span>
+              )}
+            </p>
+          </section>
+
+          {/* Sessions CTA Card */}
+          <Link
+            href={'/schedule'}
+            className="block bg-primary rounded-2xl p-5 shadow-lg shadow-primary/20 transition-transform interactive-card"
+          >
+            <h2 className="text-white text-xl font-bold">
+              {profile.is_trainer ? 'Create Sessions' : 'Book Sessions'}
+            </h2>
+            {profile.is_trainer && (
+              <p className="text-white/70 text-sm mt-1">
+                View current available sessions & create new ones.
+              </p>
+            )}
+            <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
+              {profile.is_trainer ? 'View Sessions' : 'Schedule Now'}
+              <Calendar size={18} />
+            </div>
+          </Link>
+
+          {/* Messages & Payments Grid */}
+          <section className={`grid gap-3 ${profile.is_trainer || profile.has_full_access ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {/* Messages Card — only for trainers and full-access users */}
+            {(profile.is_trainer || profile.has_full_access) && (
+              <Link
+                href="/chat"
+                className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 interactive-card"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <MessageCircle size={24} className="text-primary" />
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {unreadCount} NEW
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-text-primary font-semibold">Messages</h3>
+                <p className="text-text-secondary text-xs mt-0.5 truncate">
+                  {unreadCount > 0
+                    ? `${unreadCount} unread messages`
+                    : messagingStats.trainerName
+                      ? `Chat with ${messagingStats.trainerName}`
+                      : 'View conversations'
+                  }
+                </p>
+              </Link>
+            )}
+
+            {/* Payments Card */}
+            <Link
+              href="/payments"
+              className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 interactive-card"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="bg-success/10 p-2 rounded-lg">
+                  <Wallet size={24} className="text-success" />
+                </div>
+              </div>
+              <h3 className="text-text-primary font-semibold">Payments</h3>
+              <p className="text-text-secondary text-xs mt-0.5">
+                Manage billing &amp; payments
+              </p>
+            </Link>
+          </section>
+
+          {/* Recent Activity */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-text-primary font-semibold">Recent Activity</h2>
+              <Link href="/profile/history" className="text-primary text-sm font-medium">
+                View All
+              </Link>
+            </div>
+            {renderRecentActivityItems()}
+          </section>
+
+          {/* Trainer-specific: My Clients stat */}
+          {profile.is_trainer && !loadingMessagingStats && (
+            <section className="bg-bg-card border border-border rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-text-secondary text-sm">Active Clients</p>
+                  <p className="text-2xl font-bold text-text-primary">{messagingStats.clientsCount || 0}</p>
+                </div>
+                <Link
+                  href="/trainer/clients"
+                  className="bg-primary text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-primary/90 transition-colors"
+                >
+                  View All
+                </Link>
+              </div>
+            </section>
+          )}
+        </>
       )}
-    </MobileLayout>
+    </GlassAppLayout>
   )
 }

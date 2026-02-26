@@ -177,7 +177,7 @@ export default function ChatWindow({
         scrollToBottom(true)
       }
     }
-  }, [])
+  }, [scrollToBottom])
 
   useEffect(() => {
     // Always scroll to bottom on initial load (messages.length transition from 0)
@@ -193,7 +193,7 @@ export default function ChatWindow({
     }
 
     prevMessagesLength.current = messages.length
-  }, [messages])
+  }, [messages, scrollToBottom])
 
   const loadMessages = useCallback(async () => {
     setLoading(true)
@@ -239,7 +239,7 @@ export default function ChatWindow({
     } finally {
       setLoading(false)
     }
-  }, [conversationId, processMessage])
+  }, [conversationId, processMessage, currentUserId, scrollToBottom])
 
   useEffect(() => {
     loadMessages()

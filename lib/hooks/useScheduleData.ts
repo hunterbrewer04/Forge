@@ -155,7 +155,9 @@ export function useScheduleData({
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [fromDate, toDate, userId]) // Intentionally excluding fetchSessions to avoid infinite loop
+  // fetchSessions and sessions.length intentionally excluded — including them causes an infinite refetch loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromDate, toDate, userId])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {

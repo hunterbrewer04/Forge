@@ -3,7 +3,8 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
-import MobileLayout from '@/components/layout/MobileLayout'
+import GlassAppLayout from '@/components/layout/GlassAppLayout'
+import GlassCard from '@/components/ui/GlassCard'
 import {
   isPushSupported,
   getNotificationPermission,
@@ -105,114 +106,116 @@ export default function NotificationSettingsPage() {
 
   if (loading || !user) {
     return (
-      <MobileLayout title="Notification Settings" showBack>
+      <GlassAppLayout title="Notification Settings" showBack desktopTitle="Notification Settings">
         <div className="flex items-center justify-center py-20">
           <Loader2 size={24} className="text-text-muted animate-spin" />
         </div>
-      </MobileLayout>
+      </GlassAppLayout>
     )
   }
 
   return (
-    <MobileLayout title="Notification Settings" showBack>
-      {/* Push Notification Toggle */}
-      <section className="mt-2">
-        <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
-          Push Notifications
-        </h3>
-        <div className="bg-bg-card rounded-xl border border-border overflow-hidden">
-          <button
-            onClick={canToggle ? handleToggle : undefined}
-            disabled={!canToggle || toggling}
-            className="flex items-center gap-4 px-4 py-4 w-full text-left disabled:opacity-60"
-          >
-            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <Bell size={22} className="text-text-primary" />
+    <GlassAppLayout title="Notification Settings" showBack desktopTitle="Notification Settings">
+      <GlassCard variant="subtle" className="p-6 space-y-6">
+        {/* Push Notification Toggle */}
+        <section>
+          <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
+            Push Notifications
+          </h3>
+          <div className="bg-bg-card rounded-xl border border-border overflow-hidden">
+            <button
+              onClick={canToggle ? handleToggle : undefined}
+              disabled={!canToggle || toggling}
+              className="flex items-center gap-4 px-4 py-4 w-full text-left disabled:opacity-60"
+            >
+              <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+                <Bell size={22} className="text-text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-text-primary font-medium block">Push Notifications</span>
+                <span className={`text-xs ${isEnabled ? 'text-success' : 'text-text-muted'}`}>
+                  {statusText}
+                </span>
+              </div>
+              {canToggle && (
+                <div className={`w-12 h-7 rounded-full p-1 transition-colors ${isEnabled ? 'bg-primary' : 'bg-bg-secondary border border-border'}`}>
+                  {toggling ? (
+                    <div className="size-5 flex items-center justify-center">
+                      <Loader2 size={14} className="text-text-muted animate-spin" />
+                    </div>
+                  ) : (
+                    <div className={`size-5 rounded-full bg-white shadow transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                  )}
+                </div>
+              )}
+            </button>
+          </div>
+        </section>
+
+        {/* Denied Warning */}
+        {pushState === 'denied' && (
+          <section>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-3">
+              <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-text-primary text-sm font-medium">Notifications Blocked</p>
+                <p className="text-text-secondary text-xs mt-1">
+                  You&apos;ve blocked notifications for this site. To re-enable, go to your browser or device settings and allow notifications for this app.
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-text-primary font-medium block">Push Notifications</span>
-              <span className={`text-xs ${isEnabled ? 'text-success' : 'text-text-muted'}`}>
-                {statusText}
+          </section>
+        )}
+
+        {/* Unsupported Warning */}
+        {pushState === 'unsupported' && (
+          <section>
+            <div className="bg-bg-card border border-border rounded-xl p-4 flex gap-3">
+              <AlertTriangle size={20} className="text-text-muted shrink-0 mt-0.5" />
+              <div>
+                <p className="text-text-primary text-sm font-medium">Not Supported</p>
+                <p className="text-text-secondary text-xs mt-1">
+                  Push notifications are not supported in this browser. For the best experience, install the app to your home screen on iOS 16.4+ or use a supported browser.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Notification Categories */}
+        <section>
+          <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
+            Notification Types
+          </h3>
+          <div className="bg-bg-card rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center gap-4 px-4 py-4">
+              <div className="flex items-center justify-center rounded-lg bg-primary/10 size-10 shrink-0">
+                <MessageCircle size={22} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-text-primary font-medium block">New Messages</span>
+                <span className="text-text-muted text-xs">Get notified when you receive a message</span>
+              </div>
+              <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-success/10 text-success">
+                ACTIVE
               </span>
             </div>
-            {canToggle && (
-              <div className={`w-12 h-7 rounded-full p-1 transition-colors ${isEnabled ? 'bg-primary' : 'bg-bg-secondary border border-border'}`}>
-                {toggling ? (
-                  <div className="size-5 flex items-center justify-center">
-                    <Loader2 size={14} className="text-text-muted animate-spin" />
-                  </div>
-                ) : (
-                  <div className={`size-5 rounded-full bg-white shadow transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                )}
+
+            <div className="flex items-center gap-4 px-4 py-4 border-t border-border">
+              <div className="flex items-center justify-center rounded-lg bg-primary/10 size-10 shrink-0">
+                <Calendar size={22} className="text-primary" />
               </div>
-            )}
-          </button>
-        </div>
-      </section>
-
-      {/* Denied Warning */}
-      {pushState === 'denied' && (
-        <section className="mt-4">
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-3">
-            <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-text-primary text-sm font-medium">Notifications Blocked</p>
-              <p className="text-text-secondary text-xs mt-1">
-                You&apos;ve blocked notifications for this site. To re-enable, go to your browser or device settings and allow notifications for this app.
-              </p>
+              <div className="flex-1 min-w-0">
+                <span className="text-text-primary font-medium block">Booking Updates</span>
+                <span className="text-text-muted text-xs">Session confirmations and changes</span>
+              </div>
+              <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-success/10 text-success">
+                ACTIVE
+              </span>
             </div>
           </div>
         </section>
-      )}
-
-      {/* Unsupported Warning */}
-      {pushState === 'unsupported' && (
-        <section className="mt-4">
-          <div className="bg-bg-card border border-border rounded-xl p-4 flex gap-3">
-            <AlertTriangle size={20} className="text-text-muted shrink-0 mt-0.5" />
-            <div>
-              <p className="text-text-primary text-sm font-medium">Not Supported</p>
-              <p className="text-text-secondary text-xs mt-1">
-                Push notifications are not supported in this browser. For the best experience, install the app to your home screen on iOS 16.4+ or use a supported browser.
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Notification Categories */}
-      <section className="mt-6">
-        <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
-          Notification Types
-        </h3>
-        <div className="bg-bg-card rounded-xl border border-border overflow-hidden">
-          <div className="flex items-center gap-4 px-4 py-4">
-            <div className="flex items-center justify-center rounded-lg bg-primary/10 size-10 shrink-0">
-              <MessageCircle size={22} className="text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-text-primary font-medium block">New Messages</span>
-              <span className="text-text-muted text-xs">Get notified when you receive a message</span>
-            </div>
-            <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-success/10 text-success">
-              ACTIVE
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4 px-4 py-4 border-t border-border">
-            <div className="flex items-center justify-center rounded-lg bg-primary/10 size-10 shrink-0">
-              <Calendar size={22} className="text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-text-primary font-medium block">Booking Updates</span>
-              <span className="text-text-muted text-xs">Session confirmations and changes</span>
-            </div>
-            <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-success/10 text-success">
-              ACTIVE
-            </span>
-          </div>
-        </div>
-      </section>
-    </MobileLayout>
+      </GlassCard>
+    </GlassAppLayout>
   )
 }

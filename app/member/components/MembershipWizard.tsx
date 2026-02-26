@@ -143,7 +143,7 @@ export default function MembershipWizard() {
         onAccountComplete={handleAccountComplete}
         onSelectTier={handleSelectTier}
         onPaymentBack={handlePaymentBack}
-        onPaymentSuccess={() => goTo('success')}
+        onPaymentSuccess={() => router.push('/member/success')}
       />
     )
   }
@@ -211,7 +211,7 @@ export default function MembershipWizard() {
                   tierName={selectedTier.name}
                   priceMonthly={selectedTier.price_monthly}
                   onBack={handlePaymentBack}
-                  onSuccess={() => goTo('success')}
+                  onSuccess={() => router.push('/member/success')}
                 />
               </Elements>
             </motion.div>

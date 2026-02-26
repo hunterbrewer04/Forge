@@ -78,17 +78,6 @@ export default function WizardStepSuccess() {
           <Link href="/schedule">Browse Sessions</Link>
         </Button>
 
-        {/* Secondary CTA */}
-        <p className="text-sm text-text-secondary">
-          Manage your membership at any time from your{' '}
-          <Link
-            href="/member/portal"
-            className="underline text-text-secondary hover:text-text-primary transition-colors"
-          >
-            member portal
-          </Link>
-          .
-        </p>
       </motion.div>
 
     </div>

@@ -17,13 +17,13 @@ export default function MemberLayoutShell({ children }: MemberLayoutShellProps) 
 
   return (
     <div
-      className="min-h-screen bg-bg-secondary flex flex-col"
+      className="fixed inset-0 overflow-y-auto bg-bg-secondary flex flex-col"
       style={{
         background: `radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--facility-primary) 6%, transparent) 0%, transparent 70%)`,
         backgroundColor: 'var(--bg-secondary)',
       }}
     >
-      <header className="flex items-center justify-center py-6">
+      <header className="flex items-center justify-center py-6 shrink-0">
         <Image src="/forge-logo.png" alt="Forge" width={560} height={280} className="h-56 w-auto" priority />
       </header>
 

@@ -229,7 +229,7 @@ export default function MessageInput({
           }),
         }).catch(() => {}) // Best-effort, don't block chat
       }
-    } catch (err) {
+    } catch {
       // Remove optimistic message and restore input
       onMessageError?.(tempId)
       setMessage(messageContent)

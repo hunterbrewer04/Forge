@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { fetchClientConversation } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
-import { AlertCircle, MessageSquare, RefreshCw, User } from '@/components/ui/icons'
+import { AlertCircle, MessageSquare, RefreshCw } from '@/components/ui/icons'
 
 interface Conversation {
   id: string
@@ -63,7 +63,7 @@ export default function ClientConversationList({
     } finally {
       setLoading(false)
     }
-  }, [currentUserId, onSelectConversation])
+  }, [currentUserId, onSelectConversation, selectedConversationId])
 
   useEffect(() => {
     loadConversation()

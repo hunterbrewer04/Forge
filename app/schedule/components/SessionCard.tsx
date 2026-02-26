@@ -14,7 +14,7 @@ interface SessionCardProps {
   onDetails?: () => void
 }
 
-export default function SessionCard({ session, userId, isTrainer, onBook, onCancel, onTap, onDetails }: SessionCardProps) {
+export default function SessionCard({ session, isTrainer, onBook, onTap, onDetails }: SessionCardProps) {
   const { trainer, availability, user_booking } = session
 
   // Determine card state

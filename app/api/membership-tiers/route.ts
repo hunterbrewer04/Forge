@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase-admin'
 import { stripe } from '@/lib/stripe'
 import { handleUnexpectedError } from '@/lib/api/errors'
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const supabase = getAdminClient()
     const { data: tiers, error } = await supabase

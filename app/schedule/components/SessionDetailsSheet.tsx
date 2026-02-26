@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { X, Clock, MapPin, User, Calendar, Users } from '@/components/ui/icons'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import type { SessionWithDetails } from '@/lib/types/sessions'
 import Image from 'next/image'
 
@@ -38,6 +39,7 @@ export default function SessionDetailsSheet({
 
   const mountedRef = useRef(true)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const isDesktop = useIsDesktop()
 
   useEffect(() => {
     mountedRef.current = true
@@ -120,7 +122,7 @@ export default function SessionDetailsSheet({
   const isFull = session.availability.is_full && !session.user_booking
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center">
+    <div className={`fixed inset-0 z-[70] flex justify-center ${isDesktop ? 'items-center p-4' : 'items-end'}`}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -129,27 +131,35 @@ export default function SessionDetailsSheet({
 
       {/* Sheet Content */}
       <div
-        className="relative w-full max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom max-h-[85dvh] flex flex-col"
-        style={{
+        className={`relative w-full max-h-[85dvh] flex flex-col ${
+          isDesktop
+            ? 'max-w-xl bg-surface-dark rounded-2xl animate-scale-up'
+            : 'max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom'
+        }`}
+        style={!isDesktop ? {
           transform: `translateY(${translateY}px)`,
           transition: translateY === 0 ? 'transform 0.3s ease-out' : 'none'
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        } : undefined}
+        {...(!isDesktop ? {
+          onTouchStart: handleTouchStart,
+          onTouchMove: handleTouchMove,
+          onTouchEnd: handleTouchEnd,
+        } : {})}
       >
         {/* Session Type Color Header Bar */}
         <div
-          className="absolute top-0 left-0 right-0 h-1"
+          className={`absolute top-0 left-0 right-0 ${isDesktop ? 'h-1.5 rounded-t-2xl' : 'h-1'}`}
           style={{ backgroundColor: session.session_type?.color || '#ff6714' }}
         />
 
         {/* Header: Drag Handle */}
-        <div className="px-6 pt-2 shrink-0">
-          <div className="flex justify-center pb-3">
-            <div className="w-10 h-1 bg-gray-600 rounded-full" />
+        {!isDesktop && (
+          <div className="px-6 pt-2 shrink-0">
+            <div className="flex justify-center pb-3">
+              <div className="w-10 h-1 bg-gray-600 rounded-full" />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Close Button */}
         <button
@@ -160,7 +170,7 @@ export default function SessionDetailsSheet({
         </button>
 
         {/* Scrollable Body */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 min-h-0">
+        <div ref={scrollRef} className={`flex-1 overflow-y-auto px-6 min-h-0 ${isDesktop ? 'pt-6' : ''}`}>
           {/* Session Info */}
           <div className="mb-6">
             <h2 className="text-xl font-bold text-white mb-2">

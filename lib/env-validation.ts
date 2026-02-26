@@ -140,7 +140,7 @@ export function validateEnvironmentVariables(): void {
             `NEXT_PUBLIC_SUPABASE_URL doesn't appear to be a Supabase URL: ${value}`
           )
         }
-      } catch (error) {
+      } catch {
         throw new EnvironmentValidationError(
           `NEXT_PUBLIC_SUPABASE_URL is not a valid URL: ${value}`
         )

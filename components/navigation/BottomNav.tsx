@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, MessageCircle, Calendar, User, type LucideIcon } from "@/components/ui/icons";
@@ -18,7 +18,7 @@ export default function BottomNav() {
   const router = useRouter();
   const { user, profile } = useAuth();
 
-  const navItems: NavItem[] = [
+  const navItems = useMemo<NavItem[]>(() => [
     { href: "/home", icon: Home, label: "Home" },
     // Chat only for trainers and full-access accounts (not plain members)
     ...(profile?.is_trainer || profile?.has_full_access
@@ -26,7 +26,7 @@ export default function BottomNav() {
       : []),
     { href: "/schedule", icon: Calendar, label: "Sessions" },
     { href: "/profile", icon: User, label: "Profile" },
-  ];
+  ], [profile?.is_trainer, profile?.has_full_access]);
   const { unreadCount } = useUnreadCount({
     userId: user?.id,
     isTrainer: profile?.is_trainer,
@@ -38,7 +38,7 @@ export default function BottomNav() {
     navItems.forEach((item) => {
       router.prefetch(item.href);
     });
-  }, [router]);
+  }, [router, navItems]);
 
   const isActive = (href: string) => {
     if (href === "/home") {

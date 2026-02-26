@@ -48,7 +48,7 @@ export default function MobileLayout({
         />
       ) : null}
 
-      <main className="flex-1 overflow-y-auto overscroll-none w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <main className="flex-1 overflow-y-auto overscroll-none w-full animate-fade-in-up" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="max-w-md lg:max-w-2xl xl:max-w-4xl mx-auto flex flex-col gap-4 px-4 sm:px-6 pt-4 pb-28 lg:pb-8 min-h-full">
           {children}
         </div>

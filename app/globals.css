@@ -154,28 +154,26 @@
 
 /* ── Glassmorphism Utilities ── */
 .glass {
-  background: rgba(255, 255, 255, 0.60);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.20);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.40);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 .glass-subtle {
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.70);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
 .glass-input {
   background: rgba(255, 255, 255, 0.50);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -188,15 +186,13 @@
 .dark .glass {
   background: rgba(26, 34, 53, 0.70);
   border-color: rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.20);
 }
 
 .dark .glass-subtle {
   background: rgba(26, 34, 53, 0.45);
   border-color: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
 }
 
 .dark .glass-input {
@@ -204,55 +200,54 @@
   border-color: rgba(255, 255, 255, 0.10);
 }
 
-/* ── Gradient Mesh Background ── */
+/* ── Gradient Mesh Background (auth/member pages only) ── */
 .gradient-mesh {
   position: fixed;
   inset: 0;
-  overflow: hidden;
   z-index: 0;
-}
-
-.gradient-mesh::before,
-.gradient-mesh::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.6;
-  will-change: transform;
-}
-
-.gradient-mesh::before {
-  width: 60%;
-  height: 60%;
-  top: -10%;
-  left: -10%;
-  background: color-mix(in srgb, var(--facility-primary) 25%, transparent);
-  animation: mesh-shift 20s ease-in-out infinite;
-}
-
-.gradient-mesh::after {
-  width: 50%;
-  height: 50%;
-  bottom: -10%;
-  right: -10%;
-  background: color-mix(in srgb, var(--facility-primary) 15%, transparent);
-  animation: mesh-shift 20s ease-in-out infinite reverse;
-}
-
-@keyframes mesh-shift {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(30px, -20px) scale(1.05);
-  }
+  background:
+    radial-gradient(ellipse at 20% 50%, color-mix(in srgb, var(--facility-primary) 8%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, color-mix(in srgb, var(--facility-primary) 6%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse at 40% 80%, color-mix(in srgb, var(--facility-primary) 4%, transparent) 0%, transparent 50%);
+  background-color: var(--bg-primary);
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gradient-mesh::before,
-  .gradient-mesh::after {
+  .gradient-mesh { animation: none; }
+}
+
+/* ── Entrance & Interaction Animations ── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.35s cubic-bezier(0.25, 0.4, 0.25, 1) both;
+}
+
+.interactive-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+  .interactive-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.interactive-card:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .interactive-card:hover,
+  .interactive-card:active {
     animation: none;
+    transform: none;
   }
 }
 

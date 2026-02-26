@@ -22,7 +22,6 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { href: "/home", iconKey: "home", label: "Home" },
-  { href: "/chat", iconKey: "messages", label: "Messages" },
   { href: "/schedule", iconKey: "calendar", label: "Schedule" },
 ];
 
@@ -60,6 +59,11 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
     return pathname.startsWith(href);
   };
 
+  const messagesNavItem: NavItem[] =
+    profile?.is_trainer || profile?.has_full_access
+      ? [{ href: "/chat", iconKey: "messages", label: "Messages" }]
+      : [];
+
   const trainerNavItems: NavItem[] = profile?.is_trainer
     ? [{ href: "/trainer/clients", iconKey: "clients", label: "Clients" }]
     : [];
@@ -82,7 +86,7 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
       {/* Main Navigation */}
       <nav className="flex-1 px-3 py-6">
         <ul className="space-y-1">
-          {[...mainNavItems, ...trainerNavItems].map((item) => (
+          {[...mainNavItems, ...messagesNavItem, ...trainerNavItems].map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
