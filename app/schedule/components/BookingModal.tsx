@@ -164,7 +164,7 @@ export default function BookingModal({
       >
         {/* Session Type Color Header Bar */}
         <div
-          className="absolute top-0 left-0 right-0 h-1"
+          className={`absolute top-0 left-0 right-0 ${isDesktop ? 'h-1.5 rounded-t-2xl' : 'h-1'}`}
           style={{ backgroundColor: session.session_type?.color || '#ff6714' }}
         />
 
