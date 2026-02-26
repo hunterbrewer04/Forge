@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import MobileLayout from '@/components/layout/MobileLayout'
+import GlassAppLayout from '@/components/layout/GlassAppLayout'
+import GlassCard from '@/components/ui/GlassCard'
 import {
   Plus,
   Calendar,
@@ -132,81 +133,115 @@ export default function AdminSessionsPage() {
     { key: 'all', label: 'All' },
   ]
 
+  const topBarRightContent = (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={handleRefresh}
+        className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+        disabled={isRefreshing}
+      >
+        <RefreshCw
+          size={20}
+          className={isRefreshing ? 'animate-spin' : ''}
+        />
+      </button>
+      <button
+        onClick={() => router.push('/trainer/settings')}
+        className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+      >
+        <Settings size={20} />
+      </button>
+    </div>
+  )
+
+  const desktopHeaderRight = (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={handleRefresh}
+        className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+        disabled={isRefreshing}
+      >
+        <RefreshCw
+          size={20}
+          className={isRefreshing ? 'animate-spin' : ''}
+        />
+      </button>
+      <button
+        onClick={() => router.push('/trainer/settings')}
+        className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+      >
+        <Settings size={20} />
+      </button>
+      <button
+        onClick={() => router.push('/trainer/sessions/new')}
+        className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors active:scale-95"
+      >
+        <Plus size={18} />
+        New Session
+      </button>
+    </div>
+  )
+
   return (
-    <MobileLayout
+    <GlassAppLayout
       title="Sessions"
+      desktopTitle="Sessions"
       showBack
       showNotifications={false}
-      topBarRightContent={
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleRefresh}
-            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
-            disabled={isRefreshing}
-          >
-            <RefreshCw
-              size={20}
-              className={isRefreshing ? 'animate-spin' : ''}
-            />
-          </button>
-          <button
-            onClick={() => router.push('/trainer/settings')}
-            className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-800 text-stone-300 transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
-          >
-            <Settings size={20} />
-          </button>
-        </div>
-      }
+      topBarRightContent={topBarRightContent}
+      desktopHeaderRight={desktopHeaderRight}
     >
       {/* Filters */}
-      <div className="space-y-3">
-        {/* Status Filter */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
-          {filterButtons.map((btn) => (
-            <button
-              key={btn.key}
-              onClick={() => setFilter(btn.key)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                filter === btn.key
-                  ? 'bg-primary text-white'
-                  : 'bg-stone-800 text-stone-400 hover:bg-stone-700'
-              }`}
-            >
-              {btn.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Type Filter */}
-        {sessionTypes.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Filter size={16} className="text-stone-500" />
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="flex-1 bg-stone-800 text-white rounded-lg px-3 py-2 text-sm border-none outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">All Types</option>
-              {sessionTypes.map((type) => (
-                <option key={type.id} value={type.slug}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
+      <GlassCard variant="subtle" className="p-4">
+        <div className="space-y-3">
+          {/* Status Filter */}
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+            {filterButtons.map((btn) => (
+              <button
+                key={btn.key}
+                onClick={() => setFilter(btn.key)}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  filter === btn.key
+                    ? 'bg-primary text-white'
+                    : 'bg-bg-secondary text-text-secondary hover:bg-bg-input'
+                }`}
+              >
+                {btn.label}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+
+          {/* Type Filter */}
+          {sessionTypes.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Filter size={16} className="text-text-muted" />
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="flex-1 bg-bg-secondary text-text-primary rounded-lg px-3 py-2 text-sm border-none outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All Types</option>
+                {sessionTypes.map((type) => (
+                  <option key={type.id} value={type.slug}>
+                    {type.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      </GlassCard>
 
       {/* Content */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-12">
           <Loader2 size={32} className="text-primary animate-spin mb-4" />
-          <p className="text-stone-400">Loading sessions...</p>
+          <p className="text-text-secondary">Loading sessions...</p>
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-12">
           <AlertCircle size={32} className="text-red-500 mb-4" />
-          <p className="text-stone-400">{error}</p>
+          <p className="text-text-secondary">{error}</p>
           <button
             onClick={handleRefresh}
             className="mt-4 px-4 py-2 bg-primary text-white rounded-lg font-medium"
@@ -216,9 +251,9 @@ export default function AdminSessionsPage() {
         </div>
       ) : sessions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <Calendar size={48} className="text-stone-600 mb-4" />
-          <p className="text-stone-400 text-center mb-2">No sessions found</p>
-          <p className="text-stone-500 text-sm text-center mb-6">
+          <Calendar size={48} className="text-text-muted mb-4" />
+          <p className="text-text-secondary text-center mb-2">No sessions found</p>
+          <p className="text-text-muted text-sm text-center mb-6">
             {filter === 'upcoming'
               ? 'Create your first session to get started'
               : 'No sessions match the current filter'}
@@ -234,17 +269,17 @@ export default function AdminSessionsPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-3 space-y-3 lg:space-y-0">
           {sessions.map((session) => (
             <button
               key={session.id}
               onClick={() => router.push(`/trainer/sessions/${session.id}`)}
-              className="w-full bg-surface-dark rounded-xl p-4 text-left hover:bg-stone-800/80 transition-colors"
+              className="w-full bg-bg-input rounded-xl p-4 text-left hover:bg-bg-secondary/80 transition-colors"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-white truncate">
+                    <h3 className="font-bold text-text-primary truncate">
                       {session.title}
                     </h3>
                     {getStatusBadge(session)}
@@ -262,7 +297,7 @@ export default function AdminSessionsPage() {
                     </span>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-400">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
                     <div className="flex items-center gap-1.5">
                       <Calendar size={14} className="text-primary" />
                       <span>{formatDate(session.starts_at)}</span>
@@ -281,17 +316,17 @@ export default function AdminSessionsPage() {
                   </div>
                 </div>
 
-                <ChevronRight size={20} className="text-stone-500 flex-shrink-0 mt-1" />
+                <ChevronRight size={20} className="text-text-muted flex-shrink-0 mt-1" />
               </div>
             </button>
           ))}
         </div>
       )}
 
-      {/* FAB - Create New Session */}
+      {/* FAB - Create New Session (mobile only) */}
       <button
         onClick={() => router.push('/trainer/sessions/new')}
-        className="fixed bottom-24 right-4 size-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform lg:bottom-8"
+        className="lg:hidden fixed bottom-24 right-4 size-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform"
         aria-label="Create new session"
       >
         <Plus size={28} />
@@ -306,6 +341,6 @@ export default function AdminSessionsPage() {
           scrollbar-width: none;
         }
       `}</style>
-    </MobileLayout>
+    </GlassAppLayout>
   )
 }

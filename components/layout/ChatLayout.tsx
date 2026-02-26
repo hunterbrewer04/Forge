@@ -1,7 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
-import Sidebar from "@/components/navigation/Sidebar";
+import GlassSidebar from "@/components/navigation/GlassSidebar";
+import { motion } from 'framer-motion';
 import BottomNav from "@/components/navigation/BottomNav";
 import { Plus, MessageCircle } from "@/components/ui/icons";
 
@@ -22,11 +23,34 @@ export default function ChatLayout({
 }: ChatLayoutProps) {
   return (
     <div className="fixed inset-0 bg-bg-primary flex overflow-hidden transition-colors duration-200">
+      {/* Desktop gradient mesh and floating orbs - lg only */}
+      <div className="hidden lg:block">
+        <div className="gradient-mesh" />
+        <motion.div
+          className="fixed top-[10%] left-[15%] w-[300px] h-[300px] rounded-full opacity-20 pointer-events-none z-0"
+          style={{
+            background: 'radial-gradient(circle, var(--facility-primary), transparent 70%)',
+            filter: 'blur(60px)',
+          }}
+          animate={{ y: [0, -20, 0], x: [0, 10, 0] }}
+          transition={{ duration: 8, ease: 'easeInOut', repeat: Infinity }}
+        />
+        <motion.div
+          className="fixed bottom-[10%] right-[15%] w-[250px] h-[250px] rounded-full opacity-15 pointer-events-none z-0"
+          style={{
+            background: 'radial-gradient(circle, var(--facility-primary), transparent 70%)',
+            filter: 'blur(60px)',
+          }}
+          animate={{ y: [0, 15, 0], x: [0, -12, 0] }}
+          transition={{ duration: 10, ease: 'easeInOut', repeat: Infinity }}
+        />
+      </div>
+
       {/* Sidebar - only visible on large screens */}
-      <Sidebar onSignOut={onSignOut} />
+      <GlassSidebar onSignOut={onSignOut} />
 
       {/* Main Chat Area */}
-      <div className="relative flex-1 flex flex-col lg:flex-row min-h-0 lg:max-h-screen overflow-hidden">
+      <div className="relative z-10 flex-1 flex flex-col lg:flex-row min-h-0 lg:max-h-screen overflow-hidden">
         {/* Mobile Header - only on mobile, hidden when chat is open */}
         {!showActiveChat && <div className="lg:hidden flex-none">{mobileHeader}</div>}
 
@@ -37,7 +61,7 @@ export default function ChatLayout({
             lg:flex flex-col min-h-0
             w-full lg:w-80 xl:w-96
             lg:border-r lg:border-border
-            bg-bg-primary
+            bg-bg-primary lg:glass-subtle
             overflow-hidden
           `}
         >
@@ -63,7 +87,7 @@ export default function ChatLayout({
             ${showActiveChat ? "flex" : "hidden"}
             lg:flex flex-col flex-1 min-h-0
             lg:relative
-            bg-bg-primary lg:z-0
+            bg-bg-primary lg:glass-subtle lg:z-0
           `}
         >
           {activeChat || (

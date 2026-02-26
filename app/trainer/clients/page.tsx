@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useClientList } from '@/lib/hooks/useClients'
-import MobileLayout from '@/components/layout/MobileLayout'
+import GlassAppLayout from '@/components/layout/GlassAppLayout'
+import GlassCard from '@/components/ui/GlassCard'
 import { ClientListSkeleton } from '@/components/skeletons/ClientSkeleton'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -32,21 +33,23 @@ export default function ClientListPage() {
   }, [clients, search])
 
   return (
-    <MobileLayout title="Clients" showBack showNotifications={false}>
+    <GlassAppLayout title="Clients" desktopTitle="Clients" showBack showNotifications={false}>
       {/* Search */}
-      <div className="relative">
-        <Search
-          size={18}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-        />
-        <input
-          type="text"
-          placeholder="Search by name, username, or email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-bg-secondary text-text-primary rounded-xl pl-10 pr-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-        />
-      </div>
+      <GlassCard variant="subtle" className="p-4">
+        <div className="relative">
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+          />
+          <input
+            type="text"
+            placeholder="Search by name, username, or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-bg-secondary text-text-primary rounded-xl pl-10 pr-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
+          />
+        </div>
+      </GlassCard>
 
       {/* Content */}
       {loading ? (
@@ -74,7 +77,7 @@ export default function ClientListPage() {
             {filtered.length} {filtered.length === 1 ? 'client' : 'clients'}
           </p>
 
-          <div className="space-y-1">
+          <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3 space-y-1 lg:space-y-0">
             {filtered.map((client) => (
               <Link
                 key={client.id}
@@ -122,6 +125,6 @@ export default function ClientListPage() {
           </div>
         </>
       )}
-    </MobileLayout>
+    </GlassAppLayout>
   )
 }

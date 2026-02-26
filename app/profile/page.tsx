@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
-import MobileLayout from '@/components/layout/MobileLayout'
+import GlassAppLayout from '@/components/layout/GlassAppLayout'
+import GlassCard from '@/components/ui/GlassCard'
 import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
@@ -141,9 +142,9 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <MobileLayout title="Athlete Profile" showBack showNotifications={false}>
+      <GlassAppLayout title="Athlete Profile" showBack showNotifications={false} desktopTitle="Athlete Profile">
         <ProfileSkeleton />
-      </MobileLayout>
+      </GlassAppLayout>
     )
   }
 
@@ -174,7 +175,7 @@ export default function ProfilePage() {
   )
 
   return (
-    <MobileLayout customHeader={customHeader}>
+    <GlassAppLayout customHeader={customHeader} desktopTitle="Athlete Profile">
       <input
         type="file"
         ref={fileInputRef}
@@ -184,148 +185,174 @@ export default function ProfilePage() {
         aria-label="Upload profile picture"
       />
 
-      {/* Profile Header */}
-      <section className="flex flex-col items-center pt-4 pb-6">
-        <div
-          className="relative mb-4 group cursor-pointer"
-          onClick={handleAvatarClick}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleAvatarClick() }}
-          role="button"
-          tabIndex={0}
-          aria-label="Click to change profile picture"
-        >
-          {/* Avatar */}
-          <div className="relative size-28 rounded-full overflow-hidden bg-bg-secondary border-4 border-primary">
-            {profile?.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={displayName}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="size-full flex items-center justify-center">
-                <User size={48} className="text-text-muted" />
+      <div className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
+        {/* Left column: Identity card */}
+        <div>
+          <GlassCard variant="subtle" className="p-6">
+            {/* Profile Header */}
+            <section className="flex flex-col items-center pt-4 pb-6">
+              <div
+                className="relative mb-4 group cursor-pointer"
+                onClick={handleAvatarClick}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleAvatarClick() }}
+                role="button"
+                tabIndex={0}
+                aria-label="Click to change profile picture"
+              >
+                {/* Avatar */}
+                <div className="relative size-28 rounded-full overflow-hidden bg-bg-secondary border-4 border-primary">
+                  {profile?.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt={displayName}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="size-full flex items-center justify-center">
+                      <User size={48} className="text-text-muted" />
+                    </div>
+                  )}
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+                {/* Online indicator */}
+                <div className="absolute bottom-2 right-2 size-4 bg-success rounded-full ring-4 ring-bg-primary" />
               </div>
-            )}
-            {uploadingAvatar && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+
+              {/* Name & Role */}
+              <h1 className="text-2xl font-bold text-text-primary mb-1 text-center w-full px-2">{displayName}</h1>
+              <div className="bg-text-primary text-bg-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+                {role}
               </div>
-            )}
-          </div>
-          {/* Online indicator */}
-          <div className="absolute bottom-2 right-2 size-4 bg-success rounded-full ring-4 ring-bg-primary" />
+              <p className="text-text-muted text-sm">{getMemberInfo()}</p>
+            </section>
+
+            {/* Sign Out button in identity card on desktop */}
+            <div className="hidden lg:block mt-2">
+              <button
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary active:scale-[0.98] disabled:opacity-50"
+              >
+                <LogOut size={22} />
+                {signingOut ? 'Signing Out...' : 'Log Out'}
+              </button>
+            </div>
+          </GlassCard>
         </div>
 
-        {/* Name & Role */}
-        <h1 className="text-2xl font-bold text-text-primary mb-1 text-center w-full px-2">{displayName}</h1>
-        <div className="bg-text-primary text-bg-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
-          {role}
+        {/* Right two columns: Account Management + Preferences */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Account Management Section */}
+          <GlassCard variant="subtle" className="p-6">
+            <section>
+              <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
+                Account Management
+              </h3>
+              <div className="flex flex-col bg-bg-card rounded-xl border border-border overflow-hidden">
+                {/* Edit Profile */}
+                <button
+                  onClick={() => router.push('/profile/edit')}
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
+                >
+                  <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+                    <User size={22} className="text-text-primary" />
+                  </div>
+                  <span className="flex-1 text-text-primary font-medium">Edit Profile</span>
+                  <ChevronRight size={22} className="text-text-muted" />
+                </button>
+
+                {/* Training History */}
+                <button onClick={() => router.push('/profile/history')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
+                  <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+                    <Clock size={22} className="text-text-primary" />
+                  </div>
+                  <span className="flex-1 text-text-primary font-medium">Training History</span>
+                  <ChevronRight size={22} className="text-text-muted" />
+                </button>
+
+                {/* Notification Settings */}
+                <button onClick={() => router.push('/profile/notifications')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
+                  <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+                    <Bell size={22} className="text-text-primary" />
+                  </div>
+                  <span className="flex-1 text-text-primary font-medium">Notification Settings</span>
+                  <ChevronRight size={22} className="text-text-muted" />
+                </button>
+
+                {/* Payment Methods */}
+                <button
+                  onClick={() => router.push('/payments')}
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
+                >
+                  <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+                    <CreditCard size={22} className="text-text-primary" />
+                  </div>
+                  <span className="flex-1 text-text-primary font-medium">Payment Methods</span>
+                  <ChevronRight size={22} className="text-text-muted" />
+                </button>
+
+                {/* Calendar Feed */}
+                <button
+                  onClick={() => setShowCalendarExport(true)}
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
+                >
+                  <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+                    <Calendar size={22} className="text-text-primary" />
+                  </div>
+                  <span className="flex-1 text-text-primary font-medium">Calendar Feed</span>
+                  <ChevronRight size={22} className="text-text-muted" />
+                </button>
+              </div>
+            </section>
+          </GlassCard>
+
+          {/* Preferences Section */}
+          <GlassCard variant="subtle" className="p-6">
+            <section>
+              <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
+                Preferences
+              </h3>
+              <div className="flex flex-col bg-bg-card rounded-xl border border-border overflow-hidden">
+                {/* Theme Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
+                >
+                  <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+                    {isDark ? <Moon size={22} className="text-text-primary" /> : <Sun size={22} className="text-text-primary" />}
+                  </div>
+                  <span className="flex-1 text-text-primary font-medium">
+                    {isDark ? 'Dark Mode' : 'Light Mode'}
+                  </span>
+                  <div className={`w-12 h-7 rounded-full p-1 transition-colors ${isDark ? 'bg-primary' : 'bg-bg-secondary border border-border'}`}>
+                    <div className={`size-5 rounded-full bg-white shadow transition-transform ${isDark ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                </button>
+
+                {/* Reset Password */}
+                <button
+                  onClick={() => setShowResetPasswordModal(true)}
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
+                >
+                  <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
+                    <Lock size={22} className="text-text-primary" />
+                  </div>
+                  <span className="flex-1 text-text-primary font-medium">Reset Password</span>
+                  <ChevronRight size={22} className="text-text-muted" />
+                </button>
+              </div>
+            </section>
+          </GlassCard>
         </div>
-        <p className="text-text-muted text-sm">{getMemberInfo()}</p>
-      </section>
+      </div>
 
-      {/* Account Management Section */}
-      <section className="mt-2">
-        <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
-          Account Management
-        </h3>
-        <div className="flex flex-col bg-bg-card rounded-xl border border-border overflow-hidden">
-          {/* Edit Profile */}
-          <button
-            onClick={() => router.push('/profile/edit')}
-            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
-          >
-            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <User size={22} className="text-text-primary" />
-            </div>
-            <span className="flex-1 text-text-primary font-medium">Edit Profile</span>
-            <ChevronRight size={22} className="text-text-muted" />
-          </button>
-
-          {/* Training History */}
-          <button onClick={() => router.push('/profile/history')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
-            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <Clock size={22} className="text-text-primary" />
-            </div>
-            <span className="flex-1 text-text-primary font-medium">Training History</span>
-            <ChevronRight size={22} className="text-text-muted" />
-          </button>
-
-          {/* Notification Settings */}
-          <button onClick={() => router.push('/profile/notifications')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
-            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <Bell size={22} className="text-text-primary" />
-            </div>
-            <span className="flex-1 text-text-primary font-medium">Notification Settings</span>
-            <ChevronRight size={22} className="text-text-muted" />
-          </button>
-
-          {/* Payment Methods */}
-          <button
-            onClick={() => router.push('/payments')}
-            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
-          >
-            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <CreditCard size={22} className="text-text-primary" />
-            </div>
-            <span className="flex-1 text-text-primary font-medium">Payment Methods</span>
-            <ChevronRight size={22} className="text-text-muted" />
-          </button>
-
-          {/* Calendar Feed */}
-          <button
-            onClick={() => setShowCalendarExport(true)}
-            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
-          >
-            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <Calendar size={22} className="text-text-primary" />
-            </div>
-            <span className="flex-1 text-text-primary font-medium">Calendar Feed</span>
-            <ChevronRight size={22} className="text-text-muted" />
-          </button>
-        </div>
-      </section>
-
-      {/* Preferences Section */}
-      <section className="mt-6">
-        <h3 className="py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
-          Preferences
-        </h3>
-        <div className="flex flex-col bg-bg-card rounded-xl border border-border overflow-hidden">
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
-          >
-            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              {isDark ? <Moon size={22} className="text-text-primary" /> : <Sun size={22} className="text-text-primary" />}
-            </div>
-            <span className="flex-1 text-text-primary font-medium">
-              {isDark ? 'Dark Mode' : 'Light Mode'}
-            </span>
-            <div className={`w-12 h-7 rounded-full p-1 transition-colors ${isDark ? 'bg-primary' : 'bg-bg-secondary border border-border'}`}>
-              <div className={`size-5 rounded-full bg-white shadow transition-transform ${isDark ? 'translate-x-5' : 'translate-x-0'}`} />
-            </div>
-          </button>
-
-          {/* Reset Password */}
-          <button
-            onClick={() => setShowResetPasswordModal(true)}
-            className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
-          >
-            <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
-              <Lock size={22} className="text-text-primary" />
-            </div>
-            <span className="flex-1 text-text-primary font-medium">Reset Password</span>
-            <ChevronRight size={22} className="text-text-muted" />
-          </button>
-        </div>
-      </section>
-
-      {/* Logout Button */}
-      <section className="mt-8 mb-8">
+      {/* Logout Button — mobile only (desktop sign out is inside identity card) */}
+      <section className="mt-8 mb-8 lg:hidden">
         <button
           onClick={handleSignOut}
           disabled={signingOut}
@@ -334,7 +361,6 @@ export default function ProfilePage() {
           <LogOut size={22} />
           {signingOut ? 'Signing Out...' : 'Log Out'}
         </button>
-
       </section>
 
       {/* Reset Password Confirmation Modal */}
@@ -356,6 +382,6 @@ export default function ProfilePage() {
           onClose={() => setShowCalendarExport(false)}
         />
       )}
-    </MobileLayout>
+    </GlassAppLayout>
   )
 }

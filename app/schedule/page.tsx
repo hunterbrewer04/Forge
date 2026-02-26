@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import MobileLayout from '@/components/layout/MobileLayout'
+import GlassAppLayout from '@/components/layout/GlassAppLayout'
+import GlassCard from '@/components/ui/GlassCard'
 import { ArrowLeft, CalendarOff, Plus } from '@/components/ui/icons'
 import { useScheduleData } from '@/lib/hooks/useScheduleData'
 import CalendarStrip from './components/CalendarStrip'
@@ -148,14 +149,16 @@ export default function SchedulePage() {
 
   return (
     <>
-      <MobileLayout customHeader={customHeader}>
+      <GlassAppLayout customHeader={customHeader} desktopTitle={profile?.is_trainer ? 'Sessions' : 'Book a Session'}>
         {/* Calendar */}
-        <CalendarStrip
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          datesWithSessions={datesWithSessions}
-          bookedDates={bookedDates}
-        />
+        <GlassCard variant="subtle" className="p-4">
+          <CalendarStrip
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            datesWithSessions={datesWithSessions}
+            bookedDates={bookedDates}
+          />
+        </GlassCard>
 
         {/* Trainer: Create Session Link */}
         {profile?.is_trainer && (
@@ -205,18 +208,25 @@ export default function SchedulePage() {
         {!loading && !error && (
           <div className="flex-1 flex flex-col">
             {selectedDateSessions.length > 0 ? (
-              <div className="space-y-3">
+              <div className="grid lg:grid-cols-2 gap-3">
                 {selectedDateSessions.map((session) => (
-                  <SessionCard
+                  <GlassCard
                     key={session.id}
-                    session={session}
-                    userId={user?.id}
-                    isTrainer={profile?.is_trainer}
-                    onBook={() => handleBookSession(session)}
-                    onCancel={() => handleCancelBooking(session)}
-                    onTap={() => handleTapSession(session)}
-                    onDetails={() => handleViewDetails(session)}
-                  />
+                    variant="subtle"
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.18 }}
+                    className="overflow-hidden"
+                  >
+                    <SessionCard
+                      session={session}
+                      userId={user?.id}
+                      isTrainer={profile?.is_trainer}
+                      onBook={() => handleBookSession(session)}
+                      onCancel={() => handleCancelBooking(session)}
+                      onTap={() => handleTapSession(session)}
+                      onDetails={() => handleViewDetails(session)}
+                    />
+                  </GlassCard>
                 ))}
               </div>
             ) : (
@@ -232,7 +242,7 @@ export default function SchedulePage() {
             )}
           </div>
         )}
-      </MobileLayout>
+      </GlassAppLayout>
 
       {/* Modals -- outside layout to avoid iOS fixed-positioning issues */}
       {selectedSession && (
