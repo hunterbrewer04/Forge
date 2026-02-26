@@ -63,9 +63,10 @@ export default function NewSessionPage() {
           const data = await response.json()
           const types = data.session_types || []
           setSessionTypes(types)
-          const lessonType = types.find((t: SessionType) => t.name.toLowerCase() === 'lesson')
-          if (lessonType) {
-            setFormData(prev => ({ ...prev, session_type_id: lessonType.id }))
+          if (types.length > 0) {
+            const lessonType = types.find((t: SessionType) => t.name.toLowerCase() === 'lesson')
+            const defaultType = lessonType ?? types[0]
+            setFormData(prev => ({ ...prev, session_type_id: defaultType.id }))
           }
         }
       } catch (err) {
@@ -204,14 +205,17 @@ export default function NewSessionPage() {
               className="w-full bg-bg-input text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
               disabled={isLoadingTypes}
             >
-              {sessionTypes
-                .filter(t => t.name.toLowerCase() === 'lesson')
-                .map((type) => (
+              {isLoadingTypes ? (
+                <option value="">Loading...</option>
+              ) : sessionTypes.length === 0 ? (
+                <option value="">No session types available</option>
+              ) : (
+                sessionTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.name}
                   </option>
                 ))
-              }
+              )}
             </select>
           </div>
 
