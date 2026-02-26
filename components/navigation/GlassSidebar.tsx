@@ -13,11 +13,12 @@ import {
   User,
   Users,
   MessageCircle,
+  Dumbbell,
   LogOut,
   X,
 } from '@/components/ui/icons'
 
-type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients'
+type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients' | 'sessions'
 
 interface NavItem {
   href: string
@@ -35,6 +36,8 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
       return <Calendar size={size} strokeWidth={strokeWidth} />
     case 'clients':
       return <Users size={size} strokeWidth={strokeWidth} />
+    case 'sessions':
+      return <Dumbbell size={size} strokeWidth={strokeWidth} />
     case 'profile':
       return <User size={size} strokeWidth={strokeWidth} />
   }
@@ -77,7 +80,10 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
   ]
 
   const trainerNavItems: NavItem[] = profile?.is_trainer
-    ? [{ href: '/trainer/clients', iconKey: 'clients', label: 'Clients' }]
+    ? [
+        { href: '/trainer/sessions', iconKey: 'sessions', label: 'Sessions' },
+        { href: '/trainer/clients', iconKey: 'clients', label: 'Clients' },
+      ]
     : []
 
   const allNavItems = [...mainNavItems, ...messagesNavItem, ...scheduleNavItem, ...trainerNavItems]
