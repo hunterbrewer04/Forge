@@ -90,7 +90,7 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
     : []
 
   const paymentsNavItem: NavItem[] =
-    !profile?.is_trainer && (profile?.has_full_access || profile?.is_client)
+    !profile?.is_trainer && (profile?.has_full_access || profile?.is_member)
       ? [{ href: '/payments', iconKey: 'payments', label: 'Payments' }]
       : []
 
