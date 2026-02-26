@@ -142,6 +142,17 @@ export default function ProfilePage() {
     return `Member since ${month} ${year}`
   }
 
+  const LogOutButton = () => (
+    <button
+      onClick={handleSignOut}
+      disabled={signingOut}
+      className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary interactive-card disabled:opacity-50"
+    >
+      <LogOut size={22} />
+      {signingOut ? 'Signing Out...' : 'Log Out'}
+    </button>
+  )
+
   if (loading) {
     return (
       <GlassAppLayout title="Athlete Profile" showBack showNotifications={false} desktopTitle="Athlete Profile">
@@ -231,14 +242,7 @@ export default function ProfilePage() {
 
             {/* Sign Out button in identity card on desktop */}
             <div className="hidden lg:block mt-2">
-              <button
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary interactive-card disabled:opacity-50"
-              >
-                <LogOut size={22} />
-                {signingOut ? 'Signing Out...' : 'Log Out'}
-              </button>
+              <LogOutButton />
             </div>
           </GlassCard>
         </motion.div>
@@ -351,14 +355,7 @@ export default function ProfilePage() {
 
       {/* Logout Button — mobile only (desktop sign out is inside identity card) */}
       <section className="mt-8 mb-8 lg:hidden">
-        <button
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary interactive-card disabled:opacity-50"
-        >
-          <LogOut size={22} />
-          {signingOut ? 'Signing Out...' : 'Log Out'}
-        </button>
+        <LogOutButton />
       </section>
 
       {/* Reset Password Confirmation Modal */}

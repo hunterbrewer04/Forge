@@ -167,20 +167,20 @@ export default function EditProfilePage() {
       <GlassAppLayout title="Edit Profile" showBack showNotifications={false} desktopTitle="Edit Profile">
         <div className="px-4 py-6 animate-pulse space-y-6">
           <div className="space-y-2">
-            <div className="h-4 bg-stone-700 rounded w-20" />
-            <div className="h-12 bg-stone-700 rounded-xl w-full" />
+            <div className="h-4 bg-bg-secondary rounded w-20" />
+            <div className="h-12 bg-bg-secondary rounded-xl w-full" />
           </div>
           <div className="space-y-2">
-            <div className="h-4 bg-stone-700 rounded w-20" />
-            <div className="h-12 bg-stone-700 rounded-xl w-full" />
+            <div className="h-4 bg-bg-secondary rounded w-20" />
+            <div className="h-12 bg-bg-secondary rounded-xl w-full" />
           </div>
           <div className="space-y-2">
-            <div className="h-4 bg-stone-700 rounded w-20" />
-            <div className="h-12 bg-stone-700 rounded-xl w-full" />
+            <div className="h-4 bg-bg-secondary rounded w-20" />
+            <div className="h-12 bg-bg-secondary rounded-xl w-full" />
           </div>
           <div className="flex gap-3 pt-4">
-            <div className="flex-1 h-12 bg-stone-700 rounded-xl" />
-            <div className="flex-1 h-12 bg-primary/30 rounded-xl" />
+            <div className="flex-1 h-12 bg-bg-secondary rounded-xl" />
+            <div className="flex-1 h-12 bg-bg-secondary rounded-xl" />
           </div>
         </div>
       </GlassAppLayout>
@@ -195,7 +195,6 @@ export default function EditProfilePage() {
 
   return (
     <GlassAppLayout title="Edit Profile" showBack showNotifications={false} desktopTitle="Edit Profile">
-      <div className="px-4 py-6 lg:px-0 lg:py-0">
         <GlassCard variant="subtle" className="p-8 lg:max-w-2xl lg:mx-auto">
           <form onSubmit={handleSave} className="space-y-6">
             {/* Full Name */}
@@ -305,7 +304,6 @@ export default function EditProfilePage() {
             </div>
           </form>
         </GlassCard>
-      </div>
     </GlassAppLayout>
   )
 }

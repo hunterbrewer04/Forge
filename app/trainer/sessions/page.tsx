@@ -135,45 +135,39 @@ export default function AdminSessionsPage() {
     { key: 'all', label: 'All' },
   ]
 
+  const refreshButton = (
+    <button
+      onClick={handleRefresh}
+      className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+      disabled={isRefreshing}
+    >
+      <RefreshCw
+        size={20}
+        className={isRefreshing ? 'animate-spin' : ''}
+      />
+    </button>
+  )
+
+  const settingsButton = (
+    <button
+      onClick={() => router.push('/trainer/settings')}
+      className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
+    >
+      <Settings size={20} />
+    </button>
+  )
+
   const topBarRightContent = (
     <div className="flex items-center gap-2">
-      <button
-        onClick={handleRefresh}
-        className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
-        disabled={isRefreshing}
-      >
-        <RefreshCw
-          size={20}
-          className={isRefreshing ? 'animate-spin' : ''}
-        />
-      </button>
-      <button
-        onClick={() => router.push('/trainer/settings')}
-        className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
-      >
-        <Settings size={20} />
-      </button>
+      {refreshButton}
+      {settingsButton}
     </div>
   )
 
   const desktopHeaderRight = (
     <div className="flex items-center gap-2">
-      <button
-        onClick={handleRefresh}
-        className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
-        disabled={isRefreshing}
-      >
-        <RefreshCw
-          size={20}
-          className={isRefreshing ? 'animate-spin' : ''}
-        />
-      </button>
-      <button
-        onClick={() => router.push('/trainer/settings')}
-        className="flex items-center justify-center size-11 min-w-[44px] min-h-[44px] rounded-full bg-bg-secondary text-text-primary transition-colors hover:bg-primary/20 hover:text-primary active:scale-95"
-      >
-        <Settings size={20} />
-      </button>
+      {refreshButton}
+      {settingsButton}
       <button
         onClick={() => router.push('/trainer/sessions/new')}
         className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors active:scale-95"

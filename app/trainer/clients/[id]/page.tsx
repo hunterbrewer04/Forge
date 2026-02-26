@@ -44,7 +44,7 @@ export default function ClientDetailPage() {
           <p className="text-text-secondary text-sm text-center">{error}</p>
         </div>
       ) : client ? (
-        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
+        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-6 space-y-6 lg:space-y-0">
           {/* Left column: profile header + message button */}
           <motion.div variants={fadeUpItem}>
           <GlassCard variant="subtle" className="p-6">
@@ -85,7 +85,7 @@ export default function ClientDetailPage() {
           </motion.div>
 
           {/* Right column: info cards */}
-          <motion.div variants={fadeUpItem} className="lg:col-span-2">
+          <motion.div variants={fadeUpItem}>
             <GlassCard variant="subtle" className="p-6">
               <div className="space-y-3">
                 {client.email && (

@@ -31,8 +31,8 @@ export default function HomePage() {
   const { theme } = useFacilityTheme()
   const router = useRouter()
   const isDesktop = useIsDesktop()
-  const [stats, setStats] = useState<Stats>({ totalConversations: 0 })
-  const [loadingStats, setLoadingStats] = useState(true)
+  const [messagingStats, setMessagingStats] = useState<Stats>({ totalConversations: 0 })
+  const [loadingMessagingStats, setLoadingMessagingStats] = useState(true)
   const supabase = useMemo(() => createClient(), [])
 
   // Fetch real home data — pass userId to avoid redundant getUser() call
@@ -59,16 +59,16 @@ export default function HomePage() {
     }
   }, [user, loading, router])
 
-  // Fetch user stats (only for users with messaging access)
+  // Fetch messaging-related stats (only for users with chat access)
   useEffect(() => {
     const fetchStats = async () => {
       if (!user || !profile) return
       if (!profile.is_trainer && !profile.has_full_access) {
-        setLoadingStats(false)
+        setLoadingMessagingStats(false)
         return
       }
 
-      setLoadingStats(true)
+      setLoadingMessagingStats(true)
 
       if (profile.is_trainer) {
         const { data: conversations, error } = await supabase
@@ -77,7 +77,7 @@ export default function HomePage() {
           .eq('trainer_id', user.id)
 
         if (!error && conversations) {
-          setStats({
+          setMessagingStats({
             totalConversations: conversations.length,
             clientsCount: conversations.length,
           })
@@ -99,14 +99,14 @@ export default function HomePage() {
           const trainer = Array.isArray(trainerData)
             ? trainerData[0] as ProfileJoin | undefined
             : trainerData as ProfileJoin | null
-          setStats({
+          setMessagingStats({
             totalConversations: 1,
             trainerName: trainer?.full_name || 'Coach',
           })
         }
       }
 
-      setLoadingStats(false)
+      setLoadingMessagingStats(false)
     }
 
     fetchStats()
@@ -131,6 +131,9 @@ export default function HomePage() {
       </GlassAppLayout>
     )
   }
+
+  // Whether the user has access to the messaging feature
+  const hasMessaging = profile.is_trainer || profile.has_full_access
 
   // Extract first name from full name
   const firstName = profile.full_name?.split(' ')[0] || 'User'
@@ -363,11 +366,11 @@ export default function HomePage() {
           </GlassCard>
           </motion.div>
 
-          {/* Main 5-column grid: 3 left + 2 right */}
+          {/* Main grid: 5-col (3+2) when messaging is available, balanced 2-col otherwise */}
           <motion.div variants={fadeUpItem}>
-          <div className="grid grid-cols-5 gap-6 items-start">
-            {/* Left column — 3 cols */}
-            <div className="col-span-3 space-y-4">
+          <div className={hasMessaging ? "grid grid-cols-5 gap-6 items-start" : "grid grid-cols-2 gap-6 items-start"}>
+            {/* Left column */}
+            <div className={hasMessaging ? "col-span-3 space-y-4" : "space-y-4"}>
               {/* Book Sessions CTA */}
               <GlassCard
                 variant="subtle"
@@ -376,12 +379,9 @@ export default function HomePage() {
               >
                 <Link
                   href="/schedule"
-                  className="block"
+                  className="block rounded-2xl p-6"
                   style={{
                     background: 'linear-gradient(135deg, var(--facility-primary), color-mix(in srgb, var(--facility-primary) 70%, #000))',
-                    borderRadius: '1rem',
-                    padding: '1.5rem',
-                    display: 'block',
                   }}
                 >
                   <h2 className="text-white text-xl font-bold">Book Sessions</h2>
@@ -407,10 +407,10 @@ export default function HomePage() {
               </GlassCard>
             </div>
 
-            {/* Right column — 2 cols */}
-            <div className="col-span-2 space-y-4">
+            {/* Right column */}
+            <div className={hasMessaging ? "col-span-2 space-y-4" : "space-y-4"}>
               {/* Messages Card — only for trainers and full-access users */}
-              {(profile.is_trainer || profile.has_full_access) && (
+              {hasMessaging && (
                 <GlassCard
                   variant="subtle"
                   className="p-6"
@@ -431,8 +431,8 @@ export default function HomePage() {
                     <p className="text-text-secondary text-xs mt-0.5 truncate">
                       {unreadCount > 0
                         ? `${unreadCount} unread messages`
-                        : stats.trainerName
-                          ? `Chat with ${stats.trainerName}`
+                        : messagingStats.trainerName
+                          ? `Chat with ${messagingStats.trainerName}`
                           : 'View conversations'}
                     </p>
                   </Link>
@@ -475,12 +475,12 @@ export default function HomePage() {
               </GlassCard>
 
               {/* Trainer-specific: Active Clients stat */}
-              {profile.is_trainer && !loadingStats && (
+              {profile.is_trainer && !loadingMessagingStats && (
                 <GlassCard variant="subtle" className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-text-secondary text-sm">Active Clients</p>
-                      <p className="text-2xl font-bold text-text-primary">{stats.clientsCount || 0}</p>
+                      <p className="text-2xl font-bold text-text-primary">{messagingStats.clientsCount || 0}</p>
                     </div>
                     <Link
                       href="/trainer/clients"
@@ -548,8 +548,8 @@ export default function HomePage() {
                 <p className="text-text-secondary text-xs mt-0.5 truncate">
                   {unreadCount > 0
                     ? `${unreadCount} unread messages`
-                    : stats.trainerName
-                      ? `Chat with ${stats.trainerName}`
+                    : messagingStats.trainerName
+                      ? `Chat with ${messagingStats.trainerName}`
                       : 'View conversations'
                   }
                 </p>
@@ -585,12 +585,12 @@ export default function HomePage() {
           </section>
 
           {/* Trainer-specific: My Clients stat */}
-          {profile.is_trainer && !loadingStats && (
+          {profile.is_trainer && !loadingMessagingStats && (
             <section className="bg-bg-card border border-border rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-text-secondary text-sm">Active Clients</p>
-                  <p className="text-2xl font-bold text-text-primary">{stats.clientsCount || 0}</p>
+                  <p className="text-2xl font-bold text-text-primary">{messagingStats.clientsCount || 0}</p>
                 </div>
                 <Link
                   href="/trainer/clients"

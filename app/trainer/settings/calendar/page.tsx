@@ -271,7 +271,7 @@ export default function CalendarSettingsPage() {
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-bg-secondary rounded-lg flex items-center justify-center">
-                    <span className="text-text-secondary font-bold text-sm">A</span>
+                    <span className="text-text-primary font-bold text-sm">A</span>
                   </div>
                   <span className="font-medium text-text-primary">Apple Calendar</span>
                 </div>

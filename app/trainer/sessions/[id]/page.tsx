@@ -299,6 +299,64 @@ export default function EditSessionPage() {
     ? 'Edit Session'
     : 'Session Details'
 
+  const BookingsList = () => (
+    <GlassCard variant="subtle" className="p-6">
+      <h3 className="text-lg font-bold text-text-primary mb-4">
+        Bookings ({bookings.filter(b => b.status === 'confirmed').length})
+      </h3>
+      {bookings.length === 0 ? (
+        <div className="text-center py-6">
+          <Users size={32} className="text-text-muted mx-auto mb-2" />
+          <p className="text-text-secondary">No bookings yet</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {bookings.map((booking) => (
+            <div
+              key={booking.id}
+              className={`bg-bg-input rounded-xl p-4 flex items-center gap-3 ${
+                booking.status === 'cancelled' ? 'opacity-50' : ''
+              }`}
+            >
+              <div className="w-10 h-10 rounded-full bg-bg-secondary flex items-center justify-center flex-shrink-0">
+                {booking.client?.avatar_url ? (
+                  <img
+                    src={booking.client.avatar_url}
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <User size={20} className="text-text-secondary" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-text-primary truncate">
+                  {booking.client?.full_name || 'Unknown Client'}
+                </p>
+                <p className="text-xs text-text-muted">
+                  Booked {new Date(booking.booked_at).toLocaleDateString()}
+                </p>
+              </div>
+              <span
+                className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                  booking.status === 'confirmed'
+                    ? 'bg-green-500/20 text-green-400'
+                    : booking.status === 'cancelled'
+                    ? 'bg-red-500/20 text-red-400'
+                    : booking.status === 'attended'
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : 'bg-yellow-500/20 text-yellow-400'
+                }`}
+              >
+                {booking.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </GlassCard>
+  )
+
   if (isLoading) {
     return (
       <GlassAppLayout title="Session Details" desktopTitle="Session Details" showBack showNotifications={false}>
@@ -479,233 +537,186 @@ export default function EditSessionPage() {
 
           {/* Right: Bookings List */}
           <div>
-            <GlassCard variant="subtle" className="p-6">
-              <h3 className="text-lg font-bold text-text-primary mb-4">
-                Bookings ({bookings.filter(b => b.status === 'confirmed').length})
-              </h3>
-              {bookings.length === 0 ? (
-                <div className="text-center py-6">
-                  <Users size={32} className="text-text-muted mx-auto mb-2" />
-                  <p className="text-text-secondary">No bookings yet</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {bookings.map((booking) => (
-                    <div
-                      key={booking.id}
-                      className={`bg-bg-input rounded-xl p-4 flex items-center gap-3 ${
-                        booking.status === 'cancelled' ? 'opacity-50' : ''
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-full bg-bg-secondary flex items-center justify-center flex-shrink-0">
-                        {booking.client?.avatar_url ? (
-                          <img
-                            src={booking.client.avatar_url}
-                            alt=""
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <User size={20} className="text-text-secondary" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-text-primary truncate">
-                          {booking.client?.full_name || 'Unknown Client'}
-                        </p>
-                        <p className="text-xs text-text-muted">
-                          Booked {new Date(booking.booked_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <span
-                        className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                          booking.status === 'confirmed'
-                            ? 'bg-green-500/20 text-green-400'
-                            : booking.status === 'cancelled'
-                            ? 'bg-red-500/20 text-red-400'
-                            : booking.status === 'attended'
-                            ? 'bg-blue-500/20 text-blue-400'
-                            : 'bg-yellow-500/20 text-yellow-400'
-                        }`}
-                      >
-                        {booking.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </GlassCard>
+            <BookingsList />
           </div>
         </div>
       ) : (
         /* Edit Form */
-        <GlassCard variant="subtle" className="p-8 lg:max-w-2xl lg:mx-auto">
-          <div className="space-y-6">
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Session Title *
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              />
-            </div>
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
+          <div>
+            <GlassCard variant="subtle" className="p-8">
+              <div className="space-y-6">
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Session Title *
+                  </label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                </div>
 
-            {/* Session Type */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Session Type
-              </label>
-              <select
-                name="session_type_id"
-                value={formData.session_type_id}
-                onChange={handleChange}
-                className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              >
-                <option value="">Select a type</option>
-                {sessionTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {/* Session Type */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Session Type
+                  </label>
+                  <select
+                    name="session_type_id"
+                    value={formData.session_type_id}
+                    onChange={handleChange}
+                    className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  >
+                    <option value="">Select a type</option>
+                    {sessionTypes.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={3}
-                className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
-              />
-            </div>
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={3}
+                    className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
+                  />
+                </div>
 
-            {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Date *
-                </label>
-                <input
-                  type="date"
-                  name="starts_at"
-                  value={formData.starts_at}
-                  onChange={handleChange}
-                  className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                />
+                {/* Date and Time */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      name="starts_at"
+                      value={formData.starts_at}
+                      onChange={handleChange}
+                      className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Time *
+                    </label>
+                    <input
+                      type="time"
+                      name="starts_time"
+                      value={formData.starts_time}
+                      onChange={handleChange}
+                      className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Duration and Capacity */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Duration (min)
+                    </label>
+                    <input
+                      type="number"
+                      name="duration_minutes"
+                      value={formData.duration_minutes}
+                      onChange={handleChange}
+                      min={15}
+                      max={180}
+                      step={15}
+                      className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Capacity
+                    </label>
+                    <input
+                      type="number"
+                      name="capacity"
+                      value={formData.capacity}
+                      onChange={handleChange}
+                      min={1}
+                      max={50}
+                      className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                {/* Premium Toggle */}
+                <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg border border-border">
+                  <div>
+                    <p className="font-medium text-text-primary">Premium Session</p>
+                    <p className="text-sm text-text-secondary">Mark this as a premium session</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="is_premium"
+                      checked={formData.is_premium}
+                      onChange={handleChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-bg-input peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setViewMode('view')}
+                    className="flex-1 py-3 px-4 bg-bg-secondary text-text-primary font-bold rounded-lg hover:bg-bg-input transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving || !formData.title}
+                    className="flex-1 py-3 px-4 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Time *
-                </label>
-                <input
-                  type="time"
-                  name="starts_time"
-                  value={formData.starts_time}
-                  onChange={handleChange}
-                  className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Duration and Capacity */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Duration (min)
-                </label>
-                <input
-                  type="number"
-                  name="duration_minutes"
-                  value={formData.duration_minutes}
-                  onChange={handleChange}
-                  min={15}
-                  max={180}
-                  step={15}
-                  className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Capacity
-                </label>
-                <input
-                  type="number"
-                  name="capacity"
-                  value={formData.capacity}
-                  onChange={handleChange}
-                  min={1}
-                  max={50}
-                  className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">
-                Location
-              </label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full bg-bg-secondary text-text-primary rounded-lg px-4 py-3 border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              />
-            </div>
-
-            {/* Premium Toggle */}
-            <div className="flex items-center justify-between p-4 bg-bg-secondary rounded-lg border border-border">
-              <div>
-                <p className="font-medium text-text-primary">Premium Session</p>
-                <p className="text-sm text-text-secondary">Mark this as a premium session</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="is_premium"
-                  checked={formData.is_premium}
-                  onChange={handleChange}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-bg-input peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={() => setViewMode('view')}
-                className="flex-1 py-3 px-4 bg-bg-secondary text-text-primary font-bold rounded-lg hover:bg-bg-input transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isSaving || !formData.title}
-                className="flex-1 py-3 px-4 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </button>
-            </div>
+            </GlassCard>
           </div>
-        </GlassCard>
+          <div>
+            <BookingsList />
+          </div>
+        </div>
       )}
 
       {/* Modals */}
@@ -715,7 +726,7 @@ export default function EditSessionPage() {
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setActiveModal(null)}
           />
-          <div className="relative w-full max-w-sm bg-bg-input rounded-2xl p-6">
+          <div className="relative w-full max-w-sm bg-bg-card rounded-2xl p-6">
             <button
               onClick={() => setActiveModal(null)}
               className="absolute top-4 right-4 p-2 text-text-secondary hover:text-text-primary transition-colors"

@@ -96,18 +96,18 @@ export default function PaymentsPage() {
         <motion.div variants={fadeUpItem}>
           <GlassCard variant="subtle" className="p-6">
             <section
-              className="rounded-2xl p-5 text-bg-primary"
-              style={{ background: 'linear-gradient(135deg, var(--text-primary), #2a2a2a)' }}
+              className="rounded-2xl p-5 text-white"
+              style={{ background: 'linear-gradient(135deg, #111418, #2a2a2a)' }}
             >
               <div className="flex items-center justify-between mb-4">
-                <span className="text-bg-primary/70 text-sm font-medium">Membership</span>
-                <CreditCard size={24} className="text-bg-primary/50" />
+                <span className="text-white/70 text-sm font-medium">Membership</span>
+                <CreditCard size={24} className="text-white/50" />
               </div>
 
               {loadingPayments ? (
                 <div className="animate-pulse">
-                  <div className="h-8 bg-bg-primary/20 rounded w-48 mb-3" />
-                  <div className="h-5 bg-bg-primary/20 rounded w-36" />
+                  <div className="h-8 bg-white/20 rounded w-48 mb-3" />
+                  <div className="h-5 bg-white/20 rounded w-36" />
                 </div>
               ) : hasActiveSubscription ? (
                 <>
@@ -118,7 +118,7 @@ export default function PaymentsPage() {
                     </span>
                   </div>
                   {currentPeriodEnd && (
-                    <p className="text-bg-primary/70 text-sm">
+                    <p className="text-white/70 text-sm">
                       Renews {formatPeriodEnd(currentPeriodEnd)}
                     </p>
                   )}
@@ -128,7 +128,7 @@ export default function PaymentsPage() {
                   <h2 className="text-2xl font-bold mb-3">No Active Membership</h2>
                   <Link
                     href="/member/plans"
-                    className="inline-block bg-bg-primary text-text-primary py-2.5 px-5 rounded-xl font-semibold hover:bg-bg-primary/90 transition-colors text-sm"
+                    className="inline-block bg-white text-gray-900 py-2.5 px-5 rounded-xl font-semibold hover:bg-white/90 transition-colors text-sm"
                   >
                     View Plans
                   </Link>
