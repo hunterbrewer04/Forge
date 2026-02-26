@@ -155,7 +155,6 @@ export default function ProfilePage() {
   }
 
   const displayName = profile.full_name || 'User'
-  const role = profile.is_trainer ? 'TRAINER' : 'VARSITY PITCHER'
 
   // Custom header
   const customHeader = (
@@ -225,11 +224,8 @@ export default function ProfilePage() {
                 <div className="absolute bottom-2 right-2 size-4 bg-success rounded-full ring-4 ring-bg-primary" />
               </div>
 
-              {/* Name & Role */}
+              {/* Name */}
               <h1 className="text-2xl font-bold text-text-primary mb-1 text-center w-full px-2">{displayName}</h1>
-              <div className="bg-text-primary text-bg-primary text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2">
-                {role}
-              </div>
               <p className="text-text-muted text-sm">{getMemberInfo()}</p>
             </section>
 
