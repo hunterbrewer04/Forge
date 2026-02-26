@@ -90,11 +90,11 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
   return (
     <GlassCard
       variant="subtle"
-      className="hidden lg:flex flex-col w-64 xl:w-72 h-full rounded-none border-r border-white/10"
+      className="hidden lg:flex flex-col w-64 xl:w-72 h-full rounded-none border-r border-border"
       initial={false}
     >
       {/* Facility Branding */}
-      <div className="flex items-center gap-3 px-6 py-6 border-b border-white/10">
+      <div className="flex items-center gap-3 px-6 py-6 border-b border-border">
         <div className="size-10 rounded-xl bg-primary flex items-center justify-center">
           <span className="text-white font-bold text-xl">
             {theme.name.charAt(0).toUpperCase()}
@@ -111,7 +111,7 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
         {onClose && (
           <button
             onClick={onClose}
-            className="size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-white/10 transition-all"
+            className="size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
             aria-label="Close sidebar"
           >
             <X size={18} />
@@ -138,7 +138,7 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   isActive(item.href)
                     ? 'glass-subtle text-primary font-semibold'
-                    : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                    : 'text-text-secondary hover:bg-bg-secondary/50 hover:text-text-primary'
                 }`}
               >
                 <SidebarIcon
@@ -167,7 +167,7 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
               isActive(item.href)
                 ? 'glass-subtle text-primary font-semibold'
-                : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                : 'text-text-secondary hover:bg-bg-secondary/50 hover:text-text-primary'
             }`}
           >
             <SidebarIcon

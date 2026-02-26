@@ -146,7 +146,7 @@ export default function ConversationList({
             key={conversation.id}
             onClick={() => onSelectConversation(conversation.id)}
             aria-label={`Conversation with ${conversation.client_name}`}
-            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-bg-secondary active:scale-[0.98] ${
+            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-bg-secondary interactive-card ${
               selectedConversationId === conversation.id ? 'bg-primary/10' : ''
             }`}
           >

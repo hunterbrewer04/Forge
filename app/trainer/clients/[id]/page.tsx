@@ -14,6 +14,8 @@ import {
   MessageCircle,
   AlertCircle,
 } from '@/components/ui/icons'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 export default function ClientDetailPage() {
   const params = useParams()
@@ -42,8 +44,9 @@ export default function ClientDetailPage() {
           <p className="text-text-secondary text-sm text-center">{error}</p>
         </div>
       ) : client ? (
-        <div className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
+        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
           {/* Left column: profile header + message button */}
+          <motion.div variants={fadeUpItem}>
           <GlassCard variant="subtle" className="p-6">
             {/* Profile Header */}
             <div className="flex flex-col items-center text-center">
@@ -73,15 +76,16 @@ export default function ClientDetailPage() {
             {/* Quick Action: Message */}
             <button
               onClick={() => router.push(`/chat?conversation=${client.conversation_id}`)}
-              className="mt-6 w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors active:scale-[0.98]"
+              className="interactive-card mt-6 w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors"
             >
               <MessageCircle size={20} />
               Message Client
             </button>
           </GlassCard>
+          </motion.div>
 
           {/* Right column: info cards */}
-          <div className="lg:col-span-2">
+          <motion.div variants={fadeUpItem} className="lg:col-span-2">
             <GlassCard variant="subtle" className="p-6">
               <div className="space-y-3">
                 {client.email && (
@@ -119,8 +123,8 @@ export default function ClientDetailPage() {
                 </div>
               </div>
             </GlassCard>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       ) : null}
     </GlassAppLayout>
   )

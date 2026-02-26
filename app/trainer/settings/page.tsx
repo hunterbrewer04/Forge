@@ -26,7 +26,7 @@ export default function AdminSettingsPage() {
 
   return (
     <GlassAppLayout title="Settings" desktopTitle="Settings" showBack showNotifications={false}>
-      <GlassCard variant="subtle" className="p-6">
+      <GlassCard variant="subtle" className="p-6" interactive>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center gap-3">

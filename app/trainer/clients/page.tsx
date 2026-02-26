@@ -15,6 +15,8 @@ import {
   Users,
   AlertCircle,
 } from '@/components/ui/icons'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 export default function ClientListPage() {
   const { user } = useAuth()
@@ -77,12 +79,12 @@ export default function ClientListPage() {
             {filtered.length} {filtered.length === 1 ? 'client' : 'clients'}
           </p>
 
-          <div className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3 space-y-1 lg:space-y-0">
+          <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3 space-y-1 lg:space-y-0">
             {filtered.map((client) => (
               <Link
                 key={client.id}
                 href={`/trainer/clients/${client.id}`}
-                className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-bg-secondary active:scale-[0.98]"
+                className="interactive-card flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-bg-secondary"
               >
                 {/* Avatar */}
                 <div className="size-12 rounded-full bg-bg-secondary overflow-hidden shrink-0">
@@ -122,7 +124,7 @@ export default function ClientListPage() {
                 </p>
               </div>
             )}
-          </div>
+          </motion.div>
         </>
       )}
     </GlassAppLayout>

@@ -10,6 +10,8 @@ import GlassCard from '@/components/ui/GlassCard'
 import { ArrowLeft, CreditCard, Clipboard, Lock, Dumbbell } from '@/components/ui/icons'
 import Link from 'next/link'
 import { fetchPaymentsSummary } from '@/lib/services/payments'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 export default function PaymentsPage() {
   const { user, profile, loading } = useAuth()
@@ -89,9 +91,9 @@ export default function PaymentsPage() {
   return (
     <GlassAppLayout customHeader={customHeader} desktopTitle="Payments">
       {/* Desktop: 2-column grid — Mobile: stacked */}
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
+      <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
         {/* Left column: Membership Status Card */}
-        <div>
+        <motion.div variants={fadeUpItem}>
           <GlassCard variant="subtle" className="p-6">
             <section
               className="rounded-2xl p-5 text-bg-primary"
@@ -134,10 +136,10 @@ export default function PaymentsPage() {
               )}
             </section>
           </GlassCard>
-        </div>
+        </motion.div>
 
         {/* Right column: Payment Methods + Recent Activity */}
-        <div className="space-y-6">
+        <motion.div variants={fadeUpItem} className="space-y-6">
           {/* Saved Payment Methods */}
           <GlassCard variant="subtle" className="p-6">
             <section>
@@ -248,8 +250,8 @@ export default function PaymentsPage() {
               </div>
             </section>
           </GlassCard>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Security Footer */}
       <section className="mt-8 mb-8 text-center">

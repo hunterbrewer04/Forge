@@ -14,6 +14,8 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { ArrowLeft, User, ChevronRight, Clock, Bell, CreditCard, Calendar, Sun, Moon, Lock, LogOut } from '@/components/ui/icons'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 const CalendarExportSheet = dynamic(() => import('./components/CalendarExportSheet'), { ssr: false })
 
@@ -185,9 +187,9 @@ export default function ProfilePage() {
         aria-label="Upload profile picture"
       />
 
-      <div className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
+      <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
         {/* Left column: Identity card */}
-        <div>
+        <motion.div variants={fadeUpItem}>
           <GlassCard variant="subtle" className="p-6">
             {/* Profile Header */}
             <section className="flex flex-col items-center pt-4 pb-6">
@@ -236,17 +238,17 @@ export default function ProfilePage() {
               <button
                 onClick={handleSignOut}
                 disabled={signingOut}
-                className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary active:scale-[0.98] disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary interactive-card disabled:opacity-50"
               >
                 <LogOut size={22} />
                 {signingOut ? 'Signing Out...' : 'Log Out'}
               </button>
             </div>
           </GlassCard>
-        </div>
+        </motion.div>
 
         {/* Right two columns: Account Management + Preferences */}
-        <div className="lg:col-span-2 space-y-6">
+        <motion.div variants={fadeUpItem} className="lg:col-span-2 space-y-6">
           {/* Account Management Section */}
           <GlassCard variant="subtle" className="p-6">
             <section>
@@ -257,7 +259,7 @@ export default function ProfilePage() {
                 {/* Edit Profile */}
                 <button
                   onClick={() => router.push('/profile/edit')}
-                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left interactive-card"
                 >
                   <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
                     <User size={22} className="text-text-primary" />
@@ -267,7 +269,7 @@ export default function ProfilePage() {
                 </button>
 
                 {/* Training History */}
-                <button onClick={() => router.push('/profile/history')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
+                <button onClick={() => router.push('/profile/history')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border interactive-card">
                   <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
                     <Clock size={22} className="text-text-primary" />
                   </div>
@@ -276,7 +278,7 @@ export default function ProfilePage() {
                 </button>
 
                 {/* Notification Settings */}
-                <button onClick={() => router.push('/profile/notifications')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border">
+                <button onClick={() => router.push('/profile/notifications')} className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border interactive-card">
                   <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
                     <Bell size={22} className="text-text-primary" />
                   </div>
@@ -287,7 +289,7 @@ export default function ProfilePage() {
                 {/* Payment Methods */}
                 <button
                   onClick={() => router.push('/payments')}
-                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border interactive-card"
                 >
                   <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
                     <CreditCard size={22} className="text-text-primary" />
@@ -299,7 +301,7 @@ export default function ProfilePage() {
                 {/* Calendar Feed */}
                 <button
                   onClick={() => setShowCalendarExport(true)}
-                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border interactive-card"
                 >
                   <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
                     <Calendar size={22} className="text-text-primary" />
@@ -321,7 +323,7 @@ export default function ProfilePage() {
                 {/* Theme Toggle */}
                 <button
                   onClick={toggleTheme}
-                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left"
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left interactive-card"
                 >
                   <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
                     {isDark ? <Moon size={22} className="text-text-primary" /> : <Sun size={22} className="text-text-primary" />}
@@ -337,7 +339,7 @@ export default function ProfilePage() {
                 {/* Reset Password */}
                 <button
                   onClick={() => setShowResetPasswordModal(true)}
-                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border"
+                  className="flex items-center gap-4 px-4 py-4 hover:bg-bg-secondary transition-colors text-left border-t border-border interactive-card"
                 >
                   <div className="flex items-center justify-center rounded-lg bg-bg-secondary size-10 shrink-0">
                     <Lock size={22} className="text-text-primary" />
@@ -348,15 +350,15 @@ export default function ProfilePage() {
               </div>
             </section>
           </GlassCard>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Logout Button — mobile only (desktop sign out is inside identity card) */}
       <section className="mt-8 mb-8 lg:hidden">
         <button
           onClick={handleSignOut}
           disabled={signingOut}
-          className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary active:scale-[0.98] disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 bg-bg-card border border-border text-text-primary py-4 rounded-xl font-semibold transition-all hover:bg-bg-secondary interactive-card disabled:opacity-50"
         >
           <LogOut size={22} />
           {signingOut ? 'Signing Out...' : 'Log Out'}

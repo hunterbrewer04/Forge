@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import { ArrowLeft, CalendarOff, Plus } from '@/components/ui/icons'
 import { useScheduleData } from '@/lib/hooks/useScheduleData'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import CalendarStrip from './components/CalendarStrip'
 import SessionCard from './components/SessionCard'
 
@@ -164,7 +166,7 @@ export default function SchedulePage() {
         {profile?.is_trainer && (
           <Link
             href="/schedule/new"
-            className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-primary/10 border border-primary/30 text-primary rounded-xl font-semibold text-sm hover:bg-primary/20 transition-all interactive-card"
           >
             <Plus size={20} />
             Create New Session
@@ -208,27 +210,27 @@ export default function SchedulePage() {
         {!loading && !error && (
           <div className="flex-1 flex flex-col">
             {selectedDateSessions.length > 0 ? (
-              <div className="grid lg:grid-cols-2 gap-3">
+              <motion.div variants={staggerContainer} initial="hidden" animate="show" className="grid lg:grid-cols-2 gap-3">
                 {selectedDateSessions.map((session) => (
-                  <GlassCard
-                    key={session.id}
-                    variant="subtle"
-                    whileHover={{ y: -2 }}
-                    transition={{ duration: 0.18 }}
-                    className="overflow-hidden"
-                  >
-                    <SessionCard
-                      session={session}
-                      userId={user?.id}
-                      isTrainer={profile?.is_trainer}
-                      onBook={() => handleBookSession(session)}
-                      onCancel={() => handleCancelBooking(session)}
-                      onTap={() => handleTapSession(session)}
-                      onDetails={() => handleViewDetails(session)}
-                    />
-                  </GlassCard>
+                  <motion.div key={session.id} variants={fadeUpItem}>
+                    <GlassCard
+                      variant="subtle"
+                      interactive
+                      className="overflow-hidden"
+                    >
+                      <SessionCard
+                        session={session}
+                        userId={user?.id}
+                        isTrainer={profile?.is_trainer}
+                        onBook={() => handleBookSession(session)}
+                        onCancel={() => handleCancelBooking(session)}
+                        onTap={() => handleTapSession(session)}
+                        onDetails={() => handleViewDetails(session)}
+                      />
+                    </GlassCard>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
                 <div className="bg-bg-secondary p-4 rounded-full mb-4">

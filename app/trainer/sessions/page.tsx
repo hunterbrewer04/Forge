@@ -17,6 +17,8 @@ import {
   Settings,
 } from '@/components/ui/icons'
 import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 type FilterType = 'all' | 'upcoming' | 'past' | 'cancelled'
 
@@ -269,12 +271,12 @@ export default function AdminSessionsPage() {
           )}
         </div>
       ) : (
-        <div className="lg:grid lg:grid-cols-2 lg:gap-3 space-y-3 lg:space-y-0">
+        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-2 lg:gap-3 space-y-3 lg:space-y-0">
           {sessions.map((session) => (
             <button
               key={session.id}
               onClick={() => router.push(`/trainer/sessions/${session.id}`)}
-              className="w-full bg-bg-input rounded-xl p-4 text-left hover:bg-bg-secondary/80 transition-colors"
+              className="interactive-card w-full bg-bg-input rounded-xl p-4 text-left hover:bg-bg-secondary/80 transition-colors"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -320,7 +322,7 @@ export default function AdminSessionsPage() {
               </div>
             </button>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* FAB - Create New Session (mobile only) */}

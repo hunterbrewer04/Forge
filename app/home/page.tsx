@@ -17,6 +17,8 @@ import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
 import { User, Bell, Calendar, MessageCircle, Wallet, Dumbbell, CalendarOff } from '@/components/ui/icons'
 import { fetchRecentInvoices } from '@/lib/services/payments'
+import { motion } from 'framer-motion'
+import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 interface Stats {
   totalConversations: number
@@ -297,13 +299,14 @@ export default function HomePage() {
     <GlassAppLayout customHeader={customHeader} hideDesktopHeader>
       {isDesktop ? (
         /* ── Desktop layout ── */
-        <div className="space-y-6">
+        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
           {/* Desktop greeting header card */}
+          <motion.div variants={fadeUpItem}>
           <GlassCard variant="subtle" className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 {/* Avatar */}
-                <div className="size-14 rounded-full overflow-hidden bg-white/10 border-2 border-white/20 shrink-0">
+                <div className="size-14 rounded-full overflow-hidden bg-bg-secondary border-2 border-border shrink-0">
                   {profile.avatar_url ? (
                     <Image
                       src={profile.avatar_url}
@@ -358,8 +361,10 @@ export default function HomePage() {
               </div>
             </div>
           </GlassCard>
+          </motion.div>
 
           {/* Main 5-column grid: 3 left + 2 right */}
+          <motion.div variants={fadeUpItem}>
           <div className="grid grid-cols-5 gap-6 items-start">
             {/* Left column — 3 cols */}
             <div className="col-span-3 space-y-4">
@@ -367,8 +372,7 @@ export default function HomePage() {
               <GlassCard
                 variant="subtle"
                 className="p-6 overflow-hidden"
-                whileHover={{ scale: 1.01 }}
-                transition={{ duration: 0.2 }}
+                interactive
               >
                 <Link
                   href="/schedule"
@@ -410,8 +414,7 @@ export default function HomePage() {
                 <GlassCard
                   variant="subtle"
                   className="p-6"
-                  whileHover={{ y: -2 }}
-                  transition={{ duration: 0.2 }}
+                  interactive
                 >
                   <Link href="/chat" className="block">
                     <div className="flex items-start justify-between mb-3">
@@ -440,8 +443,7 @@ export default function HomePage() {
               <GlassCard
                 variant="subtle"
                 className="p-6"
-                whileHover={{ y: -2 }}
-                transition={{ duration: 0.2 }}
+                interactive
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="bg-success/10 p-2 rounded-lg">
@@ -491,7 +493,8 @@ export default function HomePage() {
               )}
             </div>
           </div>
-        </div>
+          </motion.div>
+        </motion.div>
       ) : (
         /* ── Mobile layout (unchanged) ── */
         <>
@@ -514,7 +517,7 @@ export default function HomePage() {
           {/* Book Sessions CTA Card */}
           <Link
             href="/schedule"
-            className="block bg-primary rounded-2xl p-5 shadow-lg shadow-primary/20 transition-transform active:scale-[0.98]"
+            className="block bg-primary rounded-2xl p-5 shadow-lg shadow-primary/20 transition-transform interactive-card"
           >
             <h2 className="text-white text-xl font-bold">Book Sessions</h2>
             <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
@@ -529,7 +532,7 @@ export default function HomePage() {
             {(profile.is_trainer || profile.has_full_access) && (
               <Link
                 href="/chat"
-                className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 active:scale-[0.98]"
+                className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 interactive-card"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="bg-primary/10 p-2 rounded-lg">
@@ -556,7 +559,7 @@ export default function HomePage() {
             {/* Payments Card */}
             <Link
               href="/payments"
-              className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 active:scale-[0.98]"
+              className="bg-bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/30 interactive-card"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="bg-success/10 p-2 rounded-lg">

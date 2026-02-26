@@ -2,7 +2,6 @@
 
 import { ReactNode } from "react";
 import GlassSidebar from "@/components/navigation/GlassSidebar";
-import { motion } from 'framer-motion';
 import BottomNav from "@/components/navigation/BottomNav";
 import { Plus, MessageCircle } from "@/components/ui/icons";
 
@@ -23,29 +22,6 @@ export default function ChatLayout({
 }: ChatLayoutProps) {
   return (
     <div className="fixed inset-0 bg-bg-primary flex overflow-hidden transition-colors duration-200">
-      {/* Desktop gradient mesh and floating orbs - lg only */}
-      <div className="hidden lg:block">
-        <div className="gradient-mesh" />
-        <motion.div
-          className="fixed top-[10%] left-[15%] w-[300px] h-[300px] rounded-full opacity-20 pointer-events-none z-0"
-          style={{
-            background: 'radial-gradient(circle, var(--facility-primary), transparent 70%)',
-            filter: 'blur(60px)',
-          }}
-          animate={{ y: [0, -20, 0], x: [0, 10, 0] }}
-          transition={{ duration: 8, ease: 'easeInOut', repeat: Infinity }}
-        />
-        <motion.div
-          className="fixed bottom-[10%] right-[15%] w-[250px] h-[250px] rounded-full opacity-15 pointer-events-none z-0"
-          style={{
-            background: 'radial-gradient(circle, var(--facility-primary), transparent 70%)',
-            filter: 'blur(60px)',
-          }}
-          animate={{ y: [0, 15, 0], x: [0, -12, 0] }}
-          transition={{ duration: 10, ease: 'easeInOut', repeat: Infinity }}
-        />
-      </div>
-
       {/* Sidebar - only visible on large screens */}
       <GlassSidebar onSignOut={onSignOut} />
 
