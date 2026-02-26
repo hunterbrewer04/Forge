@@ -101,7 +101,7 @@ export default function CalendarStrip({
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-border">
       {/* Header: Month/Year + Navigation */}
-      <div className="flex items-center justify-between mb-4 lg:mb-2">
+      <div className="flex items-center justify-between mb-4 lg:mb-4">
         <button
           onClick={handlePrevMonth}
           className="size-8 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
@@ -122,7 +122,7 @@ export default function CalendarStrip({
       </div>
 
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-1 lg:gap-0.5 mb-2 lg:mb-1">
+      <div className="grid grid-cols-7 gap-1 lg:gap-1 mb-2 lg:mb-2">
         {weekDays.map((day, idx) => (
           <div
             key={idx}
@@ -134,7 +134,7 @@ export default function CalendarStrip({
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1 lg:gap-0.5">
+      <div className="grid grid-cols-7 gap-1 lg:gap-1">
         {visibleDays.map((dayItem, idx) => {
           const isSelected = dayItem.isoDate === selectedDate
           const isToday = dayItem.isoDate === todayISO
@@ -147,7 +147,7 @@ export default function CalendarStrip({
               onClick={() => onSelectDate(dayItem.isoDate)}
               disabled={!dayItem.isCurrentMonth}
               className={`
-                relative aspect-square lg:aspect-auto lg:py-2 flex flex-col items-center justify-center rounded-full text-sm font-medium
+                relative aspect-square lg:aspect-auto lg:py-3 flex flex-col items-center justify-center rounded-full text-sm font-medium
                 transition-all duration-150
                 ${!dayItem.isCurrentMonth ? 'invisible cursor-default' : ''}
                 ${dayItem.isCurrentMonth && !isSelected ? 'text-text-primary hover:bg-bg-secondary' : ''}
@@ -159,7 +159,7 @@ export default function CalendarStrip({
 
               {/* Session indicator dot */}
               {dayItem.isCurrentMonth && (hasSessions || hasBooking) && (
-                <div className="absolute bottom-1 lg:bottom-0.5 flex gap-0.5">
+                <div className="absolute bottom-1 lg:bottom-1 flex gap-0.5">
                   {hasSessions && (
                     <div
                       className={`w-1 h-1 rounded-full ${

@@ -152,6 +152,7 @@ export default function SchedulePage() {
   return (
     <>
       <GlassAppLayout customHeader={customHeader} desktopTitle={profile?.is_trainer ? 'Sessions' : 'Book a Session'}>
+        <div className="flex flex-col gap-4 lg:gap-6">
         {/* Calendar */}
         <GlassCard variant="subtle" className="p-4 lg:p-3">
           <CalendarStrip
@@ -244,6 +245,7 @@ export default function SchedulePage() {
             )}
           </div>
         )}
+        </div>
       </GlassAppLayout>
 
       {/* Modals -- outside layout to avoid iOS fixed-positioning issues */}
