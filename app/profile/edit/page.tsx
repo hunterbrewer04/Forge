@@ -89,7 +89,7 @@ export default function EditProfilePage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    if (!user || !profile) return
 
     // Validate username
     const usernameValidation = validateUsername(username)
