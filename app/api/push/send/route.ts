@@ -15,17 +15,17 @@ import { sendPushToUser } from '@/lib/services/push-send'
 export async function POST(request: NextRequest) {
   try {
     // Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // Rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.MESSAGING,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult

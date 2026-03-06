@@ -1,20 +1,21 @@
 // app/api/member/claim/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
 import { getAdminClient } from '@/lib/supabase-admin'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const auth = await validateAuth(request)
+    const auth = await validateAuth()
     if (auth instanceof NextResponse) return auth
+    const { profileId } = auth
 
     const supabase = getAdminClient()
 
     const { error } = await supabase
       .from('profiles')
       .update({ is_member: true })
-      .eq('id', auth.id)
+      .eq('id', profileId)
 
     if (error) {
       console.error('Error setting is_member:', { code: error.code, message: error.message })

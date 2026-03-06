@@ -1,19 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
 import { getAdminClient } from '@/lib/supabase-admin'
 import { stripe } from '@/lib/stripe'
 import { handleUnexpectedError } from '@/lib/api/errors'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const auth = await validateAuth(request)
+    const auth = await validateAuth()
     if (auth instanceof NextResponse) return auth
+    const { profileId } = auth
 
     const supabase = getAdminClient()
     const { data: profile } = await supabase
       .from('profiles')
       .select('stripe_customer_id, stripe_subscription_id')
-      .eq('id', auth.id)
+      .eq('id', profileId)
       .single()
 
     if (!profile?.stripe_customer_id) {

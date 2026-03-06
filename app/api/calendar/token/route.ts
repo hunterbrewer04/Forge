@@ -6,11 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
-import { env } from '@/lib/env-validation'
 
 /**
  * Derive base URL from the incoming request.
@@ -35,40 +34,28 @@ function getBaseUrl(request: NextRequest): string {
 export async function GET(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
     // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 4. Get or create token
     const { data: token, error } = await supabase.rpc('get_or_create_calendar_token', {
-      p_user_id: user.id,
+      p_user_id: profileId,
     })
 
     if (error) {
@@ -80,7 +67,7 @@ export async function GET(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_trainer')
-      .eq('id', user.id)
+      .eq('id', profileId)
       .single()
 
     const isTrainer = profile?.is_trainer ?? false
@@ -88,14 +75,14 @@ export async function GET(request: NextRequest) {
     // 6. Build feed URL based on role
     const baseUrl = getBaseUrl(request)
     const feedUrl = isTrainer
-      ? `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
-      : `${baseUrl}/api/calendar/client/${user.id}.ics?token=${token}`
+      ? `${baseUrl}/api/calendar/${profileId}.ics?token=${token}`
+      : `${baseUrl}/api/calendar/client/${profileId}.ics?token=${token}`
 
     return NextResponse.json({
       success: true,
       token,
       feedUrl,
-      userId: user.id,
+      userId: profileId,
     })
   } catch (error) {
     return handleUnexpectedError(error, 'calendar-token-get')
@@ -110,40 +97,28 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit (stricter for regeneration)
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.BOOKING, // Use booking preset (10/min) for regeneration
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
     // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 4. Regenerate token
     const { data: token, error } = await supabase.rpc('regenerate_calendar_token', {
-      p_user_id: user.id,
+      p_user_id: profileId,
     })
 
     if (error) {
@@ -155,7 +130,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_trainer')
-      .eq('id', user.id)
+      .eq('id', profileId)
       .single()
 
     const isTrainer = profile?.is_trainer ?? false
@@ -163,14 +138,14 @@ export async function POST(request: NextRequest) {
     // 6. Build new feed URL based on role
     const baseUrl = getBaseUrl(request)
     const feedUrl = isTrainer
-      ? `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
-      : `${baseUrl}/api/calendar/client/${user.id}.ics?token=${token}`
+      ? `${baseUrl}/api/calendar/${profileId}.ics?token=${token}`
+      : `${baseUrl}/api/calendar/client/${profileId}.ics?token=${token}`
 
     return NextResponse.json({
       success: true,
       token,
       feedUrl,
-      userId: user.id,
+      userId: profileId,
       message: 'Calendar token regenerated. Old feed URLs are now invalid.',
     })
   } catch (error) {

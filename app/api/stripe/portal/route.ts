@@ -6,15 +6,16 @@ import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await validateAuth(request)
+    const auth = await validateAuth()
     if (auth instanceof NextResponse) return auth
+    const { profileId } = auth
 
     const supabase = getAdminClient()
 
     const { data: profile } = await supabase
       .from('profiles')
       .select('stripe_customer_id')
-      .eq('id', auth.id)
+      .eq('id', profileId)
       .single()
 
     if (!profile?.stripe_customer_id) {

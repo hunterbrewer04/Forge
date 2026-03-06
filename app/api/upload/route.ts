@@ -10,12 +10,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError } from '@/lib/api/errors'
 import { isValidUUID } from '@/lib/api/validation'
-import { env } from '@/lib/env-validation'
 
 // File size limits (in bytes)
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -100,17 +99,17 @@ function validateMagicBytes(buffer: ArrayBuffer, mimeType: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.UPLOAD,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -167,26 +166,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Create Supabase client and verify conversation access
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // Verify user has access to this conversation
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .select('id')
       .eq('id', conversationId)
-      .or(`client_id.eq.${user.id},trainer_id.eq.${user.id}`)
+      .or(`client_id.eq.${profileId},trainer_id.eq.${profileId}`)
       .single()
 
     if (convError || !conversation) {

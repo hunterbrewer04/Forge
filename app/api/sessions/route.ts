@@ -6,13 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth, validateRole } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody, SessionSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
-import { env } from '@/lib/env-validation'
 import type { SessionFilters } from '@/lib/types/sessions'
 
 /**
@@ -31,17 +30,17 @@ import type { SessionFilters } from '@/lib/types/sessions'
 export async function GET(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -52,19 +51,7 @@ export async function GET(request: NextRequest) {
 
     // Handle types_only request
     if (searchParams.get('types_only') === 'true') {
-      const supabase = createServerClient(
-        env.supabaseUrl(),
-        env.supabaseAnonKey(),
-        {
-          cookies: {
-            get(name: string) {
-              return request.cookies.get(name)?.value
-            },
-            set() {},
-            remove() {},
-          },
-        }
-      )
+      const supabase = createAdminClient()
 
       const { data: sessionTypes, error } = await supabase
         .from('session_types')
@@ -85,7 +72,7 @@ export async function GET(request: NextRequest) {
     // Handle trainer_id=me
     let trainerId = searchParams.get('trainer_id') || undefined
     if (trainerId === 'me') {
-      trainerId = user.id
+      trainerId = profileId
     }
 
     const filters: SessionFilters = {
@@ -99,19 +86,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 5. Build query
     let query = supabase
@@ -181,7 +156,7 @@ export async function GET(request: NextRequest) {
           .from('bookings')
           .select('session_id, id, status')
           .in('session_id', sessionIds)
-          .eq('client_id', user.id)
+          .eq('client_id', profileId)
           .eq('status', 'confirmed')
       : { data: [] }
 
@@ -255,17 +230,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate trainer role
-    const authResult = await validateRole(request, 'trainer')
+    const authResult = await validateRole('trainer')
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -307,25 +282,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 6. Create session
     const { data: session, error } = await supabase
       .from('sessions')
       .insert({
-        trainer_id: user.id,
+        trainer_id: profileId,
         session_type_id: body.session_type_id || null,
         title: body.title,
         description: body.description || null,
@@ -355,7 +318,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Log audit event
     await logAuditEventFromRequest({
-      userId: user.id,
+      userId: profileId,
       action: 'SESSION_CREATE',
       resource: 'session',
       resourceId: session.id,

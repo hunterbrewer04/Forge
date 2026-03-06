@@ -6,14 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { BookingSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
 import { sendPushToUser } from '@/lib/services/push-send'
-import { env } from '@/lib/env-validation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -30,38 +29,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
     // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
-    // 4. Fetch booking (RLS will handle access control)
+    // 4. Fetch booking
     const { data: booking, error } = await supabase
       .from('bookings')
       .select(`
@@ -137,17 +124,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.BOOKING,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -174,19 +161,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 4. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 5. Fetch existing booking to check ownership and get details
     const { data: existingBooking, error: fetchError } = await supabase
@@ -235,11 +210,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('id', user.id)
+      .eq('id', profileId)
       .single()
 
-    const isBookingOwner = existingBooking.client_id === user.id
-    const isSessionTrainer = session?.trainer_id === user.id
+    const isBookingOwner = existingBooking.client_id === profileId
+    const isSessionTrainer = session?.trainer_id === profileId
     const isAdmin = profile?.is_admin === true
 
     if (!isBookingOwner && !isSessionTrainer && !isAdmin) {
@@ -280,7 +255,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // 9. Log audit event
     await logAuditEventFromRequest({
-      userId: user.id,
+      userId: profileId,
       action: 'BOOKING_CANCEL',
       resource: 'booking',
       resourceId: id,

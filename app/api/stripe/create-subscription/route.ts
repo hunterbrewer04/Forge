@@ -18,8 +18,9 @@ const SubscriptionSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await validateAuth(request)
+    const auth = await validateAuth()
     if (auth instanceof NextResponse) return auth
+    const { profileId } = auth
 
     const body = await validateRequestBody(request, SubscriptionSchema)
     if (body instanceof NextResponse) return body
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('email, full_name, stripe_customer_id, membership_status')
-      .eq('id', auth.id)
+      .eq('id', profileId)
       .single()
 
     if (profile?.membership_status === 'active') {
@@ -60,14 +61,14 @@ export async function POST(request: NextRequest) {
       const customer = await stripe.customers.create({
         email: profile?.email ?? undefined,
         name: profile?.full_name ?? undefined,
-        metadata: { supabase_user_id: auth.id },
+        metadata: { supabase_user_id: profileId },
       })
       customerId = customer.id
 
       await supabase
         .from('profiles')
         .update({ stripe_customer_id: customerId })
-        .eq('id', auth.id)
+        .eq('id', profileId)
     }
 
     // 4. Create subscription with default_incomplete so we get a PaymentIntent
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
       },
       expand: ['latest_invoice.confirmation_secret'],
       metadata: {
-        supabase_user_id: auth.id,
+        supabase_user_id: profileId,
         membership_tier_id: tier.id,
       },
     })

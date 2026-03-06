@@ -6,11 +6,10 @@
  * Returns list of confirmed bookings with client details.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
-import { env } from '@/lib/env-validation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -22,31 +21,19 @@ interface RouteParams {
  * Fetches all confirmed bookings for a session.
  * Only accessible by the session's trainer.
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const { id: sessionId } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 3. Verify session exists and user is the trainer
     const { data: session, error: sessionError } = await supabase
@@ -64,7 +51,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // 4. Check if user is the trainer (only trainers can see booking list)
-    if (user.id !== session.trainer_id) {
+    if (profileId !== session.trainer_id) {
       return createApiError(
         'Only the session trainer can view bookings',
         403,

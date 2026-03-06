@@ -8,12 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
-import { env } from '@/lib/env-validation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -30,42 +29,30 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { id: sessionId } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit (stricter for booking to prevent abuse)
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.BOOKING,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
     // 2b. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 2c. Quota check for member accounts
     const { data: memberProfile } = await supabase
       .from('profiles')
       .select('is_member, membership_tier_id, membership_status, has_full_access, is_trainer, is_admin')
-      .eq('id', user.id)
+      .eq('id', profileId)
       .single()
 
     // Access check — reject users without any valid access tier
@@ -97,7 +84,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         supabase
           .from('bookings')
           .select('*', { count: 'exact', head: true })
-          .eq('client_id', user.id)
+          .eq('client_id', profileId)
           .gte('created_at', startOfMonth)
           .lt('created_at', startOfNextMonth),
         supabase
@@ -141,7 +128,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // 3c. Prevent trainer from booking their own sessions (BRE-16)
-    if (user.id === session.trainer_id) {
+    if (profileId === session.trainer_id) {
       return createApiError(
         'Trainers cannot book their own sessions',
         403,
@@ -154,7 +141,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       'book_session',
       {
         p_session_id: sessionId,
-        p_client_id: user.id,
+        p_client_id: profileId,
       }
     )
 
@@ -211,7 +198,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         data: {
           id: result.booking_id,
           session_id: sessionId,
-          client_id: user.id,
+          client_id: profileId,
           status: 'confirmed',
         },
         message: 'Session booked successfully',
@@ -220,7 +207,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // 7. Log audit event
     await logAuditEventFromRequest({
-      userId: user.id,
+      userId: profileId,
       action: 'BOOKING_CREATE',
       resource: 'booking',
       resourceId: result.booking_id,

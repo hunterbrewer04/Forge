@@ -5,12 +5,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { BookingSchemas } from '@/lib/api/validation'
-import { env } from '@/lib/env-validation'
 import type { BookingFilters } from '@/lib/types/sessions'
 
 /**
@@ -25,17 +24,17 @@ import type { BookingFilters } from '@/lib/types/sessions'
 export async function GET(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -64,19 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 5. Build query
     let query = supabase
@@ -93,7 +80,7 @@ export async function GET(request: NextRequest) {
           )
         )
       `)
-      .eq('client_id', user.id)
+      .eq('client_id', profileId)
       .order('booked_at', { ascending: false })
 
     // Filter by status

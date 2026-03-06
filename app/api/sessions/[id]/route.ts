@@ -7,14 +7,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody } from '@/lib/api/validation'
 import { SessionSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
-import { env } from '@/lib/env-validation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -34,36 +33,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const includeBookings = searchParams.get('include_bookings') === 'true'
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
     // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 4. Fetch session
     const { data: session, error } = await supabase
@@ -105,7 +92,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .from('bookings')
       .select('id, status, booked_at')
       .eq('session_id', id)
-      .eq('client_id', user.id)
+      .eq('client_id', profileId)
       .eq('status', 'confirmed')
       .maybeSingle()
 
@@ -119,7 +106,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // 8. Fetch bookings if requested (trainer only)
     let bookings = null
-    if (includeBookings && session.trainer_id === user.id) {
+    if (includeBookings && session.trainer_id === profileId) {
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select(`
@@ -180,17 +167,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -204,19 +191,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const body = bodyResult
 
     // 4. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 5. Check if session exists and user has permission
     const { data: existingSession, error: fetchError } = await supabase
@@ -237,10 +212,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('id', user.id)
+      .eq('id', profileId)
       .single()
 
-    const isOwner = existingSession.trainer_id === user.id
+    const isOwner = existingSession.trainer_id === profileId
     const isAdmin = profile?.is_admin === true
 
     if (!isOwner && !isAdmin) {
@@ -333,7 +308,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // 9. Log audit event
     const auditAction = body.status === 'cancelled' ? 'SESSION_CANCEL' : 'SESSION_UPDATE'
     await logAuditEventFromRequest({
-      userId: user.id,
+      userId: profileId,
       action: auditAction,
       resource: 'session',
       resourceId: id,
@@ -375,36 +350,24 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
     // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    const supabase = createAdminClient()
 
     // 4. Check if session exists and user has permission
     const { data: existingSession, error: fetchError } = await supabase
@@ -425,10 +388,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('id', user.id)
+      .eq('id', profileId)
       .single()
 
-    const isOwner = existingSession.trainer_id === user.id
+    const isOwner = existingSession.trainer_id === profileId
     const isAdmin = profile?.is_admin === true
 
     if (!isOwner && !isAdmin) {
@@ -452,7 +415,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // 7. Log audit event
     await logAuditEventFromRequest({
-      userId: user.id,
+      userId: profileId,
       action: 'SESSION_DELETE',
       resource: 'session',
       resourceId: id,
