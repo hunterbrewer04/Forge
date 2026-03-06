@@ -1,13 +1,17 @@
 import { headers } from 'next/headers'
-import { NextResponse } from 'next/server'
 import { Webhook } from 'svix'
 import type { WebhookEvent } from '@clerk/nextjs/server'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
+import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+
+function buildFullName(first: string | null, last: string | null): string | null {
+  return [first, last].filter(Boolean).join(' ') || null
+}
 
 export async function POST(request: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET
   if (!WEBHOOK_SECRET) {
-    return NextResponse.json({ error: 'Missing webhook secret' }, { status: 500 })
+    return createApiError('Missing webhook secret', 500, 'INTERNAL_ERROR')
   }
 
   const headerPayload = await headers()
@@ -16,11 +20,11 @@ export async function POST(request: Request) {
   const svixSignature = headerPayload.get('svix-signature')
 
   if (!svixId || !svixTimestamp || !svixSignature) {
-    return NextResponse.json({ error: 'Missing svix headers' }, { status: 400 })
+    return createApiError('Missing svix headers', 400, 'INVALID_REQUEST')
   }
 
-  const payload = await request.json()
-  const body = JSON.stringify(payload)
+  // Read raw body once — avoids parse-then-serialize round-trip
+  const body = await request.text()
 
   const wh = new Webhook(WEBHOOK_SECRET)
   let evt: WebhookEvent
@@ -33,60 +37,70 @@ export async function POST(request: Request) {
     }) as WebhookEvent
   } catch (err) {
     console.error('Clerk webhook verification failed:', err)
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    return createApiError('Invalid signature', 400, 'INVALID_REQUEST')
   }
 
-  const supabase = createAdminClient()
+  const supabase = getAdminClient()
 
-  switch (evt.type) {
-    case 'user.created': {
-      const { id, email_addresses, first_name, last_name, image_url } = evt.data
-      const email = email_addresses.find(
-        e => e.id === evt.data.primary_email_address_id
-      )?.email_address
-      const fullName = [first_name, last_name].filter(Boolean).join(' ') || null
+  try {
+    switch (evt.type) {
+      case 'user.created': {
+        const { id, email_addresses, first_name, last_name, image_url } = evt.data
+        const email = email_addresses.find(
+          e => e.id === evt.data.primary_email_address_id
+        )?.email_address
 
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          clerk_user_id: id,
-          full_name: fullName,
-          avatar_url: image_url || null,
-          email: email || null,
-          is_trainer: false,
-          is_admin: false,
-          has_full_access: false,
-          is_member: false,
-        })
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            clerk_user_id: id,
+            full_name: buildFullName(first_name, last_name),
+            avatar_url: image_url || null,
+            email: email || null,
+            is_trainer: false,
+            is_admin: false,
+            has_full_access: false,
+            is_member: false,
+          })
 
-      if (error) {
-        console.error('Failed to create profile for Clerk user:', id, error)
-        return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
+        if (error) {
+          console.error('Failed to create profile for Clerk user:', id, error)
+          return createApiError('Failed to create profile', 500, 'DATABASE_ERROR')
+        }
+        break
       }
-      break
-    }
 
-    case 'user.updated': {
-      const { id, first_name, last_name, image_url } = evt.data
-      const fullName = [first_name, last_name].filter(Boolean).join(' ') || null
+      case 'user.updated': {
+        const { id, first_name, last_name, image_url, email_addresses } = evt.data
+        const email = email_addresses.find(
+          e => e.id === evt.data.primary_email_address_id
+        )?.email_address
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({ full_name: fullName, avatar_url: image_url || null })
-        .eq('clerk_user_id', id)
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            full_name: buildFullName(first_name, last_name),
+            avatar_url: image_url || null,
+            email: email || null,
+          })
+          .eq('clerk_user_id', id)
 
-      if (error) {
-        console.error('Failed to update profile for Clerk user:', id, error)
+        if (error) {
+          console.error('Failed to update profile for Clerk user:', id, error)
+        }
+        break
       }
-      break
+
+      case 'user.deleted': {
+        const { id } = evt.data
+        console.warn('user.deleted received for Clerk user:', id)
+        // TODO: soft-delete or deactivate the profile
+        break
+      }
     }
 
-    case 'user.deleted': {
-      const { id } = evt.data
-      console.warn('user.deleted received for Clerk user:', id)
-      break
-    }
+    return Response.json({ received: true })
+  } catch (err) {
+    return handleUnexpectedError(err, 'clerk-webhook')
   }
-
-  return NextResponse.json({ received: true })
 }

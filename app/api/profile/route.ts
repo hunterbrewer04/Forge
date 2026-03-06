@@ -18,7 +18,7 @@ export async function GET() {
       .single()
 
     if (error || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+      return createApiError('Profile not found', 404, 'PROFILE_NOT_FOUND')
     }
 
     return NextResponse.json({ profile })
