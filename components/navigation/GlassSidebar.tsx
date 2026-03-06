@@ -53,7 +53,7 @@ interface GlassSidebarProps {
 
 export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) {
   const pathname = usePathname()
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
 
   const { unreadCount } = useUnreadCount({
     userId: profile?.id,

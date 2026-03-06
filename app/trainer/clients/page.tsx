@@ -19,7 +19,7 @@ import { motion } from 'framer-motion'
 import { staggerContainer } from '@/lib/motion'
 
 export default function ClientListPage() {
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
   const { clients, loading, error } = useClientList(profile?.id)
   const [search, setSearch] = useState('')
 

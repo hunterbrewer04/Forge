@@ -16,7 +16,7 @@ interface NavItem {
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
 
   const navItems = useMemo<NavItem[]>(() => [
     { href: "/home", icon: Home, label: "Home" },

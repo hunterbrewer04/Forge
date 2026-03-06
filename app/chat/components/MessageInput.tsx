@@ -18,7 +18,7 @@ export default function MessageInput({
   onOptimisticMessage,
   onMessageError,
 }: MessageInputProps) {
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)

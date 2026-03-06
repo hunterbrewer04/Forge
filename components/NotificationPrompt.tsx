@@ -11,7 +11,7 @@ import {
 } from '@/lib/services/push-notifications'
 
 export default function NotificationPrompt() {
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
   const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
