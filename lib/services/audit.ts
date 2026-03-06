@@ -8,7 +8,7 @@
  * Run the migration in docs/migrations/create_audit_logs.sql
  */
 
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { headers } from 'next/headers'
 
 // ============================================================================
@@ -147,7 +147,7 @@ function sanitizeMetadata(
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<boolean> {
   try {
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     const ipAddress = entry.ipAddress || await getClientIp()
     const userAgent = entry.userAgent || await getUserAgent()
@@ -281,7 +281,7 @@ export async function getAuditLogsForUser(
   limit = 100
 ): Promise<AuditLogRecord[]> {
   try {
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     const { data, error } = await supabase
       .from('audit_logs')
@@ -313,7 +313,7 @@ export async function getAuditLogsByAction(
   limit = 100
 ): Promise<AuditLogRecord[]> {
   try {
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     const { data, error } = await supabase
       .from('audit_logs')

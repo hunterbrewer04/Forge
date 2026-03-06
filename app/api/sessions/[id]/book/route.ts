@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // 2b. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 2c. Quota check for member accounts
     const { data: memberProfile } = await supabase

@@ -1,19 +1,20 @@
+import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { validateAuth } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
-import { handleUnexpectedError } from '@/lib/api/errors'
+import { getAdminClient } from '@/lib/supabase-admin'
+import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 
 export async function GET() {
   try {
-    const authResult = await validateAuth()
-    if (authResult instanceof NextResponse) return authResult
-    const { profileId } = authResult
+    const { userId } = await auth()
+    if (!userId) {
+      return createApiError('Unauthorized', 401, 'NO_SESSION')
+    }
 
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('id, full_name, avatar_url, username, is_trainer, is_admin, has_full_access, is_member, membership_status, created_at')
-      .eq('id', profileId)
+      .eq('clerk_user_id', userId)
       .single()
 
     if (error || !profile) {

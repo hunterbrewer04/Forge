@@ -13,15 +13,15 @@ const isPublicRoute = createRouteMatcher([
 ])
 
 export default clerkMiddleware(async (auth, request) => {
-  const { pathname } = request.nextUrl
+  const { userId } = await auth()
 
   // Protect all non-public routes
-  if (!isPublicRoute(request)) {
+  if (!isPublicRoute(request) && !userId) {
     await auth.protect()
   }
 
   // Redirect authenticated users away from login/signup pages
-  const { userId } = await auth()
+  const { pathname } = request.nextUrl
   const isAuthPage =
     pathname.startsWith('/member/login') || pathname.startsWith('/member/signup')
 

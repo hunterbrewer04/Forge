@@ -6,6 +6,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useSignIn } from '@clerk/nextjs'
+import { getClerkErrorMessage } from '@/lib/utils/errors'
+import { clearDynamicCache } from '@/lib/utils/sw-cache'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import GlassCard from '@/components/ui/GlassCard'
 import { Input } from '@/components/ui/shadcn/input'
@@ -30,8 +32,7 @@ export default function LoginForm() {
   const { isLoaded, signIn, setActive } = useSignIn()
   const isDesktop = useIsDesktop()
 
-  // Get return_to URL from query parameters (set by proxy.ts)
-  // Validate it's a relative path to prevent open redirects
+  // Validate return_to is a relative path to prevent open redirects
   const rawReturnTo = searchParams.get('return_to') || '/home'
   const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/home'
 
@@ -50,30 +51,14 @@ export default function LoginForm() {
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId })
-
-        if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-          try {
-            const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 1000))
-            const reg = await Promise.race([navigator.serviceWorker.ready, timeout])
-            if (reg) {
-              reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
-              await new Promise(resolve => setTimeout(resolve, 50))
-            }
-          } catch (err) {
-            console.warn('Failed to clear SW cache:', err)
-          }
-        }
-
+        await clearDynamicCache()
         window.location.href = returnTo
       } else {
         setError('Sign-in could not be completed. Please try again.')
         setLoading(false)
       }
     } catch (err: unknown) {
-      const message =
-        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
-        'Sign in failed. Please check your credentials.'
-      setError(message)
+      setError(getClerkErrorMessage(err, 'Sign in failed. Please check your credentials.'))
       setLoading(false)
     }
   }

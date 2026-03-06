@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { BookingSchemas } from '@/lib/api/validation'
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // 3. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 4. Fetch booking
     const { data: booking, error } = await supabase
@@ -161,7 +161,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 4. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 5. Fetch existing booking to check ownership and get details
     const { data: existingBooking, error: fetchError } = await supabase

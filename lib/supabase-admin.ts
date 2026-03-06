@@ -15,7 +15,7 @@
  * - Background jobs and cron tasks
  * - Data migrations and bulk operations
  *
- * For regular user operations, use lib/supabase-server.ts instead.
+ * All server-side DB operations use this client post-Clerk migration.
  */
 
 import 'server-only'

@@ -10,6 +10,7 @@ import { motion } from 'framer-motion'
 import { Check, Circle } from 'lucide-react'
 import { useSignUp } from '@clerk/nextjs'
 import { PASSWORD_REQUIREMENTS, validatePassword } from '@/lib/utils/password'
+import { getClerkErrorMessage } from '@/lib/utils/errors'
 import { Input } from '@/components/ui/shadcn/input'
 import { Label } from '@/components/ui/shadcn/label'
 import { Button } from '@/components/ui/shadcn/button'
@@ -109,10 +110,7 @@ export default function WizardStepAccount({ onComplete }: WizardStepAccountProps
         setLoading(false)
       }
     } catch (err: unknown) {
-      const message =
-        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
-        'Account creation failed. Please try again.'
-      setError(message)
+      setError(getClerkErrorMessage(err, 'Account creation failed. Please try again.'))
       setLoading(false)
     }
   }

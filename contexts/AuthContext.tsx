@@ -1,7 +1,8 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
+import { clearDynamicCache } from '@/lib/utils/sw-cache'
 
 interface Profile {
   id: string
@@ -61,33 +62,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else if (isLoaded && !clerkUser) {
       setProfile(null)
     }
-  }, [isLoaded, clerkUser, fetchProfile])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally using clerkUser?.id to avoid re-fetches on object reference changes
+  }, [isLoaded, clerkUser?.id, fetchProfile])
 
-  const signOut = async () => {
-    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-      try {
-        const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 1000))
-        const reg = await Promise.race([navigator.serviceWorker.ready, timeout])
-        reg?.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
-      } catch (err) {
-        console.warn('Failed to clear SW cache:', err)
-      }
-    }
+  const signOut = useCallback(async () => {
+    await clearDynamicCache()
     await clerkSignOut()
-  }
+  }, [clerkSignOut])
 
-  const user = clerkUser
-    ? { id: clerkUser.id, email: clerkUser.primaryEmailAddress?.emailAddress }
-    : null
+  const user = useMemo(
+    () => clerkUser
+      ? { id: clerkUser.id, email: clerkUser.primaryEmailAddress?.emailAddress }
+      : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally using stable primitives instead of full clerkUser object
+    [clerkUser?.id, clerkUser?.primaryEmailAddress?.emailAddress]
+  )
+
+  const loading = !isLoaded || profileLoading
+
+  const value = useMemo(
+    () => ({ user, profile, loading, signOut, refreshProfile: fetchProfile }),
+    [user, profile, loading, signOut, fetchProfile]
+  )
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      loading: !isLoaded || profileLoading,
-      signOut,
-      refreshProfile: fetchProfile,
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError } from '@/lib/api/errors'
 import { isValidUUID } from '@/lib/api/validation'
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Create Supabase client and verify conversation access
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // Verify user has access to this conversation
     const { data: conversation, error: convError } = await supabase

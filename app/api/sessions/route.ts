@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth, validateRole } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody, SessionSchemas } from '@/lib/api/validation'
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     // Handle types_only request
     if (searchParams.get('types_only') === 'true') {
-      const supabase = createAdminClient()
+      const supabase = getAdminClient()
 
       const { data: sessionTypes, error } = await supabase
         .from('session_types')
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 5. Build query
     let query = supabase
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 6. Create session
     const { data: session, error } = await supabase

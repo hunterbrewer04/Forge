@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 
 export default async function TrainerLayout({
   children,
@@ -13,7 +13,7 @@ export default async function TrainerLayout({
     redirect('/member/login')
   }
 
-  const supabase = createAdminClient()
+  const supabase = getAdminClient()
   const { data: profile } = await supabase
     .from('profiles')
     .select('is_trainer')

@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 import { isValidUUID } from '@/lib/api/validation'
 import { generateICalFeed } from '@/lib/services/calendar'
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Use admin client to bypass RLS for token validation
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // Validate token and get user profile
     const { data: profile, error: profileError } = await supabase

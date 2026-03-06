@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 4. Get or create token
     const { data: token, error } = await supabase.rpc('get_or_create_calendar_token', {
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 4. Regenerate token
     const { data: token, error } = await supabase.rpc('regenerate_calendar_token', {

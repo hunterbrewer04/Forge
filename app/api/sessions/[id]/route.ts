@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody } from '@/lib/api/validation'
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // 3. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 4. Fetch session
     const { data: session, error } = await supabase
@@ -191,7 +191,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const body = bodyResult
 
     // 4. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 5. Check if session exists and user has permission
     const { data: existingSession, error: fetchError } = await supabase
@@ -367,7 +367,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // 3. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 4. Check if session exists and user has permission
     const { data: existingSession, error: fetchError } = await supabase

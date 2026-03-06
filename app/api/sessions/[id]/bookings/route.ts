@@ -8,7 +8,7 @@
 
 import { NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { getAdminClient } from '@/lib/supabase-admin'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 
 interface RouteParams {
@@ -33,7 +33,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { profileId } = authResult
 
     // 2. Create Supabase client
-    const supabase = createAdminClient()
+    const supabase = getAdminClient()
 
     // 3. Verify session exists and user is the trainer
     const { data: session, error: sessionError } = await supabase
