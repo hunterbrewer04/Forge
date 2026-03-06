@@ -50,7 +50,7 @@ export default function ProfilePage() {
   }
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0 || !user) return
+    if (!event.target.files || event.target.files.length === 0 || !user || !profile) return
     if (uploadingAvatar) return
 
     const file = event.target.files[0]
