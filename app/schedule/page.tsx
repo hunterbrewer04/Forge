@@ -41,7 +41,7 @@ export default function SchedulePage() {
     error,
     fetchSessions,
     datesWithSessions,
-  } = useScheduleData({ userId: user?.id })
+  } = useScheduleData({ userId: profile?.id })
 
   // Compute booked dates for calendar
   const bookedDates = useMemo(() => {
@@ -221,7 +221,7 @@ export default function SchedulePage() {
                     >
                       <SessionCard
                         session={session}
-                        userId={user?.id}
+                        userId={profile?.id}
                         isTrainer={profile?.is_trainer}
                         onBook={() => handleBookSession(session)}
                         onCancel={() => handleCancelBooking(session)}

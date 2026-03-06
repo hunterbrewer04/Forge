@@ -56,7 +56,7 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
   const { user, profile } = useAuth()
 
   const { unreadCount } = useUnreadCount({
-    userId: user?.id,
+    userId: profile?.id,
     isTrainer: profile?.is_trainer,
     isClient: profile?.has_full_access,
   })

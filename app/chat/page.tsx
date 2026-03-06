@@ -63,13 +63,13 @@ export default function ChatPage() {
     let mounted = true
 
     const loadClientConversation = async () => {
-      if (!profile || !profile.has_full_access || profile.is_trainer || !user?.id) return
+      if (!profile || !profile.has_full_access || profile.is_trainer || !profile?.id) return
 
       setLoadingConversation(true)
       setError(null)
 
       try {
-        const data = await fetchClientConversation(user.id)
+        const data = await fetchClientConversation(profile.id)
         if (!mounted) return
 
         if (!data) {
@@ -101,7 +101,7 @@ export default function ChatPage() {
     }
 
     return () => { mounted = false }
-  }, [profile, user?.id])
+  }, [profile])
 
   useEffect(() => {
     let mounted = true
@@ -267,14 +267,14 @@ export default function ChatPage() {
   // Get the conversation list based on user type
   const conversationListComponent = isTrainer ? (
     <ConversationList
-      currentUserId={user.id}
+      currentUserId={profile.id}
       selectedConversationId={selectedConversationId}
       onSelectConversation={handleSelectConversation}
       searchQuery={searchQuery}
     />
   ) : isClient ? (
     <ClientConversationList
-      currentUserId={user.id}
+      currentUserId={profile.id}
       selectedConversationId={selectedConversationId}
       onSelectConversation={handleSelectConversation}
       searchQuery={searchQuery}
@@ -346,7 +346,7 @@ export default function ChatPage() {
       return (
         <ChatWindow
           conversationId={selectedConversationId}
-          currentUserId={user.id}
+          currentUserId={profile.id}
           otherUserId={otherUserId}
           otherUserName={otherName}
           otherUserAvatar={conversationInfo.avatar_url}

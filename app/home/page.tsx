@@ -36,11 +36,11 @@ export default function HomePage() {
   const supabase = useMemo(() => createClient(), [])
 
   // Fetch real home data — pass userId to avoid redundant getUser() call
-  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData(user?.id)
+  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData(profile?.id)
 
   // Use shared unread count hook for real-time message count
   const { unreadCount } = useUnreadCount({
-    userId: user?.id,
+    userId: profile?.id,
     isTrainer: profile?.is_trainer,
     isClient: profile?.has_full_access,
   })
@@ -74,7 +74,7 @@ export default function HomePage() {
         const { data: conversations, error } = await supabase
           .from('conversations')
           .select('id, client_id')
-          .eq('trainer_id', user.id)
+          .eq('trainer_id', profile.id)
 
         if (!error && conversations) {
           setMessagingStats({
@@ -91,7 +91,7 @@ export default function HomePage() {
               full_name
             )
           `)
-          .eq('client_id', user.id)
+          .eq('client_id', profile.id)
           .single()
 
         if (!error && conversation) {

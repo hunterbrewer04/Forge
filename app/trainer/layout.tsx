@@ -1,25 +1,23 @@
+import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export default async function TrainerLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
+  const { userId } = await auth()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  if (!userId) {
     redirect('/member/login')
   }
 
+  const supabase = createAdminClient()
   const { data: profile } = await supabase
     .from('profiles')
     .select('is_trainer')
-    .eq('id', user.id)
+    .eq('clerk_user_id', userId)
     .single()
 
   if (!profile?.is_trainer) {

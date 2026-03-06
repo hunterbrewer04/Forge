@@ -58,7 +58,7 @@ export default function EditProfilePage() {
       .from('profiles')
       .select('id')
       .eq('username', usernameToCheck)
-      .neq('id', user?.id)
+      .neq('id', profile?.id)
       .maybeSingle()
 
     if (error) {
@@ -145,7 +145,7 @@ export default function EditProfilePage() {
       const { error: updateError } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', user.id)
+        .eq('id', profile.id)
 
       if (updateError) throw updateError
 

@@ -35,7 +35,7 @@ export default function HistoryPage() {
   const [currentYear, setCurrentYear] = useState(now.getFullYear())
 
   const { items, loading: loadingHistory, error } = useHistoryData(
-    user?.id,
+    profile?.id,
     !!profile?.is_trainer,
     currentMonth,
     currentYear

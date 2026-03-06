@@ -18,7 +18,7 @@ export default function MessageInput({
   onOptimisticMessage,
   onMessageError,
 }: MessageInputProps) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -120,7 +120,7 @@ export default function MessageInput({
     setUploadError(null)
 
     try {
-      if (!user?.id) {
+      if (!profile?.id) {
         throw new Error('You must be logged in to upload files')
       }
 
@@ -150,7 +150,7 @@ export default function MessageInput({
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: user.id,
+          sender_id: profile.id,
           content: null,
           media_url: filePath,
           media_type: mediaType,
@@ -195,7 +195,7 @@ export default function MessageInput({
     setSending(true)
 
     try {
-      if (!user?.id) {
+      if (!profile?.id) {
         onMessageError?.(tempId)
         setError('You must be logged in to send messages')
         return
@@ -205,7 +205,7 @@ export default function MessageInput({
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: user.id,
+          sender_id: profile.id,
           content: messageContent,
           created_at: new Date().toISOString(),
         })

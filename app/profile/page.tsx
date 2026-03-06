@@ -75,12 +75,12 @@ export default function ProfilePage() {
     }
 
     setUploadingAvatar(true)
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`
+    const fileName = `${profile.id}-${Date.now()}.${fileExt}`
 
     try {
       if (profile?.avatar_url) {
         const oldPath = profile.avatar_url.split('/avatars/')[1]
-        if (oldPath && oldPath.startsWith(`${user.id}-`)) {
+        if (oldPath && oldPath.startsWith(`${profile.id}-`)) {
           await supabase.storage.from('avatars').remove([oldPath])
         }
       }
@@ -100,7 +100,7 @@ export default function ProfilePage() {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
-        .eq('id', user.id)
+        .eq('id', profile.id)
 
       if (updateError) {
         await supabase.storage.from('avatars').remove([fileName])

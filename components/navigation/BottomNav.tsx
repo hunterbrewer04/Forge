@@ -28,7 +28,7 @@ export default function BottomNav() {
     { href: "/profile", icon: User, label: "Profile" },
   ], [profile?.is_trainer, profile?.has_full_access]);
   const { unreadCount } = useUnreadCount({
-    userId: user?.id,
+    userId: profile?.id,
     isTrainer: profile?.is_trainer,
     isClient: profile?.has_full_access,
   });
