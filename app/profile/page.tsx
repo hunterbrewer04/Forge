@@ -22,7 +22,7 @@ const CalendarExportSheet = dynamic(() => import('./components/CalendarExportShe
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 
 export default function ProfilePage() {
-  const { user, profile, loading, signOut, refreshSession } = useAuth()
+  const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const { isDark, toggleTheme } = useFacilityTheme()
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)
@@ -108,7 +108,7 @@ export default function ProfilePage() {
         return
       }
 
-      await refreshSession()
+      await refreshProfile()
       toast.success('Avatar updated successfully')
     } catch (error) {
       logger.error('Error uploading avatar:', error)

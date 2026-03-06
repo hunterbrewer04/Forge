@@ -10,7 +10,7 @@ import { logger } from '@/lib/utils/logger'
 import { Save, X, Mail, Info } from '@/components/ui/icons'
 
 export default function EditProfilePage() {
-  const { user, profile, loading, refreshSession } = useAuth()
+  const { user, profile, loading, refreshProfile } = useAuth()
   const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [username, setUsername] = useState('')
@@ -150,7 +150,7 @@ export default function EditProfilePage() {
       if (updateError) throw updateError
 
       // Refresh the session so AuthContext re-fetches the updated profile data
-      await refreshSession()
+      await refreshProfile()
 
       router.push('/profile')
       router.refresh()
