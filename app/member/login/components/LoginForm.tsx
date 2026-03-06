@@ -5,8 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { createClient } from '@/lib/supabase-browser'
-import { getErrorMessage } from '@/lib/utils/errors'
+import { useSignIn } from '@clerk/nextjs'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import GlassCard from '@/components/ui/GlassCard'
 import { Input } from '@/components/ui/shadcn/input'
@@ -28,7 +27,7 @@ export default function LoginForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const searchParams = useSearchParams()
-  const supabase = createClient()
+  const { isLoaded, signIn, setActive } = useSignIn()
   const isDesktop = useIsDesktop()
 
   // Get return_to URL from query parameters (set by proxy.ts)
@@ -42,65 +41,39 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      // Register auth listener BEFORE signIn to avoid missing the SIGNED_IN event.
-      // signInWithPassword may emit SIGNED_IN synchronously on completion.
-      const cleanup = { subscription: null as { unsubscribe: () => void } | null, timeout: null as ReturnType<typeof setTimeout> | null }
-      let signInSucceeded = false
+      if (!isLoaded) return
 
-      try {
-        const authConfirmed = new Promise<void>((resolve) => {
-          cleanup.timeout = setTimeout(() => {
-            console.warn('Auth state confirmation timed out after 3s — proceeding with login')
-            cleanup.subscription?.unsubscribe()
-            resolve()
-          }, 3000)
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      })
 
-          const { data } = supabase.auth.onAuthStateChange((event) => {
-            if (event === 'SIGNED_IN') {
-              if (cleanup.timeout) clearTimeout(cleanup.timeout)
-              cleanup.subscription?.unsubscribe()
-              resolve()
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId })
+
+        if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+          try {
+            const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 1000))
+            const reg = await Promise.race([navigator.serviceWorker.ready, timeout])
+            if (reg) {
+              reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
+              await new Promise(resolve => setTimeout(resolve, 50))
             }
-          })
-          cleanup.subscription = data.subscription
-        })
-
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-
-        if (signInError) throw signInError
-
-        // Wait for auth state confirmation (cookies persisted)
-        await authConfirmed
-        signInSucceeded = true
-      } finally {
-        if (!signInSucceeded) {
-          cleanup.subscription?.unsubscribe()
-          if (cleanup.timeout) clearTimeout(cleanup.timeout)
-        }
-      }
-
-      // Await SW cache clear before redirect to prevent serving stale login page
-      // Use Promise.race with timeout because navigator.serviceWorker.ready
-      // never rejects and waits indefinitely if no SW is active
-      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-        try {
-          const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 1000))
-          const reg = await Promise.race([navigator.serviceWorker.ready, timeout])
-          if (reg) {
-            reg.active?.postMessage({ type: 'CLEAR_DYNAMIC_CACHE' })
-            await new Promise(resolve => setTimeout(resolve, 50))
+          } catch (err) {
+            console.warn('Failed to clear SW cache:', err)
           }
-        } catch (err) {
-          console.warn('Failed to clear SW cache:', err)
         }
-      }
 
-      window.location.href = returnTo
+        window.location.href = returnTo
+      } else {
+        setError('Sign-in could not be completed. Please try again.')
+        setLoading(false)
+      }
     } catch (err: unknown) {
-      setError(getErrorMessage(err))
+      const message =
+        (err as { errors?: { message: string }[] })?.errors?.[0]?.message ||
+        'Sign in failed. Please check your credentials.'
+      setError(message)
       setLoading(false)
     }
   }
