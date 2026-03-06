@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ClerkProvider } from '@clerk/nextjs'
 import { Geist, Geist_Mono, Lexend, Manrope } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import ResponsiveToaster from "@/components/ui/ResponsiveToaster";
@@ -63,6 +64,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    <ClerkProvider
+      signInUrl="/member/login"
+      signUpUrl="/member/signup"
+      signInFallbackRedirectUrl="/home"
+      signUpFallbackRedirectUrl="/home"
+    >
     <html lang="en">
       <head>
         <script dangerouslySetInnerHTML={{__html: `
@@ -150,5 +157,6 @@ export default function RootLayout({
         <SpeedInsights />
       </body>
     </html>
+    </ClerkProvider>
   );
 }

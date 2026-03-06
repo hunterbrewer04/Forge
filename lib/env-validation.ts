@@ -65,6 +65,24 @@ const ENV_VARS: EnvVarConfig[] = [
     clientSide: false,
   },
   {
+    name: 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+    required: true,
+    description: 'Clerk publishable key (safe to expose to browser)',
+    clientSide: true,
+  },
+  {
+    name: 'CLERK_SECRET_KEY',
+    required: true,
+    description: 'Clerk secret key (server-side only)',
+    clientSide: false,
+  },
+  {
+    name: 'CLERK_WEBHOOK_SECRET',
+    required: true,
+    description: 'Clerk webhook signing secret (server-side only)',
+    clientSide: false,
+  },
+  {
     name: 'STRIPE_SECRET_KEY',
     required: true,
     description: 'Stripe secret key for server-side API calls (sk_test_... or sk_live_...)',
@@ -230,6 +248,11 @@ export const env = {
   nodeEnv: () => process.env.NODE_ENV || 'development',
   isDevelopment: () => process.env.NODE_ENV === 'development',
   isProduction: () => process.env.NODE_ENV === 'production',
+
+  // Clerk
+  clerkPublishableKey: () => getEnvVar('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'),
+  clerkSecretKey: () => getEnvVar('CLERK_SECRET_KEY'),
+  clerkWebhookSecret: () => getEnvVar('CLERK_WEBHOOK_SECRET'),
 
   // Stripe
   stripeSecretKey: () => getEnvVar('STRIPE_SECRET_KEY'),
