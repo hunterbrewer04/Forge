@@ -120,18 +120,8 @@ export default function ProfilePage() {
 
   const confirmResetPassword = async () => {
     setShowResetPasswordModal(false)
-    if (!user?.email) return
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
-      })
-      if (error) throw error
-      toast.success('Password reset email sent!')
-    } catch (error) {
-      logger.error('Error sending reset password email:', error)
-      toast.error('Failed to send reset email.')
-    }
+    // TODO: Implement Clerk password management (e.g., redirect to Clerk's user profile or use Clerk's password reset flow)
+    toast.info('Password management is handled through your account provider.')
   }
 
   const getMemberInfo = () => {

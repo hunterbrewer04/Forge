@@ -117,11 +117,10 @@ export async function fetchBookingById(
  * Fetch bookings for the current user
  */
 export async function fetchUserBookings(
+  userId: string,
   filters: BookingFilters = {}
 ): Promise<BookingWithSession[]> {
   const supabase = createClient()
-  const { data: userData } = await supabase.auth.getUser()
-  const userId = userData?.user?.id
 
   if (!userId) throw new Error('User not authenticated')
 

@@ -246,16 +246,15 @@ export async function generateTrainerICalFeed(
 /**
  * Get or create a calendar token for the current user
  */
-export async function getOrCreateCalendarToken(): Promise<string> {
+export async function getOrCreateCalendarToken(userId: string): Promise<string> {
   const supabase = createClient()
 
-  const { data: userData } = await supabase.auth.getUser()
-  if (!userData?.user) {
+  if (!userId) {
     throw new Error('Not authenticated')
   }
 
   const { data, error } = await supabase.rpc('get_or_create_calendar_token', {
-    p_user_id: userData.user.id,
+    p_user_id: userId,
   })
 
   if (error) {
@@ -268,16 +267,15 @@ export async function getOrCreateCalendarToken(): Promise<string> {
 /**
  * Regenerate the calendar token for the current user
  */
-export async function regenerateCalendarToken(): Promise<string> {
+export async function regenerateCalendarToken(userId: string): Promise<string> {
   const supabase = createClient()
 
-  const { data: userData } = await supabase.auth.getUser()
-  if (!userData?.user) {
+  if (!userId) {
     throw new Error('Not authenticated')
   }
 
   const { data, error } = await supabase.rpc('regenerate_calendar_token', {
-    p_user_id: userData.user.id,
+    p_user_id: userId,
   })
 
   if (error) {

@@ -53,11 +53,10 @@ export async function fetchSessionTypeBySlug(slug: string): Promise<SessionType 
  * Returns sessions with session type, trainer info, and availability
  */
 export async function fetchSessions(
-  filters: SessionFilters = {}
+  filters: SessionFilters = {},
+  userId?: string
 ): Promise<SessionWithDetails[]> {
   const supabase = createClient()
-  const { data: userData } = await supabase.auth.getUser()
-  const userId = userData?.user?.id
 
   let query = supabase
     .from('sessions')
@@ -174,11 +173,10 @@ export async function fetchSessions(
  * Fetch a single session by ID with full details
  */
 export async function fetchSessionById(
-  sessionId: string
+  sessionId: string,
+  userId?: string
 ): Promise<SessionWithDetails | null> {
   const supabase = createClient()
-  const { data: userData } = await supabase.auth.getUser()
-  const userId = userData?.user?.id
 
   const { data: session, error } = await supabase
     .from('sessions')
@@ -340,12 +338,13 @@ export async function deleteSession(sessionId: string): Promise<void> {
  */
 export async function fetchTrainerSessions(
   trainerId: string,
-  filters: SessionFilters = {}
+  filters: SessionFilters = {},
+  userId?: string
 ): Promise<SessionWithDetails[]> {
   return fetchSessions({
     ...filters,
     trainer_id: trainerId,
-  })
+  }, userId)
 }
 
 /**

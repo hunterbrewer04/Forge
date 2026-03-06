@@ -83,24 +83,8 @@ export default function EditProfilePage() {
     setEmailMessage(null)
     setError(null)
 
-    try {
-      const { error: emailError } = await supabase.auth.updateUser({ email })
-
-      if (emailError) {
-        // Check by status code (422) for "already registered" rather than message string
-        if ('status' in emailError && emailError.status === 422) {
-          setError('This email is already in use by another account.')
-        } else {
-          setError(`Failed to update email: ${emailError.message}`)
-        }
-        return
-      }
-
-      setEmailMessage('Verification email sent! Check your new email to confirm the change.')
-    } catch (err) {
-      logger.error('Error updating email:', err)
-      setError('An unexpected error occurred while updating email.')
-    }
+    // TODO: Implement email change via Clerk API (e.g., using clerk.user.update or Clerk's email management)
+    setError('Email changes are managed through your account provider. This feature is coming soon.')
   }
 
   const handleSave = async (e: React.FormEvent) => {
