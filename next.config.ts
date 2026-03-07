@@ -16,7 +16,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const cspHeader = `
   default-src 'self';
-  script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://vercel.live https://js.stripe.com https://challenges.cloudflare.com;
+  script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://vercel.live https://js.stripe.com https://challenges.cloudflare.com https://*.clerk.accounts.dev;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' https://*.supabase.co https://img.clerk.com data: blob:;
   font-src 'self' https://fonts.gstatic.com data:;
@@ -25,7 +25,7 @@ const cspHeader = `
   form-action 'self';
   frame-ancestors 'none';
   frame-src https://vercel.live https://js.stripe.com https://*.stripe.com https://challenges.cloudflare.com;
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live https://api.stripe.com https://m.stripe.com https://q.stripe.com https://api.clerk.com wss://api.clerk.com${isDev ? ' https://clerk.*.lcl.dev' : ''};
+  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live https://api.stripe.com https://m.stripe.com https://q.stripe.com https://api.clerk.com wss://api.clerk.com https://*.clerk.accounts.dev${isDev ? ' https://clerk.*.lcl.dev' : ''};
   upgrade-insecure-requests;
 `.replace(/\n/g, '');
 
