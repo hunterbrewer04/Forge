@@ -50,7 +50,7 @@ async function resolveAuth<T extends BaseProfile>(
     return createApiError('User profile not found', 404, 'PROFILE_NOT_FOUND')
   }
 
-  return { clerkUserId: userId, profile: profile as T }
+  return { clerkUserId: userId, profile: profile as unknown as T }
 }
 
 /**
