@@ -106,7 +106,7 @@ export default function WizardStepAccount({ onComplete }: WizardStepAccountProps
 
         onComplete()
       } else {
-        setError('Account creation incomplete. Please try again.')
+        setError(`Account creation incomplete (status: ${result.status}, missing: ${JSON.stringify(result.missingFields)}). Please try again.`)
         setLoading(false)
       }
     } catch (err: unknown) {
