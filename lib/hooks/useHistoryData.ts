@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { PostgrestError } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase-browser'
 
 export interface HistoryItem {
   id: string
@@ -23,45 +21,39 @@ interface HistoryData {
   error: string | null
 }
 
-// Supabase FK join types
-interface TrainerJoin {
-  full_name: string | null
-}
-
-interface SessionTypeJoin {
+// API response shapes
+interface ApiSessionType {
   name: string | null
   color: string | null
 }
 
-interface SessionJoin {
+interface ApiTrainer {
+  full_name: string | null
+}
+
+interface ApiSession {
   id: string
   title: string
   starts_at: string
   duration_minutes: number | null
   location: string | null
-  trainer: TrainerJoin | TrainerJoin[] | null
-  session_type: SessionTypeJoin | SessionTypeJoin[] | null
+  session_type: ApiSessionType | null
+  trainer: ApiTrainer | null
 }
 
-interface BookingRow {
+interface ApiBooking {
   id: string
   status: string
-  session: SessionJoin | SessionJoin[] | null
+  session: ApiSession | null
 }
 
-// Trainer query types
-interface TrainerSessionRow {
+interface ApiTrainerSession {
   id: string
   title: string
   starts_at: string
   duration_minutes: number | null
   location: string | null
-  session_type: SessionTypeJoin | SessionTypeJoin[] | null
-}
-
-function normalizeOne<T>(val: T | T[] | null): T | null {
-  if (val == null) return null
-  return Array.isArray(val) ? val[0] ?? null : val
+  session_type: ApiSessionType | null
 }
 
 export function useHistoryData(
@@ -86,129 +78,111 @@ export function useHistoryData(
     let isCurrent = true
 
     async function fetchHistory() {
-      const supabase = createClient()
-
       // Build date range for the selected month
       const startOfMonth = new Date(year, month - 1, 1).toISOString()
       const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999).toISOString()
 
       try {
         if (isTrainer) {
-          // Trainer: query sessions they own
-          const { data: sessions, error: sessionsError } = await supabase
-            .from('sessions')
-            .select(`
-              id,
-              title,
-              starts_at,
-              duration_minutes,
-              location,
-              session_type:session_types (
-                name,
-                color
-              )
-            `)
-            .eq('trainer_id', userId!)
-            .gte('starts_at', startOfMonth)
-            .lte('starts_at', endOfMonth)
-            .order('starts_at', { ascending: false }) as {
-              data: TrainerSessionRow[] | null
-              error: PostgrestError | null
-            }
+          // Trainer: fetch sessions they own via API
+          const params = new URLSearchParams({
+            trainer_id: 'me',
+            from: startOfMonth,
+            to: endOfMonth,
+            // Include all statuses by fetching without status filter — use 'scheduled' + past sessions
+            status: 'scheduled',
+          })
 
-          if (sessionsError) throw sessionsError
+          // Fetch scheduled sessions in the date range
+          const [scheduledRes, cancelledRes] = await Promise.all([
+            fetch(`/api/sessions?${params}`),
+            fetch(`/api/sessions?${new URLSearchParams({ trainer_id: 'me', from: startOfMonth, to: endOfMonth, status: 'cancelled' })}`),
+          ])
 
-          // Get booking counts per session
-          const sessionIds = (sessions || []).map(s => s.id)
+          if (!scheduledRes.ok) throw new Error('Failed to fetch sessions')
+
+          const scheduledData = await scheduledRes.json()
+          const cancelledData = cancelledRes.ok ? await cancelledRes.json() : { sessions: [] }
+
+          const allSessions: ApiTrainerSession[] = [
+            ...(scheduledData.sessions || []),
+            ...(cancelledData.sessions || []),
+          ]
+            .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
+
+          // Fetch booking counts per session in parallel
           const bookingCounts: Record<string, number> = {}
 
-          if (sessionIds.length > 0) {
-            const { data: bookings } = await supabase
-              .from('bookings')
-              .select('session_id')
-              .in('session_id', sessionIds)
-              .in('status', ['confirmed', 'attended'])
+          if (allSessions.length > 0) {
+            const countResults = await Promise.allSettled(
+              allSessions.map(s =>
+                fetch(`/api/sessions/${s.id}?include_bookings=true`)
+                  .then(r => r.ok ? r.json() : null)
+              )
+            )
 
-            if (bookings) {
-              for (const b of bookings) {
-                bookingCounts[b.session_id] = (bookingCounts[b.session_id] || 0) + 1
+            for (let i = 0; i < allSessions.length; i++) {
+              const result = countResults[i]
+              if (result.status === 'fulfilled' && result.value?.bookings) {
+                const confirmed = (result.value.bookings as Array<{ status: string }>)
+                  .filter(b => b.status === 'confirmed' || b.status === 'attended').length
+                bookingCounts[allSessions[i].id] = confirmed
               }
             }
           }
 
           if (!isCurrent) return
 
-          const items: HistoryItem[] = (sessions || []).map(session => {
-            const sessionType = normalizeOne(session.session_type)
-            return {
-              id: session.id,
-              sessionTitle: session.title || 'Training Session',
-              date: session.starts_at,
-              trainerName: null,
-              sessionTypeName: sessionType?.name || null,
-              sessionTypeColor: sessionType?.color || null,
-              status: new Date(session.starts_at) < new Date() ? 'completed' : 'confirmed',
-              bookingCount: bookingCounts[session.id] || 0,
-              duration: session.duration_minutes || 60,
-              location: session.location || null,
-            }
-          })
+          const items: HistoryItem[] = allSessions.map(session => ({
+            id: session.id,
+            sessionTitle: session.title || 'Training Session',
+            date: session.starts_at,
+            trainerName: null,
+            sessionTypeName: session.session_type?.name || null,
+            sessionTypeColor: session.session_type?.color || null,
+            status: new Date(session.starts_at) < new Date() ? 'completed' : 'confirmed',
+            bookingCount: bookingCounts[session.id] || 0,
+            duration: session.duration_minutes || 60,
+            location: session.location || null,
+          }))
 
           setData({ items, loading: false, error: null })
         } else {
-          // Client: query bookings
-          const { data: bookings, error: bookingsError } = await supabase
-            .from('bookings')
-            .select(`
-              id,
-              status,
-              session:sessions (
-                id,
-                title,
-                starts_at,
-                duration_minutes,
-                location,
-                trainer:profiles!sessions_trainer_id_fkey (
-                  full_name
-                ),
-                session_type:session_types (
-                  name,
-                  color
-                )
-              )
-            `)
-            .eq('client_id', userId!)
-            .in('status', ['confirmed', 'attended', 'cancelled', 'no_show'])
-            .gte('session.starts_at', startOfMonth)
-            .lte('session.starts_at', endOfMonth)
-            .order('session(starts_at)', { ascending: false }) as {
-              data: BookingRow[] | null
-              error: PostgrestError | null
-            }
+          // Client: fetch bookings via API — get all past and present bookings
+          const res = await fetch('/api/bookings?upcoming=false')
+          if (!res.ok) throw new Error('Failed to fetch bookings')
 
-          if (bookingsError) throw bookingsError
+          const json = await res.json()
+          const allBookings: ApiBooking[] = json.data || []
+
+          // Filter by date range and allowed statuses client-side
+          const filteredBookings = allBookings.filter(b => {
+            if (!b.session) return false
+            const sessionDate = new Date(b.session.starts_at)
+            const start = new Date(startOfMonth)
+            const end = new Date(endOfMonth)
+            if (sessionDate < start || sessionDate > end) return false
+            return ['confirmed', 'attended', 'cancelled', 'no_show'].includes(b.status)
+          })
+
+          // Sort descending by session date
+          filteredBookings.sort((a, b) =>
+            new Date(b.session!.starts_at).getTime() - new Date(a.session!.starts_at).getTime()
+          )
 
           if (!isCurrent) return
 
-          const items: HistoryItem[] = (bookings || [])
-            .filter(b => b.session)
-            .map(booking => {
-              const session = normalizeOne(booking.session)!
-              const trainer = normalizeOne(session.trainer)
-              const sessionType = normalizeOne(session.session_type)
-
-              return {
-                id: booking.id,
-                sessionTitle: session.title || 'Training Session',
-                date: session.starts_at,
-                trainerName: trainer?.full_name || null,
-                sessionTypeName: sessionType?.name || null,
-                sessionTypeColor: sessionType?.color || null,
-                status: booking.status as HistoryItem['status'],
-                duration: session.duration_minutes || 60,
-                location: session.location || null,
-              }
-            })
+          const items: HistoryItem[] = filteredBookings.map(booking => ({
+            id: booking.id,
+            sessionTitle: booking.session!.title || 'Training Session',
+            date: booking.session!.starts_at,
+            trainerName: booking.session!.trainer?.full_name || null,
+            sessionTypeName: booking.session!.session_type?.name || null,
+            sessionTypeColor: booking.session!.session_type?.color || null,
+            status: booking.status as HistoryItem['status'],
+            duration: booking.session!.duration_minutes || 60,
+            location: booking.session!.location || null,
+          }))
 
           setData({ items, loading: false, error: null })
         }

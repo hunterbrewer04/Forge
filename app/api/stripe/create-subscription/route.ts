@@ -7,7 +7,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import type Stripe from 'stripe'
 import { validateAuth } from '@/lib/api/auth'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles, membershipTiers } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { stripe } from '@/lib/stripe'
 import { validateRequestBody } from '@/lib/api/validation'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
@@ -25,50 +27,48 @@ export async function POST(request: NextRequest) {
     const body = await validateRequestBody(request, SubscriptionSchema)
     if (body instanceof NextResponse) return body
 
-    const supabase = getAdminClient()
-
     // 1. Load the tier
-    const { data: tier, error: tierError } = await supabase
-      .from('membership_tiers')
-      .select('id, name, stripe_price_id, is_active')
-      .eq('id', body.tierId)
-      .eq('is_active', true)
-      .single()
+    const tier = await db.query.membershipTiers.findFirst({
+      where: and(
+        eq(membershipTiers.id, body.tierId),
+        eq(membershipTiers.isActive, true)
+      ),
+      columns: { id: true, name: true, stripePriceId: true, isActive: true },
+    })
 
-    if (tierError || !tier) {
+    if (!tier) {
       return createApiError('Membership tier not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
-    if (!tier.stripe_price_id || tier.stripe_price_id === 'price_PLACEHOLDER') {
+    if (!tier.stripePriceId || tier.stripePriceId === 'price_PLACEHOLDER') {
       return createApiError('This tier is not yet configured for payments', 503, 'TIER_NOT_CONFIGURED')
     }
 
     // 2. Load profile — check for existing active subscription
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('email, full_name, stripe_customer_id, membership_status')
-      .eq('id', profileId)
-      .single()
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { email: true, fullName: true, stripeCustomerId: true, membershipStatus: true },
+    })
 
-    if (profile?.membership_status === 'active') {
+    if (profile?.membershipStatus === 'active') {
       return createApiError('Already have an active membership', 409, 'ALREADY_SUBSCRIBED')
     }
 
     // 3. Load or create Stripe customer
-    let customerId = profile?.stripe_customer_id
+    let customerId = profile?.stripeCustomerId
 
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: profile?.email ?? undefined,
-        name: profile?.full_name ?? undefined,
+        name: profile?.fullName ?? undefined,
         metadata: { supabase_user_id: profileId },
       })
       customerId = customer.id
 
-      await supabase
-        .from('profiles')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', profileId)
+      await db
+        .update(profiles)
+        .set({ stripeCustomerId: customerId })
+        .where(eq(profiles.id, profileId))
     }
 
     // 4. Create subscription with default_incomplete so we get a PaymentIntent
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     //    so the webhook can read it from subscription.metadata.
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
-      items: [{ price: tier.stripe_price_id }],
+      items: [{ price: tier.stripePriceId }],
       payment_behavior: 'default_incomplete',
       payment_settings: {
         save_default_payment_method: 'on_subscription',

@@ -3,16 +3,19 @@
  *
  * POST /api/sessions/[id]/book - Book a session
  *
- * Uses atomic database function to prevent race conditions
- * and ensure capacity limits are respected.
+ * Uses a Drizzle transaction to prevent race conditions and enforce capacity
+ * limits atomically.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { sessions, bookings, profiles, membershipTiers } from '@/lib/db/schema'
+import { eq, and, gte, lt, count } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
+import { bookSession } from '@/lib/db/queries/bookings'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -22,7 +25,7 @@ interface RouteParams {
  * POST /api/sessions/[id]/book
  *
  * Books the authenticated user into the session.
- * Uses the atomic book_session database function.
+ * Uses an atomic Drizzle transaction for capacity enforcement.
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -45,22 +48,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return rateLimitResult
     }
 
-    // 2b. Create Supabase client
-    const supabase = getAdminClient()
-
-    // 2c. Quota check for member accounts
-    const { data: memberProfile } = await supabase
-      .from('profiles')
-      .select('is_member, membership_tier_id, membership_status, has_full_access, is_trainer, is_admin')
-      .eq('id', profileId)
-      .single()
+    // 3. Fetch member profile for access and quota checks
+    const memberProfile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: {
+        isMember: true,
+        membershipTierId: true,
+        membershipStatus: true,
+        hasFullAccess: true,
+        isTrainer: true,
+        isAdmin: true,
+      },
+    })
 
     // Access check — reject users without any valid access tier
     const hasAccess =
-      memberProfile?.is_trainer ||
-      memberProfile?.is_admin ||
-      memberProfile?.has_full_access ||
-      (memberProfile?.is_member && memberProfile?.membership_status === 'active')
+      memberProfile?.isTrainer ||
+      memberProfile?.isAdmin ||
+      memberProfile?.hasFullAccess ||
+      (memberProfile?.isMember && memberProfile?.membershipStatus === 'active')
 
     if (!hasAccess) {
       return createApiError(
@@ -70,56 +76,59 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    if (memberProfile?.is_member && memberProfile.membership_tier_id) {
-      // Block inactive members at the API layer (belt-and-suspenders with client-side MembershipGuard)
-      if (memberProfile.membership_status !== 'active') {
+    // 4. Monthly quota check for member accounts
+    if (memberProfile?.isMember && memberProfile.membershipTierId) {
+      if (memberProfile.membershipStatus !== 'active') {
         return createApiError('Membership is not active', 403, 'MEMBERSHIP_INACTIVE')
       }
 
       const now = new Date()
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-      const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString()
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-      const [{ count: bookingCount }, { data: tier }] = await Promise.all([
-        supabase
-          .from('bookings')
-          .select('*', { count: 'exact', head: true })
-          .eq('client_id', profileId)
-          .gte('created_at', startOfMonth)
-          .lt('created_at', startOfNextMonth),
-        supabase
-          .from('membership_tiers')
-          .select('monthly_booking_quota')
-          .eq('id', memberProfile.membership_tier_id)
-          .single(),
+      const [[{ value: bookingCount }], tier] = await Promise.all([
+        db
+          .select({ value: count() })
+          .from(bookings)
+          .where(
+            and(
+              eq(bookings.clientId, profileId),
+              gte(bookings.createdAt, startOfMonth),
+              lt(bookings.createdAt, startOfNextMonth)
+            )
+          ),
+        db.query.membershipTiers.findFirst({
+          where: eq(membershipTiers.id, memberProfile.membershipTierId),
+          columns: { monthlyBookingQuota: true },
+        }),
       ])
 
-      if (tier && (bookingCount ?? 0) >= tier.monthly_booking_quota) {
+      if (tier && bookingCount >= tier.monthlyBookingQuota) {
         return createApiError(
-          `Monthly booking quota of ${tier.monthly_booking_quota} sessions reached`,
+          `Monthly booking quota of ${tier.monthlyBookingQuota} sessions reached`,
           429,
           'QUOTA_EXCEEDED'
         )
       }
     }
 
-    // 3. Get session info for audit logging
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id, title, starts_at, trainer_id')
-      .eq('id', sessionId)
-      .single()
+    // 5. Fetch session info for pre-flight checks and audit logging
+    const session = await db.query.sessions.findFirst({
+      where: eq(sessions.id, sessionId),
+      columns: {
+        id: true,
+        title: true,
+        startsAt: true,
+        trainerId: true,
+      },
+    })
 
-    if (sessionError) {
-      if (sessionError.code === 'PGRST116') {
-        return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
-      }
-      console.error('Error fetching session:', sessionError)
-      return createApiError('Failed to fetch session', 500, 'DATABASE_ERROR')
+    if (!session) {
+      return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
-    // 3b. Prevent booking past sessions (Issue #7 - defensive API layer check)
-    if (new Date(session.starts_at) <= new Date()) {
+    // 5a. Prevent booking past sessions
+    if (session.startsAt <= new Date()) {
       return createApiError(
         'Cannot book a session that has already started',
         400,
@@ -127,8 +136,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 3c. Prevent trainer from booking their own sessions (BRE-16)
-    if (profileId === session.trainer_id) {
+    // 5b. Prevent trainer from booking their own sessions
+    if (profileId === session.trainerId) {
       return createApiError(
         'Trainers cannot book their own sessions',
         403,
@@ -136,108 +145,120 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 4. Call atomic booking function
-    const { data: bookingResult, error: bookingError } = await supabase.rpc(
-      'book_session',
-      {
-        p_session_id: sessionId,
-        p_client_id: profileId,
-      }
-    )
+    // 6. Atomic booking via transaction
+    let newBooking: Awaited<ReturnType<typeof bookSession>>
+    try {
+      newBooking = await bookSession(sessionId, profileId)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to book session'
 
-    if (bookingError) {
-      console.error('Error booking session:', bookingError)
+      if (message === 'Session not available') {
+        return createApiError(message, 400, 'SESSION_NOT_AVAILABLE')
+      }
+      if (message === 'Session is full') {
+        return createApiError(message, 409, 'SESSION_FULL')
+      }
+      if (message === 'Already booked') {
+        return createApiError('Session already booked', 409, 'ALREADY_BOOKED')
+      }
+
+      console.error('Error booking session:', err)
       return createApiError('Failed to book session', 500, 'DATABASE_ERROR')
     }
 
-    // 5. Check booking result
-    const result = bookingResult?.[0]
-
-    if (!result?.success) {
-      const errorMessage = result?.error_message || 'Failed to book session'
-
-      // Map error messages to appropriate HTTP status codes
-      if (errorMessage.includes('not found')) {
-        return createApiError(errorMessage, 404, 'RESOURCE_NOT_FOUND')
-      }
-      if (errorMessage.includes('already booked')) {
-        return createApiError(errorMessage, 409, 'ALREADY_BOOKED')
-      }
-      if (errorMessage.includes('fully booked')) {
-        return createApiError(errorMessage, 409, 'SESSION_FULL')
-      }
-      if (errorMessage.includes('not available')) {
-        return createApiError(errorMessage, 400, 'SESSION_NOT_AVAILABLE')
-      }
-
-      return createApiError(errorMessage, 400, 'BOOKING_FAILED')
-    }
-
-    // 6. Fetch the created booking with details
-    const { data: booking, error: fetchError } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        session:sessions(
-          id,
-          title,
-          starts_at,
-          ends_at,
-          location,
-          session_type:session_types(*)
-        )
-      `)
-      .eq('id', result.booking_id)
-      .single()
-
-    if (fetchError) {
-      console.error('Error fetching booking:', fetchError)
-      // Booking was created, but we couldn't fetch it - still return success
-      return NextResponse.json({
-        success: true,
-        data: {
-          id: result.booking_id,
-          session_id: sessionId,
-          client_id: profileId,
-          status: 'confirmed',
+    // 7. Fetch the booking with session relations for the response
+    const bookingWithSession = await db.query.bookings.findFirst({
+      where: eq(bookings.id, newBooking.id),
+      with: {
+        session: {
+          with: {
+            sessionType: true,
+          },
+          columns: {
+            id: true,
+            title: true,
+            startsAt: true,
+            endsAt: true,
+            location: true,
+            sessionTypeId: true,
+          },
         },
-        message: 'Session booked successfully',
-      }, { status: 201 })
-    }
+      },
+    })
 
-    // 7. Log audit event
+    // 8. Log audit event
     await logAuditEventFromRequest({
       userId: profileId,
       action: 'BOOKING_CREATE',
       resource: 'booking',
-      resourceId: result.booking_id,
+      resourceId: newBooking.id,
       metadata: {
         session_id: sessionId,
         session_title: session.title,
-        session_starts_at: session.starts_at,
-        trainer_id: session.trainer_id,
+        session_starts_at: session.startsAt,
+        trainer_id: session.trainerId,
       },
     })
 
-    // 8. Handle FK join format
-    const sessionData = Array.isArray(booking.session)
-      ? booking.session[0] || null
-      : booking.session
-
-    if (sessionData?.session_type) {
-      sessionData.session_type = Array.isArray(sessionData.session_type)
-        ? sessionData.session_type[0] || null
-        : sessionData.session_type
+    if (!bookingWithSession) {
+      // Booking was created, but we couldn't fetch it — return minimal success
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            id: newBooking.id,
+            session_id: sessionId,
+            client_id: profileId,
+            status: 'confirmed',
+          },
+          message: 'Session booked successfully',
+        },
+        { status: 201 }
+      )
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...booking,
-        session: sessionData,
+    const bws = bookingWithSession
+    const sessionData = bws.session
+      ? {
+          id: bws.session.id,
+          title: bws.session.title,
+          starts_at: bws.session.startsAt,
+          ends_at: bws.session.endsAt,
+          location: bws.session.location,
+          session_type: bws.session.sessionType
+            ? {
+                id: bws.session.sessionType.id,
+                name: bws.session.sessionType.name,
+                slug: bws.session.sessionType.slug,
+                color: bws.session.sessionType.color,
+                icon: bws.session.sessionType.icon,
+                is_premium: bws.session.sessionType.isPremium,
+                created_at: bws.session.sessionType.createdAt,
+                updated_at: bws.session.sessionType.updatedAt,
+              }
+            : null,
+        }
+      : null
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: bws.id,
+          session_id: bws.sessionId,
+          client_id: bws.clientId,
+          status: bws.status,
+          booked_at: bws.bookedAt,
+          cancelled_at: bws.cancelledAt,
+          cancellation_reason: bws.cancellationReason,
+          created_at: bws.createdAt,
+          updated_at: bws.updatedAt,
+          session: sessionData,
+        },
+        message: 'Session booked successfully',
       },
-      message: 'Session booked successfully',
-    }, { status: 201 })
+      { status: 201 }
+    )
   } catch (error) {
     return handleUnexpectedError(error, 'session-book')
   }

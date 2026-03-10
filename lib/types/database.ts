@@ -1,4 +1,5 @@
-// Database types based on Supabase schema
+// API response types (snake_case JSON format)
+// For Drizzle ORM schema types (camelCase), see lib/db/types.ts
 export interface Profile {
   id: string
   full_name: string | null

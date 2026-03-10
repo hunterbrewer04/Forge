@@ -1,6 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 export default async function TrainerLayout({
   children,
@@ -13,14 +15,12 @@ export default async function TrainerLayout({
     redirect('/member/login')
   }
 
-  const supabase = getAdminClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_trainer')
-    .eq('clerk_user_id', userId)
-    .single()
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.clerkUserId, userId),
+    columns: { isTrainer: true },
+  })
 
-  if (!profile?.is_trainer) {
+  if (!profile?.isTrainer) {
     redirect('/home')
   }
 

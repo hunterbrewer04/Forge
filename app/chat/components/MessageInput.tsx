@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, FormEvent, useRef, ChangeEvent, useEffect } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import { useAuth } from '@/contexts/AuthContext'
 import { Plus, Send, X } from '@/components/ui/icons'
 
@@ -29,7 +28,6 @@ export default function MessageInput({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
 
   // Auto-clear error after 5 seconds
   useEffect(() => {
@@ -146,19 +144,15 @@ export default function MessageInput({
 
       setUploadProgress(90)
 
-      const { error: insertError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: profile.id,
-          content: null,
-          media_url: filePath,
-          media_type: mediaType,
-          created_at: new Date().toISOString(),
-        })
+      const insertRes = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ media_url: filePath, media_type: mediaType }),
+      })
 
-      if (insertError) {
-        throw new Error(`Failed to save message: ${insertError.message}`)
+      if (!insertRes.ok) {
+        const errorData = await insertRes.json().catch(() => ({}))
+        throw new Error(`Failed to save message: ${errorData.error || insertRes.statusText}`)
       }
 
       setUploadProgress(100)
@@ -201,16 +195,13 @@ export default function MessageInput({
         return
       }
 
-      const { error: dbError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: profile.id,
-          content: messageContent,
-          created_at: new Date().toISOString(),
-        })
+      const sendRes = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: messageContent }),
+      })
 
-      if (dbError) {
+      if (!sendRes.ok) {
         // Remove optimistic message and restore input
         onMessageError?.(tempId)
         setMessage(messageContent)

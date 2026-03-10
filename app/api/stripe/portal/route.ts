@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { stripe } from '@/lib/stripe'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 
@@ -10,21 +12,18 @@ export async function GET(request: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const { profileId } = auth
 
-    const supabase = getAdminClient()
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { stripeCustomerId: true },
+    })
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', profileId)
-      .single()
-
-    if (!profile?.stripe_customer_id) {
+    if (!profile?.stripeCustomerId) {
       return createApiError('No billing account found', 404, 'RESOURCE_NOT_FOUND')
     }
 
     const origin = request.nextUrl.origin
     const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
+      customer: profile.stripeCustomerId,
       return_url: `${origin}/member/portal`,
     })
 

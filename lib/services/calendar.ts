@@ -5,13 +5,39 @@
  * like Google Calendar, Apple Calendar, and Outlook.
  */
 
-import { createClient } from '@/lib/supabase-browser'
-import type { Session, SessionType } from '@/lib/types/sessions'
+import 'server-only'
 
-interface SessionForCalendar extends Session {
-  session_type?: SessionType | null
-  booked_count?: number
+import { db } from '@/lib/db'
+import { profiles, sessions, bookings } from '@/lib/db/schema'
+import { eq, and, gte, lte, inArray } from 'drizzle-orm'
+import { getOrCreateCalendarToken, regenerateCalendarToken } from '@/lib/db/queries/calendar'
+
+// Re-export token helpers so API routes can import from one place
+export { getOrCreateCalendarToken, regenerateCalendarToken }
+
+// ============================================================================
+// Internal types
+// ============================================================================
+
+interface SessionForCalendar {
+  id: string
+  title: string
+  description: string | null
+  location: string | null
+  startsAt: Date
+  endsAt: Date
+  status: string
+  isPremium: boolean
+  capacity: number | null
+  createdAt: Date
+  updatedAt: Date
+  sessionType?: { name: string } | null
+  bookedCount?: number
 }
+
+// ============================================================================
+// Pure iCal helpers (no DB access)
+// ============================================================================
 
 /**
  * Generate an iCal UID for a session
@@ -73,16 +99,16 @@ function getICalStatus(status: string): string {
  */
 function generateVEvent(session: SessionForCalendar, domain: string = 'forge-pwa.vercel.app'): string {
   const uid = generateUID(session.id, domain)
-  const dtstart = formatICalDate(new Date(session.starts_at))
-  const dtend = formatICalDate(new Date(session.ends_at))
+  const dtstart = formatICalDate(new Date(session.startsAt))
+  const dtend = formatICalDate(new Date(session.endsAt))
   const dtstamp = getCurrentTimestamp()
-  const created = formatICalDate(new Date(session.created_at))
-  const lastModified = formatICalDate(new Date(session.updated_at))
+  const created = formatICalDate(new Date(session.createdAt))
+  const lastModified = formatICalDate(new Date(session.updatedAt))
 
   // Build summary with booking count if available
   let summary = escapeICalText(session.title)
-  if (session.booked_count !== undefined && session.capacity) {
-    summary += ` (${session.booked_count}/${session.capacity} booked)`
+  if (session.bookedCount !== undefined && session.capacity) {
+    summary += ` (${session.bookedCount}/${session.capacity} booked)`
   }
 
   // Build description
@@ -90,15 +116,15 @@ function generateVEvent(session: SessionForCalendar, domain: string = 'forge-pwa
   if (session.description) {
     description = escapeICalText(session.description)
   }
-  if (session.session_type) {
+  if (session.sessionType) {
     description += description ? '\\n\\n' : ''
-    description += `Type: ${escapeICalText(session.session_type.name)}`
+    description += `Type: ${escapeICalText(session.sessionType.name)}`
   }
   if (session.capacity) {
     description += description ? '\\n' : ''
-    description += `Capacity: ${session.booked_count || 0} of ${session.capacity} spots booked`
+    description += `Capacity: ${session.bookedCount || 0} of ${session.capacity} spots booked`
   }
-  if (session.is_premium) {
+  if (session.isPremium) {
     description += description ? '\\n' : ''
     description += 'Premium Session'
   }
@@ -132,7 +158,7 @@ function generateVEvent(session: SessionForCalendar, domain: string = 'forge-pwa
  * Generate a complete iCal feed from a list of sessions
  */
 export function generateICalFeed(
-  sessions: SessionForCalendar[],
+  sessionList: SessionForCalendar[],
   domain: string = 'forge-pwa.vercel.app'
 ): string {
   const header = [
@@ -147,7 +173,7 @@ export function generateICalFeed(
     'X-PUBLISHED-TTL:PT15M',
   ].join('\r\n')
 
-  const events = sessions
+  const events = sessionList
     .filter(s => s.status !== 'cancelled') // Optionally filter cancelled sessions
     .map(s => generateVEvent(s, domain))
     .join('\r\n')
@@ -156,6 +182,10 @@ export function generateICalFeed(
 
   return `${header}\r\n${events}\r\n${footer}\r\n`
 }
+
+// ============================================================================
+// DB-backed functions (server-only)
+// ============================================================================
 
 /**
  * Fetch sessions for a trainer and generate iCal feed
@@ -169,8 +199,6 @@ export async function generateTrainerICalFeed(
     daysBehind?: number
   } = {}
 ): Promise<{ ical: string; trainerName: string }> {
-  const supabase = createClient()
-
   const {
     includeCompleted = true,
     includeCancelled = false,
@@ -179,13 +207,12 @@ export async function generateTrainerICalFeed(
   } = options
 
   // Get trainer info
-  const { data: trainer } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', trainerId)
-    .single()
+  const trainer = await db.query.profiles.findFirst({
+    where: eq(profiles.id, trainerId),
+    columns: { fullName: true },
+  })
 
-  const trainerName = trainer?.full_name || 'Trainer'
+  const trainerName = trainer?.fullName || 'Trainer'
 
   // Calculate date range
   const now = new Date()
@@ -195,112 +222,76 @@ export async function generateTrainerICalFeed(
   endDate.setDate(endDate.getDate() + daysAhead)
 
   // Build status filter
-  const statuses = ['scheduled']
+  const statuses: Array<'scheduled' | 'completed' | 'cancelled'> = ['scheduled']
   if (includeCompleted) statuses.push('completed')
   if (includeCancelled) statuses.push('cancelled')
 
-  // Fetch sessions
-  const { data: sessions, error } = await supabase
-    .from('sessions')
-    .select(`
-      *,
-      session_type:session_types(*)
-    `)
-    .eq('trainer_id', trainerId)
-    .in('status', statuses)
-    .gte('starts_at', startDate.toISOString())
-    .lte('starts_at', endDate.toISOString())
-    .order('starts_at', { ascending: true })
+  // Fetch sessions with session type relation
+  const rawSessions = await db.query.sessions.findMany({
+    where: and(
+      eq(sessions.trainerId, trainerId),
+      inArray(sessions.status, statuses),
+      gte(sessions.startsAt, startDate),
+      lte(sessions.startsAt, endDate)
+    ),
+    with: {
+      sessionType: true,
+    },
+    orderBy: (s, { asc }) => [asc(s.startsAt)],
+  })
 
-  if (error) {
-    throw new Error('Failed to fetch sessions for calendar')
+  // Get booking counts in a single batch query
+  const sessionIds = rawSessions.map(s => s.id)
+  const bookingCountMap = new Map<string, number>()
+
+  if (sessionIds.length > 0) {
+    const confirmedBookings = await db
+      .select({ sessionId: bookings.sessionId })
+      .from(bookings)
+      .where(
+        and(
+          inArray(bookings.sessionId, sessionIds),
+          eq(bookings.status, 'confirmed')
+        )
+      )
+
+    for (const b of confirmedBookings) {
+      bookingCountMap.set(b.sessionId, (bookingCountMap.get(b.sessionId) || 0) + 1)
+    }
   }
 
-  // Get booking counts for each session
-  const sessionsWithBookings = await Promise.all(
-    (sessions || []).map(async (session) => {
-      const { count } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('session_id', session.id)
-        .eq('status', 'confirmed')
+  const sessionsForFeed: SessionForCalendar[] = rawSessions.map(session => ({
+    id: session.id,
+    title: session.title,
+    description: session.description,
+    location: session.location,
+    startsAt: session.startsAt,
+    endsAt: session.endsAt,
+    status: session.status,
+    isPremium: session.isPremium,
+    capacity: session.capacity,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    sessionType: session.sessionType ?? null,
+    bookedCount: bookingCountMap.get(session.id) || 0,
+  }))
 
-      // Handle FK join format
-      const session_type = Array.isArray(session.session_type)
-        ? session.session_type[0] || null
-        : session.session_type
-
-      return {
-        ...session,
-        session_type,
-        booked_count: count || 0,
-      } as SessionForCalendar
-    })
-  )
-
-  const ical = generateICalFeed(sessionsWithBookings)
+  const ical = generateICalFeed(sessionsForFeed)
 
   return { ical, trainerName }
 }
 
 /**
- * Get or create a calendar token for the current user
- */
-export async function getOrCreateCalendarToken(userId: string): Promise<string> {
-  const supabase = createClient()
-
-  if (!userId) {
-    throw new Error('Not authenticated')
-  }
-
-  const { data, error } = await supabase.rpc('get_or_create_calendar_token', {
-    p_user_id: userId,
-  })
-
-  if (error) {
-    throw new Error('Failed to get calendar token')
-  }
-
-  return data
-}
-
-/**
- * Regenerate the calendar token for the current user
- */
-export async function regenerateCalendarToken(userId: string): Promise<string> {
-  const supabase = createClient()
-
-  if (!userId) {
-    throw new Error('Not authenticated')
-  }
-
-  const { data, error } = await supabase.rpc('regenerate_calendar_token', {
-    p_user_id: userId,
-  })
-
-  if (error) {
-    throw new Error('Failed to regenerate calendar token')
-  }
-
-  return data
-}
-
-/**
- * Validate a calendar token and return the trainer ID
+ * Validate a calendar token and return the trainer's profile ID
  */
 export async function validateCalendarToken(token: string): Promise<string | null> {
-  const supabase = createClient()
+  const profile = await db.query.profiles.findFirst({
+    where: and(
+      eq(profiles.calendarToken, token),
+      eq(profiles.isTrainer, true)
+    ),
+    columns: { id: true },
+  })
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('calendar_token', token)
-    .eq('is_trainer', true)
-    .single()
-
-  if (error || !data) {
-    return null
-  }
-
-  return data.id
+  return profile?.id ?? null
 }

@@ -84,15 +84,17 @@ export default function ChatWindow({
     setShowUserInfo(true)
 
     if (!userProfile) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url, username, email, created_at, is_trainer, has_full_access')
-        .eq('id', otherUserId)
-        .single()
-
-      if (data) setUserProfile(data)
+      try {
+        const res = await fetch(`/api/users/${otherUserId}`)
+        if (res.ok) {
+          const json = await res.json()
+          if (json.user) setUserProfile(json.user)
+        }
+      } catch {
+        // Non-critical — user info panel will show partial data from props
+      }
     }
-  }, [otherUserId, supabase, userProfile])
+  }, [otherUserId, userProfile])
 
   // Body scroll lock and escape key for user info panel
   useEffect(() => {

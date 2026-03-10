@@ -10,19 +10,15 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles, sessions, bookings } from '@/lib/db/schema'
+import { eq, and, gte, lte, inArray } from 'drizzle-orm'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 import { isValidUUID } from '@/lib/api/validation'
 import { generateICalFeed } from '@/lib/services/calendar'
-import type { Session, SessionType } from '@/lib/types/sessions'
 
 interface RouteParams {
   params: Promise<{ trainerId: string }>
-}
-
-interface SessionForCalendar extends Session {
-  session_type?: SessionType | null
-  booked_count?: number
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -59,25 +55,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
     }
 
-    // Use admin client to bypass RLS for token validation
-    const supabase = getAdminClient()
+    // Validate token and get trainer profile
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, cleanTrainerId),
+      columns: { id: true, fullName: true, calendarToken: true, isTrainer: true },
+    })
 
-    // Validate token and get trainer
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, full_name, calendar_token, is_trainer')
-      .eq('id', cleanTrainerId)
-      .single()
-
-    if (profileError || !profile) {
+    if (!profile) {
       return new NextResponse('Not Found - Trainer not found', {
         status: 404,
         headers: { 'Content-Type': 'text/plain' },
       })
     }
 
-    // Verify trainer role and token
-    if (!profile.is_trainer) {
+    // Verify trainer role
+    if (!profile.isTrainer) {
       return new NextResponse('Forbidden - Not a trainer', {
         status: 403,
         headers: { 'Content-Type': 'text/plain' },
@@ -85,7 +77,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Use constant-time comparison to prevent timing attacks
-    const storedToken = profile.calendar_token || ''
+    const storedToken = profile.calendarToken || ''
     let tokensMatch = false
     try {
       const a = Buffer.from(token, 'utf8')
@@ -109,65 +101,58 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const endDate = new Date(now)
     endDate.setDate(endDate.getDate() + 90)
 
-    // Fetch sessions
-    const { data: sessions, error: sessionsError } = await supabase
-      .from('sessions')
-      .select(`
-        *,
-        session_type:session_types(*)
-      `)
-      .eq('trainer_id', cleanTrainerId)
-      .in('status', ['scheduled', 'completed'])
-      .gte('starts_at', startDate.toISOString())
-      .lte('starts_at', endDate.toISOString())
-      .order('starts_at', { ascending: true })
+    // Fetch sessions with session type relation
+    const rawSessions = await db.query.sessions.findMany({
+      where: and(
+        eq(sessions.trainerId, cleanTrainerId),
+        inArray(sessions.status, ['scheduled', 'completed']),
+        gte(sessions.startsAt, startDate),
+        lte(sessions.startsAt, endDate)
+      ),
+      with: {
+        sessionType: true,
+      },
+      orderBy: (s, { asc }) => [asc(s.startsAt)],
+    })
 
-    if (sessionsError) {
-      console.error('Error fetching sessions for calendar:', sessionsError)
-      return new NextResponse('Internal Server Error', {
-        status: 500,
-        headers: { 'Content-Type': 'text/plain' },
-      })
-    }
-
-    // Get booking counts in a single batch query instead of N+1
-    const sessionIds = (sessions || []).map((s) => s.id)
+    // Get booking counts in a single batch query
+    const sessionIds = rawSessions.map(s => s.id)
     const bookingCountMap = new Map<string, number>()
 
     if (sessionIds.length > 0) {
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('session_id')
-        .in('session_id', sessionIds)
-        .eq('status', 'confirmed')
+      const confirmedBookings = await db
+        .select({ sessionId: bookings.sessionId })
+        .from(bookings)
+        .where(
+          and(
+            inArray(bookings.sessionId, sessionIds),
+            eq(bookings.status, 'confirmed')
+          )
+        )
 
-      if (bookingsError) {
-        console.error('Error fetching bookings for calendar:', bookingsError)
-        return new NextResponse('Internal Server Error', {
-          status: 500,
-          headers: { 'Content-Type': 'text/plain' },
-        })
-      }
-
-      for (const b of bookings || []) {
-        bookingCountMap.set(b.session_id, (bookingCountMap.get(b.session_id) || 0) + 1)
+      for (const b of confirmedBookings) {
+        bookingCountMap.set(b.sessionId, (bookingCountMap.get(b.sessionId) || 0) + 1)
       }
     }
 
-    const sessionsWithBookings: SessionForCalendar[] = (sessions || []).map((session) => {
-      const session_type = Array.isArray(session.session_type)
-        ? session.session_type[0] || null
-        : session.session_type
-
-      return {
-        ...session,
-        session_type,
-        booked_count: bookingCountMap.get(session.id) || 0,
-      }
-    })
+    const sessionsForFeed = rawSessions.map(session => ({
+      id: session.id,
+      title: session.title,
+      description: session.description,
+      location: session.location,
+      startsAt: session.startsAt,
+      endsAt: session.endsAt,
+      status: session.status,
+      isPremium: session.isPremium,
+      capacity: session.capacity,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+      sessionType: session.sessionType ?? null,
+      bookedCount: bookingCountMap.get(session.id) || 0,
+    }))
 
     // Generate iCal feed
-    const ical = generateICalFeed(sessionsWithBookings)
+    const ical = generateICalFeed(sessionsForFeed)
 
     // Return iCal file with appropriate headers
     return new NextResponse(ical, {

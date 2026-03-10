@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -30,9 +29,11 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 }
 
 /**
- * Subscribe the current device to push notifications and save to Supabase
+ * Subscribe the current device to push notifications and save via API.
+ * Browser push API logic is unchanged — only the persistence call now goes
+ * through /api/push/subscribe instead of direct Supabase.
  */
-export async function subscribeToPush(userId: string): Promise<boolean> {
+export async function subscribeToPush(_userId: string): Promise<boolean> {
   if (!isPushSupported()) return false
 
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -67,22 +68,20 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
       return false
     }
 
-    // Save to Supabase
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('push_subscriptions')
-      .upsert(
-        {
-          user_id: userId,
-          endpoint,
-          auth_key: authKey,
-          p256dh_key: p256dhKey,
-        },
-        { onConflict: 'user_id,endpoint' }
-      )
+    // Persist via API (replaces direct Supabase upsert)
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint,
+        auth_key: authKey,
+        p256dh_key: p256dhKey,
+      }),
+    })
 
-    if (error) {
-      logger.error('Failed to save push subscription:', error)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      logger.error('Failed to save push subscription:', err)
       return false
     }
 
@@ -94,9 +93,11 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
 }
 
 /**
- * Unsubscribe the current device from push notifications
+ * Unsubscribe the current device from push notifications.
+ * Browser push API logic is unchanged — only the deletion now goes through
+ * /api/push/unsubscribe instead of direct Supabase.
  */
-export async function unsubscribeFromPush(userId: string): Promise<boolean> {
+export async function unsubscribeFromPush(_userId: string): Promise<boolean> {
   if (!isPushSupported()) return false
 
   try {
@@ -104,13 +105,12 @@ export async function unsubscribeFromPush(userId: string): Promise<boolean> {
     const subscription = await registration.pushManager.getSubscription()
 
     if (subscription) {
-      // Remove from Supabase
-      const supabase = createClient()
-      await supabase
-        .from('push_subscriptions')
-        .delete()
-        .eq('user_id', userId)
-        .eq('endpoint', subscription.endpoint)
+      // Remove via API (replaces direct Supabase delete)
+      await fetch('/api/push/unsubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+      })
 
       // Unsubscribe from browser
       await subscription.unsubscribe()

@@ -43,54 +43,41 @@ export function useUnreadCount({ userId, isTrainer, isClient }: UseUnreadCountOp
     setError(null)
 
     try {
-      const supabase = createClient()
+      // Determine role for the conversations API
+      const role = isTrainer ? 'trainer' : isClient ? 'client' : null
 
-      // First, get the user's conversation IDs
-      let conversationIds: string[] = []
-
-      if (isTrainer) {
-        const { data: conversations, error: convError } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('trainer_id', userId)
-
-        if (convError) throw convError
-        conversationIds = conversations?.map(c => c.id) || []
-      } else if (isClient) {
-        const { data: conversations, error: convError } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('client_id', userId)
-
-        if (convError) throw convError
-        conversationIds = conversations?.map(c => c.id) || []
-      }
-
-      // Store conversation IDs in ref for real-time subscription filtering
-      conversationIdsRef.current = conversationIds
-
-      if (conversationIds.length === 0) {
+      if (!role) {
         setUnreadCount(0)
         setLoading(false)
         return
       }
 
-      // Count messages in these conversations where user is not the sender
-      // and message was created in the last 7 days (to limit the count)
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      const res = await fetch(`/api/conversations?role=${role}`)
+      if (!res.ok) throw new Error('Failed to fetch conversations')
 
-      const { count, error: countError } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .in('conversation_id', conversationIds)
-        .neq('sender_id', userId)
-        .gte('created_at', sevenDaysAgo.toISOString())
+      const json = await res.json()
 
-      if (countError) throw countError
+      // Collect conversation IDs for the Realtime subscription filter
+      let conversationIds: string[] = []
+      let totalUnread = 0
+
+      if (role === 'trainer') {
+        const convs: { id: string; unread_count: number }[] = json.conversations || []
+        conversationIds = convs.map(c => c.id)
+        totalUnread = convs.reduce((sum, c) => sum + (c.unread_count || 0), 0)
+      } else {
+        const conv: { id: string; unread_count: number } | null = json.conversation ?? null
+        if (conv) {
+          conversationIds = [conv.id]
+          totalUnread = conv.unread_count || 0
+        }
+      }
+
+      // Store conversation IDs in ref for real-time subscription filtering
+      conversationIdsRef.current = conversationIds
 
       // Cap at 99 for display purposes
-      setUnreadCount(Math.min(count || 0, 99))
+      setUnreadCount(Math.min(totalUnread, 99))
     } catch (err) {
       logger.error('Error fetching unread count:', err)
       setError('Failed to fetch unread count')

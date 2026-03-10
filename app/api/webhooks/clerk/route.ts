@@ -1,7 +1,9 @@
 import { headers } from 'next/headers'
 import { Webhook } from 'svix'
 import type { WebhookEvent } from '@clerk/nextjs/server'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 
 function buildFullName(first: string | null, last: string | null): string | null {
@@ -40,8 +42,6 @@ export async function POST(request: Request) {
     return createApiError('Invalid signature', 400, 'INVALID_REQUEST')
   }
 
-  const supabase = getAdminClient()
-
   try {
     switch (evt.type) {
       case 'user.created': {
@@ -50,21 +50,19 @@ export async function POST(request: Request) {
           e => e.id === evt.data.primary_email_address_id
         )?.email_address
 
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            clerk_user_id: id,
-            full_name: buildFullName(first_name, last_name),
-            avatar_url: image_url || null,
+        try {
+          await db.insert(profiles).values({
+            clerkUserId: id,
+            fullName: buildFullName(first_name ?? null, last_name ?? null),
+            avatarUrl: image_url || null,
             email: email || null,
-            is_trainer: false,
-            is_admin: false,
-            has_full_access: false,
-            is_member: false,
+            isTrainer: false,
+            isAdmin: false,
+            hasFullAccess: false,
+            isMember: false,
           })
-
-        if (error) {
-          console.error('Failed to create profile for Clerk user:', id, error)
+        } catch (insertErr) {
+          console.error('Failed to create profile for Clerk user:', id, insertErr)
           return createApiError('Failed to create profile', 500, 'DATABASE_ERROR')
         }
         break
@@ -76,17 +74,17 @@ export async function POST(request: Request) {
           e => e.id === evt.data.primary_email_address_id
         )?.email_address
 
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            full_name: buildFullName(first_name, last_name),
-            avatar_url: image_url || null,
-            email: email || null,
-          })
-          .eq('clerk_user_id', id)
-
-        if (error) {
-          console.error('Failed to update profile for Clerk user:', id, error)
+        try {
+          await db
+            .update(profiles)
+            .set({
+              fullName: buildFullName(first_name ?? null, last_name ?? null),
+              avatarUrl: image_url || null,
+              email: email || null,
+            })
+            .where(eq(profiles.clerkUserId, id))
+        } catch (updateErr) {
+          console.error('Failed to update profile for Clerk user:', id, updateErr)
         }
         break
       }

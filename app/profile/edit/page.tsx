@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
-import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 import { Save, X, Mail, Info } from '@/components/ui/icons'
 
@@ -19,8 +18,6 @@ export default function EditProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [emailMessage, setEmailMessage] = useState<string | null>(null)
   const [usernameError, setUsernameError] = useState<string | null>(null)
-  const supabase = createClient()
-
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
@@ -50,25 +47,13 @@ export default function EditProfilePage() {
     return null
   }
 
-  // Check if username is unique (fail-closed: returns false on unexpected errors)
+  // Username uniqueness is enforced server-side by the DB unique constraint.
+  // This function is kept as a no-op pass-through so handleSave logic is unchanged;
+  // a taken username will surface as an error from PATCH /api/profile.
   const checkUsernameUnique = async (usernameToCheck: string): Promise<boolean> => {
     if (!usernameToCheck || usernameToCheck === profile?.username) return true
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', usernameToCheck)
-      .neq('id', profile?.id)
-      .maybeSingle()
-
-    if (error) {
-      // Fail-closed: treat unexpected errors as "not unique"
-      logger.error('Username uniqueness check failed:', error)
-      return false
-    }
-
-    // If data is null, no matching row — username is unique
-    return !data
+    // Actual uniqueness checked by DB constraint in PATCH /api/profile
+    return true
   }
 
   const handleUsernameChange = (value: string) => {
@@ -120,18 +105,29 @@ export default function EditProfilePage() {
         }
       }
 
-      // Update profile
+      // Update profile via API
       const updates: { full_name: string; username?: string | null } = { full_name: trimmedFullName }
       if (username !== profile?.username) {
         updates.username = username || null
       }
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', profile.id)
+      const updateRes = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
 
-      if (updateError) throw updateError
+      if (!updateRes.ok) {
+        const errorData = await updateRes.json().catch(() => ({}))
+        // Surface username uniqueness constraint violations inline
+        const msg = errorData.error || 'Failed to update profile'
+        if (msg.toLowerCase().includes('username')) {
+          setUsernameError('This username is already taken')
+          setSaving(false)
+          return
+        }
+        throw new Error(msg)
+      }
 
       // Refresh the session so AuthContext re-fetches the updated profile data
       await refreshProfile()

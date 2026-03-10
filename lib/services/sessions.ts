@@ -1,9 +1,9 @@
 /**
  * Client-side service for sessions.
- * Uses browser Supabase client - do not call from server components or API routes.
- * For server-side usage, use the API routes instead.
+ * Thin fetch wrappers around /api/sessions — no direct Supabase access.
+ * Do not re-add supabase-browser import.
  */
-import { createClient } from '@/lib/supabase-browser'
+
 import type {
   Session,
   SessionType,
@@ -14,299 +14,148 @@ import type {
   SessionFilters,
 } from '@/lib/types/sessions'
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function buildSessionParams(filters: SessionFilters, extra?: Record<string, string>): string {
+  const params = new URLSearchParams()
+  if (filters.date) params.set('date', filters.date)
+  if (filters.from) params.set('from', filters.from)
+  if (filters.to) params.set('to', filters.to)
+  if (filters.type) params.set('type', filters.type)
+  if (filters.trainer_id) params.set('trainer_id', filters.trainer_id)
+  if (filters.include_full === false) params.set('include_full', 'false')
+  if (filters.status) params.set('status', filters.status)
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      params.set(k, v)
+    }
+  }
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
+
+// ---------------------------------------------------------------------------
+// Session types
+// ---------------------------------------------------------------------------
+
 /**
- * Fetch all session types for filtering and display
+ * Fetch all session types.
  */
 export async function fetchSessionTypes(): Promise<SessionType[]> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('session_types')
-    .select('*')
-    .order('name')
-
-  if (error) throw error
-  return data || []
+  const res = await fetch('/api/sessions?types_only=true')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch session types')
+  }
+  const json = await res.json()
+  return json.session_types ?? []
 }
 
 /**
- * Fetch a single session type by slug
+ * Fetch a single session type by slug.
+ * Fetches the full list and filters client-side (no dedicated endpoint).
  */
 export async function fetchSessionTypeBySlug(slug: string): Promise<SessionType | null> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('session_types')
-    .select('*')
-    .eq('slug', slug)
-    .single()
-
-  if (error) {
-    if (error.code === 'PGRST116') return null // Not found
-    throw error
-  }
-  return data
+  const types = await fetchSessionTypes()
+  return types.find((t) => t.slug === slug) ?? null
 }
 
+// ---------------------------------------------------------------------------
+// Sessions list / detail
+// ---------------------------------------------------------------------------
+
 /**
- * Fetch sessions with optional filters
- * Returns sessions with session type, trainer info, and availability
+ * Fetch sessions with optional filters.
+ *
+ * @param _userId - Unused (auth context resolved server-side; user_booking
+ *                  is always included from the server for the current user)
  */
 export async function fetchSessions(
   filters: SessionFilters = {},
-  userId?: string
+  _userId?: string
 ): Promise<SessionWithDetails[]> {
-  const supabase = createClient()
-
-  let query = supabase
-    .from('sessions')
-    .select(`
-      *,
-      session_type:session_types(*),
-      trainer:profiles!sessions_trainer_id_fkey(
-        id,
-        full_name,
-        avatar_url
-      )
-    `)
-    .eq('status', filters.status || 'scheduled')
-    .order('starts_at', { ascending: true })
-
-  // Apply date filters
-  if (filters.date) {
-    const startOfDay = `${filters.date}T00:00:00.000Z`
-    const endOfDay = `${filters.date}T23:59:59.999Z`
-    query = query.gte('starts_at', startOfDay).lte('starts_at', endOfDay)
-  } else if (filters.from || filters.to) {
-    if (filters.from) {
-      query = query.gte('starts_at', filters.from)
-    }
-    if (filters.to) {
-      query = query.lte('starts_at', filters.to)
-    }
+  const qs = buildSessionParams(filters)
+  const res = await fetch(`/api/sessions${qs}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch sessions')
   }
-
-  // Filter by session type
-  if (filters.type) {
-    const sessionType = await fetchSessionTypeBySlug(filters.type)
-    if (sessionType) {
-      query = query.eq('session_type_id', sessionType.id)
-    }
-  }
-
-  // Filter by trainer
-  if (filters.trainer_id) {
-    query = query.eq('trainer_id', filters.trainer_id)
-  }
-
-  const { data: sessions, error } = await query
-
-  if (error) throw error
-  if (!sessions) return []
-
-  // Fetch availability in batch (Issue #14 - N+2 query optimization)
-  const sessionIds = sessions.map((s) => s.id)
-
-  // Get batch availability - single query instead of N queries
-  const { data: availabilityData } = sessionIds.length > 0
-    ? await supabase.rpc('get_sessions_availability_batch', { p_session_ids: sessionIds })
-    : { data: [] }
-
-  // Get user bookings in batch - single query instead of N queries
-  const { data: userBookings } = sessionIds.length > 0 && userId
-    ? await supabase
-        .from('bookings')
-        .select('session_id, id, status')
-        .in('session_id', sessionIds)
-        .eq('client_id', userId)
-        .eq('status', 'confirmed')
-    : { data: [] }
-
-  // Create lookup maps for O(1) access
-  type AvailabilityRecord = { session_id: string; capacity: number; booked_count: number; spots_left: number; is_full: boolean }
-  type BookingRecord = { session_id: string; id: string; status: string }
-
-  const availabilityMap = new Map<string, AvailabilityRecord>(
-    (availabilityData || []).map((a: AvailabilityRecord) => [a.session_id, a])
-  )
-  const userBookingMap = new Map<string, { id: string; status: string }>(
-    (userBookings || []).map((b: BookingRecord) => [b.session_id, { id: b.id, status: b.status }])
-  )
-
-  // Map sessions with availability and booking data
-  const sessionsWithDetails = sessions.map((session) => {
-    const availability: SessionAvailability = availabilityMap.get(session.id) || {
-      capacity: session.capacity || 1,
-      booked_count: 0,
-      spots_left: session.capacity || 1,
-      is_full: false,
-    }
-
-    const user_booking = userBookingMap.get(session.id) || null
-
-    // Handle Supabase FK join format
-    const session_type = Array.isArray(session.session_type)
-      ? session.session_type[0] || null
-      : session.session_type
-    const trainer = Array.isArray(session.trainer)
-      ? session.trainer[0] || null
-      : session.trainer
-
-    return {
-      ...session,
-      session_type,
-      trainer,
-      availability,
-      user_booking,
-    } as SessionWithDetails
-  })
-
-  // Optionally filter out full sessions
-  if (filters.include_full === false) {
-    return sessionsWithDetails.filter((s) => !s.availability.is_full)
-  }
-
-  return sessionsWithDetails
+  const json = await res.json()
+  return json.sessions ?? []
 }
 
 /**
- * Fetch a single session by ID with full details
+ * Fetch a single session by ID with full details.
+ *
+ * @param _userId - Unused (auth context resolved server-side)
  */
 export async function fetchSessionById(
   sessionId: string,
-  userId?: string
+  _userId?: string
 ): Promise<SessionWithDetails | null> {
-  const supabase = createClient()
+  const res = await fetch(`/api/sessions/${sessionId}`)
 
-  const { data: session, error } = await supabase
-    .from('sessions')
-    .select(`
-      *,
-      session_type:session_types(*),
-      trainer:profiles!sessions_trainer_id_fkey(
-        id,
-        full_name,
-        avatar_url
-      )
-    `)
-    .eq('id', sessionId)
-    .single()
+  if (res.status === 404) return null
 
-  if (error) {
-    if (error.code === 'PGRST116') return null // Not found
-    throw error
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch session')
   }
 
-  // Get availability
-  const { data: availabilityData } = await supabase.rpc(
-    'get_session_availability',
-    { p_session_id: sessionId }
-  )
-  const availability: SessionAvailability = availabilityData?.[0] || {
-    capacity: session.capacity || 1,
-    booked_count: 0,
-    spots_left: session.capacity || 1,
-    is_full: false,
-  }
-
-  // Check if current user has a booking
-  let user_booking = null
-  if (userId) {
-    const { data: bookingData } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('session_id', sessionId)
-      .eq('client_id', userId)
-      .eq('status', 'confirmed')
-      .maybeSingle()
-    user_booking = bookingData
-  }
-
-  // Handle Supabase FK join format
-  const session_type = Array.isArray(session.session_type)
-    ? session.session_type[0] || null
-    : session.session_type
-  const trainer = Array.isArray(session.trainer)
-    ? session.trainer[0] || null
-    : session.trainer
-
-  return {
-    ...session,
-    session_type,
-    trainer,
-    availability,
-    user_booking,
-  } as SessionWithDetails
+  const json = await res.json()
+  // GET /api/sessions/[id] returns { session: { ...formatSession, availability, user_booking } }
+  return json.session ?? null
 }
 
+// ---------------------------------------------------------------------------
+// Session mutations (trainer only)
+// ---------------------------------------------------------------------------
+
 /**
- * Create a new session (trainer only)
+ * Create a new session.
  */
 export async function createSession(input: CreateSessionInput): Promise<Session> {
-  const supabase = createClient()
+  const res = await fetch('/api/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
 
-  const { data, error } = await supabase
-    .from('sessions')
-    .insert({
-      trainer_id: input.trainer_id,
-      session_type_id: input.session_type_id || null,
-      title: input.title,
-      description: input.description || null,
-      duration_minutes: input.duration_minutes || 60,
-      capacity: input.capacity ?? 1,
-      is_premium: input.is_premium || false,
-      location: input.location || null,
-      starts_at: input.starts_at,
-      ends_at: input.ends_at,
-      status: 'scheduled',
-    })
-    .select()
-    .single()
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to create session')
+  }
 
-  if (error) throw error
-  return data
+  const json = await res.json()
+  return json.data
 }
 
 /**
- * Update a session (trainer only)
+ * Update a session.
  */
 export async function updateSession(
   sessionId: string,
   input: UpdateSessionInput
 ): Promise<Session> {
-  const supabase = createClient()
+  const res = await fetch(`/api/sessions/${sessionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
 
-  const updateData: Record<string, unknown> = {}
-  if (input.session_type_id !== undefined) updateData.session_type_id = input.session_type_id
-  if (input.title !== undefined) updateData.title = input.title
-  if (input.description !== undefined) updateData.description = input.description
-  if (input.duration_minutes !== undefined) updateData.duration_minutes = input.duration_minutes
-  if (input.capacity !== undefined) updateData.capacity = input.capacity
-  if (input.is_premium !== undefined) updateData.is_premium = input.is_premium
-  if (input.location !== undefined) updateData.location = input.location
-  if (input.starts_at !== undefined) updateData.starts_at = input.starts_at
-  if (input.ends_at !== undefined) updateData.ends_at = input.ends_at
-  if (input.status !== undefined) updateData.status = input.status
-  if (input.cancellation_reason !== undefined) updateData.cancellation_reason = input.cancellation_reason
-
-  // If cancelling, set cancelled_at
-  if (input.status === 'cancelled') {
-    updateData.cancelled_at = new Date().toISOString()
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to update session')
   }
 
-  const { data, error } = await supabase
-    .from('sessions')
-    .update(updateData)
-    .eq('id', sessionId)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+  const json = await res.json()
+  return json.data
 }
 
 /**
- * Cancel a session (trainer only)
+ * Cancel a session (sets status to 'cancelled').
  */
 export async function cancelSession(
   sessionId: string,
@@ -314,56 +163,62 @@ export async function cancelSession(
 ): Promise<Session> {
   return updateSession(sessionId, {
     status: 'cancelled',
-    cancellation_reason: reason || null,
+    cancellation_reason: reason ?? null,
   })
 }
 
 /**
- * Delete a session (trainer only)
- * Note: Use cancelSession instead in most cases to preserve history
+ * Delete a session.
+ * Prefer cancelSession to preserve history.
  */
 export async function deleteSession(sessionId: string): Promise<void> {
-  const supabase = createClient()
+  const res = await fetch(`/api/sessions/${sessionId}`, {
+    method: 'DELETE',
+  })
 
-  const { error } = await supabase
-    .from('sessions')
-    .delete()
-    .eq('id', sessionId)
-
-  if (error) throw error
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to delete session')
+  }
 }
 
+// ---------------------------------------------------------------------------
+// Trainer-specific helpers
+// ---------------------------------------------------------------------------
+
 /**
- * Fetch sessions for a trainer (for admin/management views)
+ * Fetch sessions for a specific trainer.
+ *
+ * @param _userId - Unused (auth context resolved server-side)
  */
 export async function fetchTrainerSessions(
   trainerId: string,
   filters: SessionFilters = {},
-  userId?: string
+  _userId?: string
 ): Promise<SessionWithDetails[]> {
-  return fetchSessions({
-    ...filters,
-    trainer_id: trainerId,
-  }, userId)
+  return fetchSessions({ ...filters, trainer_id: trainerId })
 }
 
 /**
- * Get session availability (wrapper for RPC function)
+ * Get availability for a single session.
  */
 export async function getSessionAvailability(
   sessionId: string
 ): Promise<SessionAvailability> {
-  const supabase = createClient()
+  const res = await fetch(`/api/sessions/${sessionId}`)
 
-  const { data, error } = await supabase.rpc('get_session_availability', {
-    p_session_id: sessionId,
-  })
-
-  if (error) throw error
-  return data?.[0] || {
-    capacity: 1,
-    booked_count: 0,
-    spots_left: 1,
-    is_full: false,
+  if (!res.ok) {
+    // Fall back to a safe default if the request fails
+    return { capacity: 1, booked_count: 0, spots_left: 1, is_full: false }
   }
+
+  const json = await res.json()
+  return (
+    json.session?.availability ?? {
+      capacity: 1,
+      booked_count: 0,
+      spots_left: 1,
+      is_full: false,
+    }
+  )
 }

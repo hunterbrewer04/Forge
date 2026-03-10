@@ -7,9 +7,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { getOrCreateCalendarToken, regenerateCalendarToken } from '@/lib/db/queries/calendar'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
-import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { handleUnexpectedError } from '@/lib/api/errors'
 
 /**
  * Derive base URL from the incoming request.
@@ -50,29 +53,18 @@ export async function GET(request: NextRequest) {
       return rateLimitResult
     }
 
-    // 3. Create Supabase client
-    const supabase = getAdminClient()
+    // 3. Get or create token
+    const token = await getOrCreateCalendarToken(profileId)
 
-    // 4. Get or create token
-    const { data: token, error } = await supabase.rpc('get_or_create_calendar_token', {
-      p_user_id: profileId,
+    // 4. Get user profile to determine role
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { isTrainer: true },
     })
 
-    if (error) {
-      console.error('Error getting calendar token:', error)
-      return createApiError('Failed to get calendar token', 500, 'DATABASE_ERROR')
-    }
+    const isTrainer = profile?.isTrainer ?? false
 
-    // 5. Get user profile to determine role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_trainer')
-      .eq('id', profileId)
-      .single()
-
-    const isTrainer = profile?.is_trainer ?? false
-
-    // 6. Build feed URL based on role
+    // 5. Build feed URL based on role
     const baseUrl = getBaseUrl(request)
     const feedUrl = isTrainer
       ? `${baseUrl}/api/calendar/${profileId}.ics?token=${token}`
@@ -113,29 +105,18 @@ export async function POST(request: NextRequest) {
       return rateLimitResult
     }
 
-    // 3. Create Supabase client
-    const supabase = getAdminClient()
+    // 3. Regenerate token
+    const token = await regenerateCalendarToken(profileId)
 
-    // 4. Regenerate token
-    const { data: token, error } = await supabase.rpc('regenerate_calendar_token', {
-      p_user_id: profileId,
+    // 4. Get user profile to determine role
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { isTrainer: true },
     })
 
-    if (error) {
-      console.error('Error regenerating calendar token:', error)
-      return createApiError('Failed to regenerate calendar token', 500, 'DATABASE_ERROR')
-    }
+    const isTrainer = profile?.isTrainer ?? false
 
-    // 5. Get user profile to determine role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_trainer')
-      .eq('id', profileId)
-      .single()
-
-    const isTrainer = profile?.is_trainer ?? false
-
-    // 6. Build new feed URL based on role
+    // 5. Build new feed URL based on role
     const baseUrl = getBaseUrl(request)
     const feedUrl = isTrainer
       ? `${baseUrl}/api/calendar/${profileId}.ics?token=${token}`

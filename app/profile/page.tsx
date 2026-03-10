@@ -97,14 +97,16 @@ export default function ProfilePage() {
 
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName)
 
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', profile.id)
+      const updateRes = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      })
 
-      if (updateError) {
+      if (!updateRes.ok) {
+        const errorData = await updateRes.json().catch(() => ({}))
         await supabase.storage.from('avatars').remove([fileName])
-        toast.error(`Failed to save: ${updateError.message}`)
+        toast.error(`Failed to save: ${errorData.error || 'Unknown error'}`)
         return
       }
 

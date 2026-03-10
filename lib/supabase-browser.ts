@@ -1,17 +1,14 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 /**
- * Creates a Supabase client for use in client-side components.
+ * Supabase browser client — Realtime + Storage only.
  *
- * This client uses the anonymous key which is protected by Row Level Security (RLS).
- * All queries are scoped to the authenticated user via RLS policies.
+ * All database operations now go through API routes (Drizzle ORM).
+ * This client is used only for:
+ * - Realtime subscriptions (chat messages, unread counts)
+ * - Storage operations (avatar uploads, chat media signed URLs)
  *
- * SECURITY: The anon key is safe to expose to the browser because:
- * 1. It's protected by RLS policies that enforce user-level access control
- * 2. It can only perform operations allowed by your database policies
- * 3. It cannot bypass RLS or access data it's not authorized to see
- *
- * @returns Supabase client for browser use
+ * Migrates to Ably (Realtime) + Cloudflare R2 (Storage) in Phase 4.
  */
 export function createClient() {
   // Access env vars directly in browser - they're replaced at build time

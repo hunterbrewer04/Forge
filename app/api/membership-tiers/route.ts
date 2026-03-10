@@ -1,42 +1,46 @@
 import { NextResponse } from 'next/server'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { membershipTiers } from '@/lib/db/schema'
+import { eq, asc } from 'drizzle-orm'
 import { stripe } from '@/lib/stripe'
 import { handleUnexpectedError } from '@/lib/api/errors'
 
 export async function GET() {
   try {
-    const supabase = getAdminClient()
-    const { data: tiers, error } = await supabase
-      .from('membership_tiers')
-      .select('id, name, slug, monthly_booking_quota, price_monthly, stripe_price_id')
-      .eq('is_active', true)
-      .order('price_monthly', { ascending: true })
+    const tiers = await db.query.membershipTiers.findMany({
+      where: eq(membershipTiers.isActive, true),
+      columns: {
+        id: true,
+        name: true,
+        slug: true,
+        monthlyBookingQuota: true,
+        priceMonthly: true,
+        stripePriceId: true,
+      },
+      orderBy: asc(membershipTiers.priceMonthly),
+    })
 
-    if (error) {
-      return NextResponse.json({ error: 'Failed to load tiers' }, { status: 500 })
-    }
-
-    // Enrich each tier with live Stripe price, falling back to DB price_monthly
+    // Enrich each tier with live Stripe price, falling back to DB priceMonthly
     const enriched = await Promise.all(
-      (tiers || []).map(async (tier) => {
-        const { stripe_price_id, ...rest } = tier
-        if (!stripe_price_id || stripe_price_id === 'price_PLACEHOLDER') {
+      tiers.map(async (tier) => {
+        const { stripePriceId, ...rest } = tier
+        if (!stripePriceId || stripePriceId === 'price_PLACEHOLDER') {
           return rest
         }
         try {
-          const price = await stripe.prices.retrieve(stripe_price_id)
+          const price = await stripe.prices.retrieve(stripePriceId)
           if (price.unit_amount != null) {
-            return { ...rest, price_monthly: price.unit_amount / 100 }
+            return { ...rest, priceMonthly: String(price.unit_amount / 100) }
           }
         } catch (err) {
-          console.error(`Failed to fetch Stripe price ${stripe_price_id}:`, err)
+          console.error(`Failed to fetch Stripe price ${stripePriceId}:`, err)
         }
         return rest
       })
     )
 
     // Re-sort by actual price after enrichment
-    enriched.sort((a, b) => Number(a.price_monthly) - Number(b.price_monthly))
+    enriched.sort((a, b) => Number(a.priceMonthly) - Number(b.priceMonthly))
 
     return NextResponse.json(
       { tiers: enriched },

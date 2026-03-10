@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase-browser'
-import type { PostgrestError } from '@supabase/supabase-js'
 
 interface NextSession {
   id: string
@@ -27,22 +25,19 @@ interface HomeData {
   error: string | null
 }
 
-// Type definitions for Supabase relation queries
-interface TrainerRelation {
-  full_name: string | null
-}
-
-interface SessionRelation {
+// API response shapes
+interface ApiSession {
   id: string
   title: string
   starts_at: string
-  location?: string | null
-  trainer: TrainerRelation | TrainerRelation[] | null
+  location: string | null
+  trainer: { full_name: string | null } | null
 }
 
-interface BookingWithSession {
+interface ApiBooking {
   id: string
-  session: SessionRelation | SessionRelation[] | null
+  status: string
+  session: ApiSession | null
 }
 
 export function useHomeData(userId: string | undefined): HomeData {
@@ -64,96 +59,59 @@ export function useHomeData(userId: string | undefined): HomeData {
     let isCurrent = true
 
     async function fetchHomeData() {
-      const supabase = createClient()
-
       try {
-        // Fetch next upcoming booking from bookings table
-        const { data: nextBooking, error: nextError } = await supabase
-          .from('bookings')
-          .select(`
-            id,
-            session:sessions (
-              id,
-              title,
-              starts_at,
-              location,
-              trainer:profiles!sessions_trainer_id_fkey (
-                full_name
-              )
-            )
-          `)
-          .eq('client_id', userId!)
-          .eq('status', 'confirmed')
-          .gte('session.starts_at', new Date().toISOString())
-          .order('session(starts_at)', { ascending: true })
-          .limit(1)
-          .single() as { data: BookingWithSession | null; error: PostgrestError | null }
+        // Fetch next upcoming confirmed booking and recent past bookings in parallel
+        const [upcomingRes, recentRes] = await Promise.all([
+          fetch('/api/bookings?status=confirmed&upcoming=true'),
+          fetch('/api/bookings?upcoming=false'),
+        ])
 
-        if (nextError && nextError.code !== 'PGRST116') {
-          console.error('Error fetching next booking:', nextError)
+        if (!upcomingRes.ok) {
+          console.error('Error fetching upcoming bookings:', await upcomingRes.text())
+        }
+        if (!recentRes.ok) {
+          console.error('Error fetching recent bookings:', await recentRes.text())
         }
 
-        // Fetch recent completed bookings
-        const { data: recentBookings, error: recentError } = await supabase
-          .from('bookings')
-          .select(`
-            id,
-            session:sessions (
-              id,
-              title,
-              starts_at,
-              trainer:profiles!sessions_trainer_id_fkey (
-                full_name
-              )
-            )
-          `)
-          .eq('client_id', userId!)
-          .in('status', ['attended', 'confirmed'])
-          .lte('session.starts_at', new Date().toISOString())
-          .order('session(starts_at)', { ascending: false })
-          .limit(5) as { data: BookingWithSession[] | null; error: PostgrestError | null }
+        const upcomingJson = upcomingRes.ok ? await upcomingRes.json() : { data: [] }
+        const recentJson = recentRes.ok ? await recentRes.json() : { data: [] }
 
-        if (recentError) {
-          console.error('Error fetching recent bookings:', recentError)
-        }
+        const upcomingBookings: ApiBooking[] = upcomingJson.data || []
+        const recentBookings: ApiBooking[] = recentJson.data || []
 
-        // Transform next booking data
-        const nextSessionData = nextBooking?.session ? {
-          id: nextBooking.id,
-          title: Array.isArray(nextBooking.session)
-            ? nextBooking.session[0]?.title || 'Training Session'
-            : nextBooking.session.title || 'Training Session',
-          start_time: Array.isArray(nextBooking.session)
-            ? nextBooking.session[0]?.starts_at || ''
-            : nextBooking.session.starts_at || '',
-          trainer_name: Array.isArray(nextBooking.session)
-            ? (Array.isArray(nextBooking.session[0]?.trainer)
-                ? nextBooking.session[0]?.trainer[0]?.full_name
-                : nextBooking.session[0]?.trainer?.full_name) || 'Your Trainer'
-            : (Array.isArray(nextBooking.session.trainer)
-                ? nextBooking.session.trainer[0]?.full_name
-                : nextBooking.session.trainer?.full_name) || 'Your Trainer',
-          location: Array.isArray(nextBooking.session)
-            ? nextBooking.session[0]?.location || null
-            : nextBooking.session.location || null
-        } : null
+        // Next session: first upcoming confirmed booking with a future session
+        const now = new Date()
+        const nextBooking = upcomingBookings
+          .filter(b => b.session && new Date(b.session.starts_at) >= now)
+          .sort((a, b) =>
+            new Date(a.session!.starts_at).getTime() - new Date(b.session!.starts_at).getTime()
+          )[0] ?? null
 
-        // Transform recent bookings data
-        const recentActivityData = (recentBookings || [])
-          .filter(b => b.session)
-          .map(booking => {
-            const session = Array.isArray(booking.session) ? booking.session[0] : booking.session
-            const trainer = session?.trainer
-            const trainerName = Array.isArray(trainer) ? trainer[0]?.full_name : trainer?.full_name
-
-            return {
-              id: booking.id,
-              title: session?.title || 'Session',
-              completed_at: session?.starts_at || '',
-              type: 'session',
-              trainer_name: trainerName || null
+        const nextSessionData: NextSession | null = nextBooking?.session
+          ? {
+              id: nextBooking.id,
+              title: nextBooking.session.title || 'Training Session',
+              start_time: nextBooking.session.starts_at,
+              trainer_name: nextBooking.session.trainer?.full_name || 'Your Trainer',
+              location: nextBooking.session.location || null,
             }
-          })
+          : null
+
+        // Recent activity: past attended or confirmed sessions, limited to 5
+        const recentActivityData: RecentActivity[] = recentBookings
+          .filter(b => b.session && ['attended', 'confirmed'].includes(b.status))
+          .filter(b => new Date(b.session!.starts_at) <= now)
+          .sort((a, b) =>
+            new Date(b.session!.starts_at).getTime() - new Date(a.session!.starts_at).getTime()
+          )
+          .slice(0, 5)
+          .map(booking => ({
+            id: booking.id,
+            title: booking.session!.title || 'Session',
+            completed_at: booking.session!.starts_at,
+            type: 'session',
+            trainer_name: booking.session!.trainer?.full_name || null,
+          }))
 
         if (!isCurrent) return
 

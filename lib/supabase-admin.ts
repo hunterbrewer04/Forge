@@ -1,52 +1,25 @@
 /**
- * Supabase Admin Client
+ * Supabase Admin Client — Storage Only
  *
- * This client uses the SERVICE ROLE KEY which bypasses Row Level Security (RLS).
+ * All database operations now use Drizzle ORM (lib/db/index.ts).
+ * This client exists solely for Supabase Storage uploads (chat media, avatars).
+ * It will be removed when Storage migrates to Cloudflare R2 in Phase 4.
  *
- * ⚠️  SECURITY WARNING:
- * - NEVER use this client in client-side code
- * - NEVER expose the service role key to the browser
- * - Only use in API routes and server components for admin operations
- * - Always validate user permissions before performing admin operations
- *
- * Use Cases:
- * - Creating profiles during signup (before user auth exists)
- * - Admin operations that need to bypass RLS
- * - Background jobs and cron tasks
- * - Data migrations and bulk operations
- *
- * All server-side DB operations use this client post-Clerk migration.
+ * Only used by: app/api/upload/route.ts
  */
 
 import 'server-only'
 import { createClient } from '@supabase/supabase-js'
 import { env } from './env-validation'
 
-/**
- * Creates an admin Supabase client with service role privileges.
- *
- * This client bypasses Row Level Security (RLS) and has full database access.
- *
- * @returns Supabase client with admin privileges
- *
- * @example
- * // In an API route (server-side only!)
- * import { createAdminClient } from '@/lib/supabase-admin'
- *
- * export async function POST(request: Request) {
- *   const supabase = createAdminClient()
- *   // Perform admin operations...
- * }
- */
 export function createAdminClient() {
   const serviceRoleKey = env.supabaseServiceRoleKey()
 
   if (!serviceRoleKey) {
     throw new Error(
       'SUPABASE_SERVICE_ROLE_KEY is not configured. ' +
-      'This is required for admin operations. ' +
-      'Add it to your .env.local file. ' +
-      'Get it from: https://app.supabase.com/project/_/settings/api'
+      'Required for Supabase Storage operations. ' +
+      'Add it to your .env.local file.'
     )
   }
 
@@ -61,17 +34,3 @@ export function createAdminClient() {
     }
   )
 }
-
-/**
- * Lazy admin client singleton.
- * Only instantiated on first access, avoiding build failures when
- * SUPABASE_SERVICE_ROLE_KEY is not set (e.g., in client-side bundles).
- */
-let _adminClient: ReturnType<typeof createAdminClient> | null = null
-export function getAdminClient() {
-  if (!_adminClient) {
-    _adminClient = createAdminClient()
-  }
-  return _adminClient
-}
-

@@ -11,7 +11,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { conversations } from '@/lib/db/schema'
+import { eq, and, or } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError } from '@/lib/api/errors'
 import { isValidUUID } from '@/lib/api/validation'
@@ -165,18 +168,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 7. Create Supabase client and verify conversation access
-    const supabase = getAdminClient()
+    // 7. Verify conversation access via Drizzle
+    const conversation = await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.id, conversationId),
+        or(
+          eq(conversations.clientId, profileId),
+          eq(conversations.trainerId, profileId)
+        )
+      ),
+      columns: { id: true },
+    })
 
-    // Verify user has access to this conversation
-    const { data: conversation, error: convError } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('id', conversationId)
-      .or(`client_id.eq.${profileId},trainer_id.eq.${profileId}`)
-      .single()
-
-    if (convError || !conversation) {
+    if (!conversation) {
       return createApiError(
         'Conversation not found or access denied',
         403,
@@ -184,13 +188,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 8. Generate unique filename and upload
+    // 8. Generate unique filename and upload via Supabase Storage
     const timestamp = Date.now()
     const randomString = crypto.randomUUID().slice(0, 8)
     const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const fileName = `${timestamp}_${randomString}.${extension}`
     const filePath = `${conversationId}/${fileName}`
 
+    const supabase = createAdminClient()
     const { error: uploadError } = await supabase.storage
       .from('chat-media')
       .upload(filePath, buffer, {

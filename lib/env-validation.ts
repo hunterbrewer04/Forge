@@ -36,8 +36,8 @@ const ENV_VARS: EnvVarConfig[] = [
   },
   {
     name: 'SUPABASE_SERVICE_ROLE_KEY',
-    required: false, // Optional for now, but recommended for admin operations
-    description: 'Supabase service role key (server-side only, bypasses RLS)',
+    required: false, // Only needed for Supabase Storage (chat media uploads)
+    description: 'Supabase service role key — only used for Storage operations (migrates to R2 in Phase 4)',
     clientSide: false,
   },
   {
@@ -99,6 +99,12 @@ const ENV_VARS: EnvVarConfig[] = [
     required: false,
     description: 'Stripe publishable key exposed to the browser (pk_test_... or pk_live_...)',
     clientSide: true,
+  },
+  {
+    name: 'DATABASE_URL',
+    required: true,
+    description: 'Postgres connection string (Supabase Transaction Pooler, port 6543)',
+    clientSide: false,
   },
 ]
 
@@ -258,4 +264,7 @@ export const env = {
   stripeSecretKey: () => getEnvVar('STRIPE_SECRET_KEY'),
   stripeWebhookSecret: () => getEnvVar('STRIPE_WEBHOOK_SECRET'),
   stripePublishableKey: () => getEnvVar('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'),
+
+  // Database
+  databaseUrl: () => getEnvVar('DATABASE_URL'),
 } as const

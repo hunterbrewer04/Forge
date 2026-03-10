@@ -5,8 +5,11 @@
  * IMPORTANT: This module must only be imported in server-side code (API routes).
  */
 
+import 'server-only'
 import webpush from 'web-push'
-import { createClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
+import { pushSubscriptions } from '@/lib/db/schema'
+import { eq, and, inArray } from 'drizzle-orm'
 
 // Initialize VAPID configuration
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -37,21 +40,13 @@ export async function sendPushToUser(
 ): Promise<void> {
   if (!vapidConfigured) return
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !serviceRoleKey) return
-
   try {
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
+    const subscriptions = await db.query.pushSubscriptions.findMany({
+      where: eq(pushSubscriptions.userId, recipientId),
+      columns: { endpoint: true, authKey: true, p256dhKey: true },
     })
 
-    const { data: subscriptions } = await supabase
-      .from('push_subscriptions')
-      .select('endpoint, auth_key, p256dh_key')
-      .eq('user_id', recipientId)
-
-    if (!subscriptions || subscriptions.length === 0) return
+    if (subscriptions.length === 0) return
 
     const message = JSON.stringify({
       title: payload.title,
@@ -69,7 +64,7 @@ export async function sendPushToUser(
           await webpush.sendNotification(
             {
               endpoint: sub.endpoint,
-              keys: { auth: sub.auth_key, p256dh: sub.p256dh_key },
+              keys: { auth: sub.authKey, p256dh: sub.p256dhKey },
             },
             message
           )
@@ -84,11 +79,14 @@ export async function sendPushToUser(
 
     // Clean up expired subscriptions
     if (expiredEndpoints.length > 0) {
-      await supabase
-        .from('push_subscriptions')
-        .delete()
-        .eq('user_id', recipientId)
-        .in('endpoint', expiredEndpoints)
+      await db
+        .delete(pushSubscriptions)
+        .where(
+          and(
+            eq(pushSubscriptions.userId, recipientId),
+            inArray(pushSubscriptions.endpoint, expiredEndpoints)
+          )
+        )
     }
   } catch {
     // Best-effort — don't let push failures break the calling code
