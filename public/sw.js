@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v10';
+const CACHE_VERSION = 'v11';
 const STATIC_CACHE = `forge-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `forge-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `forge-images-${CACHE_VERSION}`;
@@ -88,6 +88,13 @@ self.addEventListener('fetch', (event) => {
 
   // Skip third-party requests (Stripe.js, Vercel, etc.) — let browser handle directly
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Skip RSC navigation requests — streaming responses must not be
+  // cloned or cached as it prematurely closes the ReadableStream.
+  // Next.js manages its own Router Cache for these on the client.
+  if (request.headers.get('RSC')) {
     return;
   }
 
