@@ -30,28 +30,20 @@ export default function LoginForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const searchParams = useSearchParams()
-  const { signIn, isLoaded } = useSignIn()
+  const { isLoaded, signIn, setActive } = useSignIn()
   const isDesktop = useIsDesktop()
 
   // Validate return_to is a relative path to prevent open redirects
   const rawReturnTo = searchParams.get('return_to') || '/home'
   const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/home'
 
-  const verifying = signIn?.status === 'needs_client_trust'
+  const verifying = signIn?.status === 'needs_second_factor'
 
-  const finalizeSignIn = async () => {
-    if (!signIn) return
+  const completeSignIn = async (sessionId: string | null) => {
+    if (!sessionId || !setActive) return
     await clearDynamicCache()
-    await signIn.finalize({
-      navigate: ({ session, decorateUrl }) => {
-        if (session?.currentTask) {
-          // Clerk session task (e.g. org selection) — let Clerk handle it
-          return
-        }
-        const url = decorateUrl(returnTo)
-        window.location.href = url
-      },
-    })
+    await setActive({ session: sessionId })
+    window.location.href = returnTo
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -61,16 +53,16 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      await signIn.password({ emailAddress: email, password })
+      const result = await signIn.create({ identifier: email, password })
 
-      if (signIn.status === 'complete') {
-        await finalizeSignIn()
-      } else if (signIn.status === 'needs_client_trust') {
-        const emailCodeFactor = signIn.supportedSecondFactors?.find(
+      if (result.status === 'complete') {
+        await completeSignIn(result.createdSessionId)
+      } else if (result.status === 'needs_second_factor') {
+        const emailCodeFactor = result.supportedSecondFactors?.find(
           (factor) => factor.strategy === 'email_code',
         )
         if (emailCodeFactor) {
-          await signIn.mfa.sendEmailCode()
+          await signIn.prepareSecondFactor({ strategy: 'email_code' })
         } else {
           setError('No supported verification method available. Please contact support.')
         }
@@ -92,10 +84,10 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      await signIn.mfa.verifyEmailCode({ code })
+      const result = await signIn.attemptSecondFactor({ strategy: 'email_code', code })
 
-      if (signIn.status === 'complete') {
-        await finalizeSignIn()
+      if (result.status === 'complete') {
+        await completeSignIn(result.createdSessionId)
       } else {
         setError('Verification could not be completed. Please try again.')
         setLoading(false)
@@ -110,7 +102,7 @@ export default function LoginForm() {
     setError('')
     try {
       if (!signIn) return
-      await signIn.mfa.sendEmailCode()
+      await signIn.prepareSecondFactor({ strategy: 'email_code' })
     } catch {
       setError('Failed to resend code. Please try again.')
     }
@@ -120,12 +112,8 @@ export default function LoginForm() {
     setError('')
     setCode('')
     setLoading(false)
-    try {
-      if (!signIn) return
-      await signIn.reset()
-    } catch {
-      // Reset failed — user can just re-enter credentials
-    }
+    // Re-navigate to clear the sign-in attempt
+    window.location.reload()
   }
 
   const credentialsFields = (
