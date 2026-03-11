@@ -74,11 +74,11 @@ export default function LoginForm() {
         }
         setLoading(false)
       } else {
-        setError('Sign-in could not be completed. Please try again.')
+        setError(`Sign-in could not be completed (status: ${result.status}, created: ${created.status}). Please try again.`)
         setLoading(false)
       }
     } catch (err: unknown) {
-      setError(getClerkErrorMessage(err, 'Sign in failed. Please check your credentials.'))
+      setError(getClerkErrorMessage(err, 'Sign in failed. Please check your credentials.') + ` [debug: ${String(err)}]`)
       setLoading(false)
     }
   }
