@@ -13,6 +13,7 @@ import { conversations, messages } from '@/lib/db/schema'
 import { eq, and, ne, isNull } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { publishReadReceipt } from '@/modules/messaging'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -65,6 +66,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           isNull(messages.readAt)
         )
       )
+
+    // Publish read receipt to Ably (best-effort)
+    try {
+      await publishReadReceipt(id, {
+        reader_id: profileId,
+        read_at: new Date().toISOString(),
+      })
+    } catch (ablyError) {
+      console.error('Ably read receipt publish error:', ablyError)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
