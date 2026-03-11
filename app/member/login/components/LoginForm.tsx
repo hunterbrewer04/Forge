@@ -53,7 +53,13 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      const result = await signIn.create({ identifier: email, password })
+      // Create sign-in attempt, then attempt password as first factor
+      const created = await signIn.create({ identifier: email })
+
+      let result = created
+      if (created.status === 'needs_first_factor') {
+        result = await signIn.attemptFirstFactor({ strategy: 'password', password })
+      }
 
       if (result.status === 'complete') {
         await completeSignIn(result.createdSessionId)
