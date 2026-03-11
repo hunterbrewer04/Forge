@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { uploadToR2 } from '@/modules/messaging'
 import { db } from '@/lib/db'
 import { conversations } from '@/lib/db/schema'
 import { eq, and, or } from 'drizzle-orm'
@@ -91,7 +91,7 @@ function validateMagicBytes(buffer: ArrayBuffer, mimeType: string): boolean {
 /**
  * POST /api/upload
  *
- * Validates and uploads a file to Supabase Storage
+ * Validates and uploads a file to R2
  *
  * Request: multipart/form-data with:
  * - file: The file to upload
@@ -188,24 +188,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 8. Generate unique filename and upload via Supabase Storage
+    // 8. Generate unique filename and upload to R2
     const timestamp = Date.now()
     const randomString = crypto.randomUUID().slice(0, 8)
     const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const fileName = `${timestamp}_${randomString}.${extension}`
     const filePath = `${conversationId}/${fileName}`
 
-    const supabase = createAdminClient()
-    const { error: uploadError } = await supabase.storage
-      .from('chat-media')
-      .upload(filePath, buffer, {
-        contentType: file.type,
-        cacheControl: '3600',
-        upsert: false,
-      })
-
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError)
+    const r2Key = `chat-media/${filePath}`
+    try {
+      await uploadToR2(r2Key, buffer, file.type)
+    } catch (uploadError) {
+      console.error('R2 upload error:', uploadError)
       return createApiError(
         'Failed to upload file',
         500,
@@ -218,7 +212,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      filePath,
+      filePath: r2Key,
       mediaType,
     })
   } catch (error) {
