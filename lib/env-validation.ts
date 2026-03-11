@@ -23,21 +23,39 @@ interface EnvVarConfig {
  */
 const ENV_VARS: EnvVarConfig[] = [
   {
-    name: 'NEXT_PUBLIC_SUPABASE_URL',
-    required: true,
-    description: 'Supabase project URL',
-    clientSide: true,
+    name: 'ABLY_API_KEY',
+    required: false,
+    description: 'Ably API key for real-time messaging (server-side only)',
+    clientSide: false,
   },
   {
-    name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    required: true,
-    description: 'Supabase anonymous/public key (protected by RLS)',
-    clientSide: true,
+    name: 'R2_ACCOUNT_ID',
+    required: false,
+    description: 'Cloudflare R2 account ID for media storage',
+    clientSide: false,
   },
   {
-    name: 'SUPABASE_SERVICE_ROLE_KEY',
-    required: false, // Only needed for Supabase Storage (chat media uploads)
-    description: 'Supabase service role key — only used for Storage operations (migrates to R2 in Phase 4)',
+    name: 'R2_ACCESS_KEY_ID',
+    required: false,
+    description: 'Cloudflare R2 access key ID',
+    clientSide: false,
+  },
+  {
+    name: 'R2_SECRET_ACCESS_KEY',
+    required: false,
+    description: 'Cloudflare R2 secret access key',
+    clientSide: false,
+  },
+  {
+    name: 'R2_BUCKET_NAME',
+    required: false,
+    description: 'Cloudflare R2 bucket name (e.g., forge-media)',
+    clientSide: false,
+  },
+  {
+    name: 'R2_PUBLIC_URL',
+    required: false,
+    description: 'Cloudflare R2 public URL or custom domain',
     clientSide: false,
   },
   {
@@ -155,22 +173,6 @@ export function validateEnvironmentVariables(): void {
       )
     }
 
-    // Validate URL format for Supabase URL
-    if (config.name === 'NEXT_PUBLIC_SUPABASE_URL' && value) {
-      try {
-        const url = new URL(value)
-        if (!url.hostname.includes('supabase')) {
-          warnings.push(
-            `NEXT_PUBLIC_SUPABASE_URL doesn't appear to be a Supabase URL: ${value}`
-          )
-        }
-      } catch {
-        throw new EnvironmentValidationError(
-          `NEXT_PUBLIC_SUPABASE_URL is not a valid URL: ${value}`
-        )
-      }
-    }
-
     // Validate key format (basic check for JWT format)
     if (config.name.includes('KEY') && value) {
       if (value.length < 20) {
@@ -191,7 +193,7 @@ export function validateEnvironmentVariables(): void {
       ),
       '',
       '💡 Copy .env.example to .env.local and fill in the values.',
-      '   Get your Supabase credentials from: https://app.supabase.com/project/_/settings/api',
+      '   See .env.example for required values.',
     ].join('\n')
 
     throw new EnvironmentValidationError(errorMessage)
@@ -220,7 +222,7 @@ export function validateEnvironmentVariables(): void {
  * @returns The environment variable value or fallback
  *
  * @example
- * const apiUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
+ * const apiUrl = getEnvVar('ABLY_API_KEY')
  * const optionalKey = getEnvVar('OPTIONAL_KEY', 'default-value')
  */
 export function getEnvVar(name: string, fallback?: string): string {
@@ -243,12 +245,15 @@ export function getEnvVar(name: string, fallback?: string): string {
  * Use this instead of process.env for better type safety.
  */
 export const env = {
-  // Public (client-side) variables
-  supabaseUrl: () => getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
-  supabaseAnonKey: () => getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  // Ably
+  ablyApiKey: () => getEnvVar('ABLY_API_KEY'),
 
-  // Server-side only variables
-  supabaseServiceRoleKey: () => getEnvVar('SUPABASE_SERVICE_ROLE_KEY', ''),
+  // Cloudflare R2
+  r2AccountId: () => getEnvVar('R2_ACCOUNT_ID'),
+  r2AccessKeyId: () => getEnvVar('R2_ACCESS_KEY_ID'),
+  r2SecretAccessKey: () => getEnvVar('R2_SECRET_ACCESS_KEY'),
+  r2BucketName: () => getEnvVar('R2_BUCKET_NAME'),
+  r2PublicUrl: () => getEnvVar('R2_PUBLIC_URL'),
 
   // Node environment
   nodeEnv: () => process.env.NODE_ENV || 'development',
