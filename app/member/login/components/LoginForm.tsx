@@ -26,6 +26,7 @@ const stagger = {
 export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const searchParams = useSearchParams()
@@ -36,25 +37,38 @@ export default function LoginForm() {
   const rawReturnTo = searchParams.get('return_to') || '/home'
   const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/home'
 
+  const verifying = signIn?.status === 'needs_second_factor'
+
+  const completeSignIn = async (sessionId: string | null) => {
+    if (!sessionId || !setActive) return
+    await clearDynamicCache()
+    await setActive({ session: sessionId })
+    window.location.href = returnTo
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isLoaded || !signIn) return
     setError('')
     setLoading(true)
 
     try {
-      if (!isLoaded) return
-
-      const result = await signIn.create({
-        identifier: email,
-        password,
-      })
+      const result = await signIn.create({ identifier: email, password })
 
       if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId })
-        await clearDynamicCache()
-        window.location.href = returnTo
+        await completeSignIn(result.createdSessionId)
+      } else if (result.status === 'needs_second_factor') {
+        const emailCodeFactor = result.supportedSecondFactors?.find(
+          (factor) => factor.strategy === 'email_code',
+        )
+        if (emailCodeFactor) {
+          await signIn.prepareSecondFactor({ strategy: 'email_code' })
+        } else {
+          setError('No supported verification method available. Please contact support.')
+        }
+        setLoading(false)
       } else {
-        setError(`Sign-in incomplete (status: ${result.status}). Please try again.`)
+        setError('Sign-in could not be completed. Please try again.')
         setLoading(false)
       }
     } catch (err: unknown) {
@@ -63,7 +77,46 @@ export default function LoginForm() {
     }
   }
 
-  const formFields = (
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!signIn) return
+    setError('')
+    setLoading(true)
+
+    try {
+      const result = await signIn.attemptSecondFactor({ strategy: 'email_code', code })
+
+      if (result.status === 'complete') {
+        await completeSignIn(result.createdSessionId)
+      } else {
+        setError('Verification could not be completed. Please try again.')
+        setLoading(false)
+      }
+    } catch (err: unknown) {
+      setError(getClerkErrorMessage(err, 'Invalid verification code. Please try again.'))
+      setLoading(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    setError('')
+    try {
+      if (!signIn) return
+      await signIn.prepareSecondFactor({ strategy: 'email_code' })
+    } catch {
+      setError('Failed to resend code. Please try again.')
+    }
+  }
+
+  const handleBackToSignIn = async () => {
+    setError('')
+    setCode('')
+    setLoading(false)
+    // Re-navigate to clear the sign-in attempt
+    window.location.reload()
+  }
+
+  const credentialsFields = (
     <>
       {error && (
         <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4">
@@ -124,6 +177,73 @@ export default function LoginForm() {
     </>
   )
 
+  const verificationFields = (
+    <>
+      {error && (
+        <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
+      <motion.div custom={0} variants={stagger} initial="hidden" animate="show">
+        <p className="text-sm text-text-secondary">
+          We sent a verification code to your email. Enter it below to continue.
+        </p>
+      </motion.div>
+
+      <motion.div custom={1} variants={stagger} initial="hidden" animate="show">
+        <Label htmlFor="code">Verification code</Label>
+        <Input
+          id="code"
+          name="code"
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          required
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Enter 6-digit code"
+          className="h-12 text-base mt-1.5"
+        />
+      </motion.div>
+
+      <motion.div custom={2} variants={stagger} initial="hidden" animate="show">
+        <Button type="submit" size="lg" className="w-full" disabled={loading}>
+          {loading ? 'Verifying...' : 'Verify'}
+        </Button>
+      </motion.div>
+
+      <motion.div
+        custom={3}
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="flex flex-col items-center gap-2 text-sm"
+      >
+        <button
+          type="button"
+          onClick={handleResendCode}
+          className="font-medium text-primary hover:text-primary/80"
+        >
+          Resend code
+        </button>
+        <button
+          type="button"
+          onClick={handleBackToSignIn}
+          className="text-text-secondary hover:text-text-primary"
+        >
+          Back to sign in
+        </button>
+      </motion.div>
+    </>
+  )
+
+  const formFields = verifying ? verificationFields : credentialsFields
+  const headingText = verifying ? 'Verify your identity' : 'Sign in to your account'
+  const subtitleText = verifying
+    ? 'One more step to secure your account.'
+    : 'Welcome back. Enter your credentials below.'
+
   // Desktop: GlassCard with branding panel + form (matches signup wizard layout)
   if (isDesktop) {
     return (
@@ -152,14 +272,14 @@ export default function LoginForm() {
         <div className="col-span-3 p-10 flex flex-col justify-center">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-text-primary font-[--font-lexend]">
-              Sign in to your account
+              {headingText}
             </h1>
             <p className="mt-2 text-text-secondary text-sm">
-              Welcome back. Enter your credentials below.
+              {subtitleText}
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleLogin}>
+          <form className="space-y-6" onSubmit={verifying ? handleVerify : handleLogin}>
             {formFields}
           </form>
         </div>
@@ -172,16 +292,16 @@ export default function LoginForm() {
     <div className="space-y-8 w-full max-w-md mx-auto">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-text-primary font-[--font-lexend]">
-          Sign in to your account
+          {headingText}
         </h1>
         <p className="mt-2 text-text-secondary text-sm">
-          Welcome back. Enter your credentials below.
+          {subtitleText}
         </p>
       </div>
 
       <form
         className="space-y-6 bg-bg-card border border-border rounded-2xl p-6"
-        onSubmit={handleLogin}
+        onSubmit={verifying ? handleVerify : handleLogin}
       >
         {formFields}
       </form>

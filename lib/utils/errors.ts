@@ -29,7 +29,8 @@ export function getErrorMessage(error: unknown): string {
 
 /**
  * Extracts a human-readable error message from a Clerk API error.
- * Clerk errors have shape { errors: [{ message: string }] }.
+ * Clerk errors have shape { errors: [{ longMessage?: string; message?: string }] }.
+ * Prefers `longMessage` (more detailed) over `message`.
  */
 export function getClerkErrorMessage(err: unknown, fallback: string): string {
   if (
@@ -38,7 +39,8 @@ export function getClerkErrorMessage(err: unknown, fallback: string): string {
     'errors' in err &&
     Array.isArray((err as { errors: unknown[] }).errors)
   ) {
-    const firstError = (err as { errors: { message?: string }[] }).errors[0]
+    const firstError = (err as { errors: { longMessage?: string; message?: string }[] }).errors[0]
+    if (firstError?.longMessage) return firstError.longMessage
     if (firstError?.message) return firstError.message
   }
   return fallback
