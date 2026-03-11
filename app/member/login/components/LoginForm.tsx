@@ -37,7 +37,10 @@ export default function LoginForm() {
   const rawReturnTo = searchParams.get('return_to') || '/home'
   const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/home'
 
-  const verifying = signIn?.status === 'needs_second_factor'
+  // Cast status to string — Clerk returns 'needs_client_trust' at runtime
+  // but the installed @clerk/nextjs@^6 types don't include it in SignInStatus yet
+  const signInStatus = signIn?.status as string | null | undefined
+  const verifying = signInStatus === 'needs_second_factor' || signInStatus === 'needs_client_trust'
 
   const completeSignIn = async (sessionId: string | null) => {
     if (!sessionId || !setActive) return
@@ -53,33 +56,47 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      // Create sign-in attempt, then attempt password as first factor
-      const created = await signIn.create({ identifier: email })
+      const result = await signIn.create({ identifier: email, password })
+      const status = result.status as string | null
 
-      let result = created
-      if (created.status === 'needs_first_factor') {
-        result = await signIn.attemptFirstFactor({ strategy: 'password', password })
-      }
-
-      if (result.status === 'complete') {
+      if (status === 'complete') {
         await completeSignIn(result.createdSessionId)
-      } else if (result.status === 'needs_second_factor') {
-        const emailCodeFactor = result.supportedSecondFactors?.find(
-          (factor) => factor.strategy === 'email_code',
-        )
-        if (emailCodeFactor) {
-          await signIn.prepareSecondFactor({ strategy: 'email_code' })
+      } else if (status === 'needs_first_factor') {
+        // Password wasn't auto-attempted — submit it as first factor
+        const firstFactorResult = await signIn.attemptFirstFactor({ strategy: 'password', password })
+        const ffStatus = firstFactorResult.status as string | null
+
+        if (ffStatus === 'complete') {
+          await completeSignIn(firstFactorResult.createdSessionId)
+        } else if (ffStatus === 'needs_second_factor' || ffStatus === 'needs_client_trust') {
+          await prepareEmailVerification()
+          setLoading(false)
         } else {
-          setError('No supported verification method available. Please contact support.')
+          setError('Sign-in could not be completed. Please try again.')
+          setLoading(false)
         }
+      } else if (status === 'needs_second_factor' || status === 'needs_client_trust') {
+        await prepareEmailVerification()
         setLoading(false)
       } else {
-        setError(`Sign-in could not be completed (status: ${result.status}, created: ${created.status}). Please try again.`)
+        setError('Sign-in could not be completed. Please try again.')
         setLoading(false)
       }
     } catch (err: unknown) {
-      setError(getClerkErrorMessage(err, 'Sign in failed. Please check your credentials.') + ` [debug: ${String(err)}]`)
+      setError(getClerkErrorMessage(err, 'Sign in failed. Please check your credentials.'))
       setLoading(false)
+    }
+  }
+
+  const prepareEmailVerification = async () => {
+    if (!signIn) return
+    const emailCodeFactor = signIn.supportedSecondFactors?.find(
+      (factor) => factor.strategy === 'email_code',
+    )
+    if (emailCodeFactor) {
+      await signIn.prepareSecondFactor({ strategy: 'email_code' })
+    } else {
+      setError('No supported verification method available. Please contact support.')
     }
   }
 
