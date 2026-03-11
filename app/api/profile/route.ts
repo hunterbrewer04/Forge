@@ -5,6 +5,32 @@ import { profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 
+function formatProfile(p: {
+  id: string
+  fullName: string | null
+  avatarUrl: string | null
+  username: string | null
+  isTrainer: boolean
+  isAdmin: boolean
+  hasFullAccess: boolean
+  isMember: boolean
+  membershipStatus: string | null
+  createdAt: Date
+}) {
+  return {
+    id: p.id,
+    full_name: p.fullName,
+    avatar_url: p.avatarUrl,
+    username: p.username,
+    is_trainer: p.isTrainer,
+    is_admin: p.isAdmin,
+    has_full_access: p.hasFullAccess,
+    is_member: p.isMember,
+    membership_status: p.membershipStatus,
+    created_at: p.createdAt,
+  }
+}
+
 export async function GET() {
   try {
     const { userId } = await auth()
@@ -32,7 +58,7 @@ export async function GET() {
       return createApiError('Profile not found', 404, 'PROFILE_NOT_FOUND')
     }
 
-    return NextResponse.json({ profile })
+    return NextResponse.json({ profile: formatProfile(profile) })
   } catch (err) {
     return handleUnexpectedError(err, 'profile-get')
   }
@@ -115,7 +141,7 @@ export async function PATCH(request: NextRequest) {
       return createApiError('Profile not found', 404, 'PROFILE_NOT_FOUND')
     }
 
-    return NextResponse.json({ profile: updated })
+    return NextResponse.json({ profile: formatProfile(updated) })
   } catch (err) {
     return handleUnexpectedError(err, 'profile-patch')
   }
