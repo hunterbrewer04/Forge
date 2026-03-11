@@ -10,7 +10,7 @@ import type {
   BookSessionResult,
   BookingFilters,
   CancelBookingInput,
-} from '@/lib/types/sessions'
+} from '@/modules/calendar-booking/types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -153,7 +153,7 @@ export async function hasUserBookedSession(
   if (!res.ok) return false
 
   const json = await res.json()
-  return !!json?.data?.user_booking
+  return !!json?.session?.user_booking
 }
 
 /**
@@ -170,7 +170,7 @@ export async function getUserBookingForSession(
   if (!res.ok) return null
 
   const json = await res.json()
-  const userBooking = json?.data?.user_booking
+  const userBooking = json?.session?.user_booking
   return userBooking ?? null
 }
 

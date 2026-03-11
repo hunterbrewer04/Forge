@@ -16,8 +16,8 @@ import { validateRequestBody, SessionSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
 import {
   getSessionsAvailabilityBatch,
-} from '@/lib/db/queries/sessions'
-import type { SessionFilters } from '@/lib/types/sessions'
+} from '@/modules/calendar-booking/services/availability'
+import type { SessionFilters } from '@/modules/calendar-booking/types'
 
 /**
  * GET /api/sessions
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
     const sessionIds = filteredSessions.map((s) => s.id)
 
     const [availabilityMap, userBookings] = await Promise.all([
-      getSessionsAvailabilityBatch(sessionIds),
+      getSessionsAvailabilityBatch(db, sessionIds),
       sessionIds.length > 0
         ? db
             .select({

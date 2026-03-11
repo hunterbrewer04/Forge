@@ -15,7 +15,7 @@ import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody, SessionSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
-import { getSessionAvailability } from '@/lib/db/queries/sessions'
+import { getSessionAvailability } from '@/modules/calendar-booking/services/availability'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // 4. Get availability and user booking in parallel
     const [availability, userBookingRow] = await Promise.all([
-      getSessionAvailability(id),
+      getSessionAvailability(db, id),
       db.query.bookings.findFirst({
         where: and(
           eq(bookings.sessionId, id),

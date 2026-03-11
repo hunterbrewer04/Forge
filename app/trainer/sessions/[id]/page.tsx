@@ -21,7 +21,7 @@ import {
   X,
   AlertTriangle,
 } from '@/components/ui/icons'
-import type { SessionWithDetails, SessionType, Booking } from '@/lib/types/sessions'
+import type { SessionWithDetails, SessionType, Booking } from '@/modules/calendar-booking/types'
 import { utcToLocalInputs, localInputsToUtc } from '@/lib/utils/date'
 
 type ViewMode = 'view' | 'edit'

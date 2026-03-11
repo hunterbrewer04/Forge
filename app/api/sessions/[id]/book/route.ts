@@ -15,7 +15,7 @@ import { eq, and, gte, lt, count } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
-import { bookSession } from '@/lib/db/queries/bookings'
+import { bookSession } from '@/modules/calendar-booking/services/bookings'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // 6. Atomic booking via transaction
     let newBooking: Awaited<ReturnType<typeof bookSession>>
     try {
-      newBooking = await bookSession(sessionId, profileId)
+      newBooking = await bookSession(db, sessionId, profileId)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to book session'
 

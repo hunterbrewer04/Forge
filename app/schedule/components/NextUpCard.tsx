@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { SessionWithDetails } from '@/lib/types/sessions'
+import type { SessionWithDetails } from '@/modules/calendar-booking/types'
 import { Clock, User, ChevronRight } from '@/components/ui/icons'
 
 interface NextUpCardProps {

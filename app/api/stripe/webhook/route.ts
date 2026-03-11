@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object
-        const userId = subscription.metadata?.supabase_user_id
+        const userId = subscription.metadata?.profile_id ?? subscription.metadata?.supabase_user_id
         const tierId = subscription.metadata?.membership_tier_id
 
         if (!userId) break
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object
-        const userId = subscription.metadata?.supabase_user_id
+        const userId = subscription.metadata?.profile_id ?? subscription.metadata?.supabase_user_id
         if (!userId) break
 
         await db

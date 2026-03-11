@@ -6,7 +6,7 @@
  * - Rate limiting
  * - Request validation
  * - Error handling
- * - Proper use of Supabase clients from Phase 1
+ * - Proper use of Drizzle ORM for database queries
  *
  * Copy this pattern when creating new API routes
  */

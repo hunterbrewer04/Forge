@@ -1,19 +1,48 @@
 /**
- * Calendar Service
+ * Calendar service
  *
- * Generates iCal (.ics) feeds for trainers and clients to sync with external calendar apps
- * like Google Calendar, Apple Calendar, and Outlook.
+ * Token CRUD, iCal generation, and feed generation.
+ * Merged from lib/db/queries/calendar.ts and lib/services/calendar.ts.
  */
 
 import 'server-only'
 
-import { db } from '@/lib/db'
 import { profiles, sessions, bookings } from '@/lib/db/schema'
-import { eq, and, gte, lte, inArray } from 'drizzle-orm'
-import { getOrCreateCalendarToken, regenerateCalendarToken } from '@/lib/db/queries/calendar'
+import { eq, and, gte, lte, inArray, count } from 'drizzle-orm'
+import type { DrizzleInstance } from '../config'
 
-// Re-export token helpers so API routes can import from one place
-export { getOrCreateCalendarToken, regenerateCalendarToken }
+// ============================================================================
+// Token CRUD
+// ============================================================================
+
+export async function getOrCreateCalendarToken(db: DrizzleInstance, userId: string): Promise<string> {
+  return await db.transaction(async (tx) => {
+    const profile = await tx.query.profiles.findFirst({
+      where: eq(profiles.id, userId),
+      columns: { calendarToken: true },
+    })
+
+    if (!profile) throw new Error('Profile not found')
+
+    if (profile.calendarToken) return profile.calendarToken
+
+    const newToken = crypto.randomUUID()
+    await tx.update(profiles).set({ calendarToken: newToken }).where(eq(profiles.id, userId))
+    return newToken
+  })
+}
+
+export async function regenerateCalendarToken(db: DrizzleInstance, userId: string): Promise<string> {
+  const newToken = crypto.randomUUID()
+  const [updated] = await db
+    .update(profiles)
+    .set({ calendarToken: newToken })
+    .where(eq(profiles.id, userId))
+    .returning({ calendarToken: profiles.calendarToken })
+
+  if (!updated) throw new Error('Profile not found')
+  return updated.calendarToken!
+}
 
 // ============================================================================
 // Internal types
@@ -39,17 +68,10 @@ interface SessionForCalendar {
 // Pure iCal helpers (no DB access)
 // ============================================================================
 
-/**
- * Generate an iCal UID for a session
- * UIDs must be globally unique and persistent
- */
 function generateUID(sessionId: string, domain: string = 'forge-pwa.vercel.app'): string {
   return `session-${sessionId}@${domain}`
 }
 
-/**
- * Escape special characters in iCal text fields
- */
 function escapeICalText(text: string): string {
   return text
     .replace(/\\/g, '\\\\')
@@ -58,10 +80,6 @@ function escapeICalText(text: string): string {
     .replace(/\n/g, '\\n')
 }
 
-/**
- * Format a Date object to iCal date-time format (UTC)
- * Format: YYYYMMDDTHHMMSSZ
- */
 function formatICalDate(date: Date): string {
   const year = date.getUTCFullYear()
   const month = String(date.getUTCMonth() + 1).padStart(2, '0')
@@ -73,16 +91,10 @@ function formatICalDate(date: Date): string {
   return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
 }
 
-/**
- * Format current timestamp for DTSTAMP
- */
 function getCurrentTimestamp(): string {
   return formatICalDate(new Date())
 }
 
-/**
- * Get iCal status from session status
- */
 function getICalStatus(status: string): string {
   switch (status) {
     case 'cancelled':
@@ -94,9 +106,6 @@ function getICalStatus(status: string): string {
   }
 }
 
-/**
- * Generate a single VEVENT block for a session
- */
 function generateVEvent(session: SessionForCalendar, domain: string = 'forge-pwa.vercel.app'): string {
   const uid = generateUID(session.id, domain)
   const dtstart = formatICalDate(new Date(session.startsAt))
@@ -105,13 +114,11 @@ function generateVEvent(session: SessionForCalendar, domain: string = 'forge-pwa
   const created = formatICalDate(new Date(session.createdAt))
   const lastModified = formatICalDate(new Date(session.updatedAt))
 
-  // Build summary with booking count if available
   let summary = escapeICalText(session.title)
   if (session.bookedCount !== undefined && session.capacity) {
     summary += ` (${session.bookedCount}/${session.capacity} booked)`
   }
 
-  // Build description
   let description = ''
   if (session.description) {
     description = escapeICalText(session.description)
@@ -174,7 +181,7 @@ export function generateICalFeed(
   ].join('\r\n')
 
   const events = sessionList
-    .filter(s => s.status !== 'cancelled') // Optionally filter cancelled sessions
+    .filter(s => s.status !== 'cancelled')
     .map(s => generateVEvent(s, domain))
     .join('\r\n')
 
@@ -187,10 +194,8 @@ export function generateICalFeed(
 // DB-backed functions (server-only)
 // ============================================================================
 
-/**
- * Fetch sessions for a trainer and generate iCal feed
- */
 export async function generateTrainerICalFeed(
+  db: DrizzleInstance,
   trainerId: string,
   options: {
     includeCompleted?: boolean
@@ -202,11 +207,10 @@ export async function generateTrainerICalFeed(
   const {
     includeCompleted = true,
     includeCancelled = false,
-    daysAhead = 90, // 3 months ahead
-    daysBehind = 30, // 1 month behind
+    daysAhead = 90,
+    daysBehind = 30,
   } = options
 
-  // Get trainer info
   const trainer = await db.query.profiles.findFirst({
     where: eq(profiles.id, trainerId),
     columns: { fullName: true },
@@ -214,19 +218,16 @@ export async function generateTrainerICalFeed(
 
   const trainerName = trainer?.fullName || 'Trainer'
 
-  // Calculate date range
   const now = new Date()
   const startDate = new Date(now)
   startDate.setDate(startDate.getDate() - daysBehind)
   const endDate = new Date(now)
   endDate.setDate(endDate.getDate() + daysAhead)
 
-  // Build status filter
   const statuses: Array<'scheduled' | 'completed' | 'cancelled'> = ['scheduled']
   if (includeCompleted) statuses.push('completed')
   if (includeCancelled) statuses.push('cancelled')
 
-  // Fetch sessions with session type relation
   const rawSessions = await db.query.sessions.findMany({
     where: and(
       eq(sessions.trainerId, trainerId),
@@ -240,13 +241,12 @@ export async function generateTrainerICalFeed(
     orderBy: (s, { asc }) => [asc(s.startsAt)],
   })
 
-  // Get booking counts in a single batch query
   const sessionIds = rawSessions.map(s => s.id)
   const bookingCountMap = new Map<string, number>()
 
   if (sessionIds.length > 0) {
-    const confirmedBookings = await db
-      .select({ sessionId: bookings.sessionId })
+    const counts = await db
+      .select({ sessionId: bookings.sessionId, value: count() })
       .from(bookings)
       .where(
         and(
@@ -254,9 +254,10 @@ export async function generateTrainerICalFeed(
           eq(bookings.status, 'confirmed')
         )
       )
+      .groupBy(bookings.sessionId)
 
-    for (const b of confirmedBookings) {
-      bookingCountMap.set(b.sessionId, (bookingCountMap.get(b.sessionId) || 0) + 1)
+    for (const c of counts) {
+      bookingCountMap.set(c.sessionId, c.value)
     }
   }
 
@@ -281,10 +282,7 @@ export async function generateTrainerICalFeed(
   return { ical, trainerName }
 }
 
-/**
- * Validate a calendar token and return the trainer's profile ID
- */
-export async function validateCalendarToken(token: string): Promise<string | null> {
+export async function validateCalendarToken(db: DrizzleInstance, token: string): Promise<string | null> {
   const profile = await db.query.profiles.findFirst({
     where: and(
       eq(profiles.calendarToken, token),

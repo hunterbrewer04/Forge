@@ -1,22 +1,19 @@
 /**
- * Session availability query helpers
+ * Session availability service
  *
  * getSessionAvailability       — single session capacity + booked count
  * getSessionsAvailabilityBatch — multi-session version for list views
  */
 
-import { db } from '@/lib/db'
 import { sessions, bookings } from '@/lib/db/schema'
 import { eq, and, inArray, count } from 'drizzle-orm'
+import type { DrizzleInstance } from '../config'
+import type { SessionAvailability } from '../types'
 
-export interface SessionAvailability {
-  capacity: number
-  booked_count: number
-  spots_left: number
-  is_full: boolean
-}
+export type { SessionAvailability }
 
 export async function getSessionAvailability(
+  db: DrizzleInstance,
   sessionId: string
 ): Promise<SessionAvailability | null> {
   const result = await db
@@ -48,6 +45,7 @@ export async function getSessionAvailability(
 }
 
 export async function getSessionsAvailabilityBatch(
+  db: DrizzleInstance,
   sessionIds: string[]
 ): Promise<Map<string, SessionAvailability>> {
   if (sessionIds.length === 0) return new Map()

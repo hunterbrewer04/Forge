@@ -10,7 +10,7 @@ import { validateAuth } from '@/lib/api/auth'
 import { db } from '@/lib/db'
 import { profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getOrCreateCalendarToken, regenerateCalendarToken } from '@/lib/db/queries/calendar'
+import { getOrCreateCalendarToken, regenerateCalendarToken } from '@/modules/calendar-booking/services/calendar'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { handleUnexpectedError } from '@/lib/api/errors'
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Get or create token
-    const token = await getOrCreateCalendarToken(profileId)
+    const token = await getOrCreateCalendarToken(db, profileId)
 
     // 4. Get user profile to determine role
     const profile = await db.query.profiles.findFirst({
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Regenerate token
-    const token = await regenerateCalendarToken(profileId)
+    const token = await regenerateCalendarToken(db, profileId)
 
     // 4. Get user profile to determine role
     const profile = await db.query.profiles.findFirst({

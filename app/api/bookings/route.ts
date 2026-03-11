@@ -12,7 +12,7 @@ import { eq, and, desc, count } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { BookingSchemas } from '@/lib/api/validation'
-import type { BookingFilters } from '@/lib/types/sessions'
+import type { BookingFilters } from '@/modules/calendar-booking/types'
 
 /**
  * GET /api/bookings

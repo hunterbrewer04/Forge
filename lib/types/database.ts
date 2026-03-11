@@ -55,8 +55,8 @@ export interface Message {
   profiles?: Profile  // For foreign key joins
 }
 
-// Supabase query response types for foreign key joins
-// When using !conversations_client_id_fkey, the profile is returned as `profiles`
+// API response types for foreign key joins
+// Profile data is returned under the `profiles` key in conversation/message responses
 export interface ProfileJoin {
   id?: string
   full_name: string | null

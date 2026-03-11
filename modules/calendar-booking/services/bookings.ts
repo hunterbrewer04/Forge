@@ -1,14 +1,14 @@
 /**
- * Booking query helpers
+ * Booking service
  *
  * bookSession — atomic transaction that enforces capacity and duplicate checks
  */
 
-import { db } from '@/lib/db'
 import { sessions, bookings } from '@/lib/db/schema'
 import { eq, and, count } from 'drizzle-orm'
+import type { DrizzleInstance } from '../config'
 
-export async function bookSession(sessionId: string, clientId: string) {
+export async function bookSession(db: DrizzleInstance, sessionId: string, clientId: string) {
   return await db.transaction(async (tx) => {
     // Lock the session row to prevent concurrent over-booking
     const [session] = await tx

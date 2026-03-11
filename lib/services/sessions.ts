@@ -12,7 +12,7 @@ import type {
   CreateSessionInput,
   UpdateSessionInput,
   SessionFilters,
-} from '@/lib/types/sessions'
+} from '@/modules/calendar-booking/types'
 
 // ---------------------------------------------------------------------------
 // Helpers

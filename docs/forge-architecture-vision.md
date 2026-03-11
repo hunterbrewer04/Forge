@@ -208,4 +208,4 @@ interface MessagingConfig {
 | 2. Drizzle ORM Migration | `docs/plans/drizzle-orm-migration.md` | Complete |
 | 3. Calendar/Booking Module | `docs/plans/2026-03-06-calendar-booking-module.md` | Complete |
 | 4. Messaging Module (Ably + R2) | `docs/plans/2026-03-11-messaging-module-phase4.md` | Complete |
-| 5. Feature Gaps | TBD | After Phase 4 complete |
+| 5. Feature Gaps | `docs/plans/2026-03-11-feature-gaps-phase5.md` | Planning |

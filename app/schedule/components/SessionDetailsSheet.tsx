@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Clock, MapPin, User, Calendar, Users } from '@/components/ui/icons'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
-import type { SessionWithDetails } from '@/lib/types/sessions'
+import type { SessionWithDetails } from '@/modules/calendar-booking/types'
 import Image from 'next/image'
 
 interface SessionDetailsSheetProps {

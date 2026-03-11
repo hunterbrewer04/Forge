@@ -109,7 +109,7 @@ export async function markMessagesAsRead(
  *
  * @deprecated Sender profile is now included in every message returned by
  * GET /api/conversations/[id]/messages and POST /api/conversations/[id]/messages.
- * This function is retained for callers that trigger on real-time Supabase events
+ * This function is retained for callers that trigger on real-time Ably events
  * and need to enrich a bare message with a profile. Consider fetching the full
  * message from the API instead.
  */

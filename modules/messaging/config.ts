@@ -1,7 +1,4 @@
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
-import type * as schema from '@/lib/db/schema'
-
-export type DrizzleInstance = PostgresJsDatabase<typeof schema>
+export type { DrizzleInstance } from '@/lib/db/types'
 
 export interface MessagingAuthContext {
   userId: string

@@ -1,6 +1,6 @@
 'use client'
 
-import type { SessionWithDetails } from '@/lib/types/sessions'
+import type { SessionWithDetails } from '@/modules/calendar-booking/types'
 import { Dumbbell, User, type LucideIcon } from '@/components/ui/icons'
 import Image from 'next/image'
 

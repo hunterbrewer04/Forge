@@ -19,7 +19,7 @@ export default function MemberSuccessPage() {
   // Watch for profile update from polling
   useEffect(() => {
     if (profile?.membership_status === 'active') {
-      // Controlled one-way transition from external async event (Stripe → Supabase profile); not a cascading render.
+      // Controlled one-way transition from external async event (Stripe webhook → profile update); not a cascading render.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setActivated(true)
     }

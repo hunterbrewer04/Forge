@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       const customer = await stripe.customers.create({
         email: profile?.email ?? undefined,
         name: profile?.fullName ?? undefined,
-        metadata: { supabase_user_id: profileId },
+        metadata: { profile_id: profileId },
       })
       customerId = customer.id
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       },
       expand: ['latest_invoice.confirmation_secret'],
       metadata: {
-        supabase_user_id: profileId,
+        profile_id: profileId,
         membership_tier_id: tier.id,
       },
     })

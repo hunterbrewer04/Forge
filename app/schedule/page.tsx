@@ -17,7 +17,7 @@ import SessionCard from './components/SessionCard'
 const BookingModal = dynamic(() => import('./components/BookingModal'), { ssr: false })
 const CancelBookingModal = dynamic(() => import('./components/CancelBookingModal'), { ssr: false })
 const SessionDetailsSheet = dynamic(() => import('./components/SessionDetailsSheet'), { ssr: false })
-import type { SessionWithDetails } from '@/lib/types/sessions'
+import type { SessionWithDetails } from '@/modules/calendar-booking/types'
 
 export default function SchedulePage() {
   const { user, profile, loading: authLoading } = useAuth()

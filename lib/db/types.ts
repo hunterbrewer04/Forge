@@ -1,3 +1,4 @@
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import type {
   profiles,
   membershipTiers,
@@ -9,6 +10,10 @@ import type {
   pushSubscriptions,
   auditLogs,
 } from './schema'
+import type * as schema from './schema'
+
+// Drizzle database instance type — shared across all modules
+export type DrizzleInstance = PostgresJsDatabase<typeof schema>
 
 // Select types (read from DB)
 export type Profile = typeof profiles.$inferSelect

@@ -15,7 +15,7 @@ import { profiles, bookings } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 import { isValidUUID } from '@/lib/api/validation'
-import { generateICalFeed } from '@/lib/services/calendar'
+import { generateICalFeed } from '@/modules/calendar-booking/services/calendar'
 
 interface RouteParams {
   params: Promise<{ clientId: string }>

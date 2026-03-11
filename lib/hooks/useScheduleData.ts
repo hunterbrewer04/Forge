@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
-import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
+import type { SessionWithDetails, SessionType } from '@/modules/calendar-booking/types'
 import { getLocalDateString } from '@/lib/utils/date'
 
 interface UseScheduleDataParams {
