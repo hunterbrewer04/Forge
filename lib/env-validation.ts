@@ -101,7 +101,7 @@ const ENV_VARS: EnvVarConfig[] = [
     clientSide: true,
   },
   {
-    name: 'DATABASE_URL',
+    name: 'POSTGRES_URL',
     required: true,
     description: 'Postgres connection string (Supabase Transaction Pooler, port 6543)',
     clientSide: false,
@@ -266,5 +266,5 @@ export const env = {
   stripePublishableKey: () => getEnvVar('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'),
 
   // Database
-  databaseUrl: () => getEnvVar('DATABASE_URL'),
+  postgresUrl: () => getEnvVar('POSTGRES_URL'),
 } as const

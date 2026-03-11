@@ -5,7 +5,7 @@ export default defineConfig({
   schema: './lib/db/schema.ts',
   out: './drizzle',
   dbCredentials: {
-    url: process.env.DATABASE_URL_DIRECT!,
+    url: process.env.POSTGRES_URL_NON_POOLING!,
   },
   verbose: true,
   strict: true,
