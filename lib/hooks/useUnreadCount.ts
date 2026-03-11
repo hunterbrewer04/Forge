@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { createClient } from '@/lib/supabase-browser'
+import Ably from 'ably'
+import { getAblyClient } from '@/lib/ably-browser'
 import { logger } from '@/lib/utils/logger'
 
 interface UseUnreadCountOptions {
@@ -95,31 +96,25 @@ export function useUnreadCount({ userId, isTrainer, isClient }: UseUnreadCountOp
   useEffect(() => {
     if (!userId) return
 
-    const supabase = createClient()
+    const ably = getAblyClient()
+    const channel = ably.channels.get('unread-messages')
 
-    const channel = supabase
-      .channel('unread-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-        },
-        (payload) => {
-          // If the new message is not from the current user and belongs to user's conversations, increment count
-          if (
-            payload.new.sender_id !== userId &&
-            conversationIdsRef.current.includes(payload.new.conversation_id)
-          ) {
-            setUnreadCount(prev => Math.min(prev + 1, 99))
-          }
-        }
-      )
-      .subscribe()
+    const handleNewMessage = (message: Ably.Message) => {
+      const payload = message.data as { conversation_id: string; sender_id: string }
+      // If the new message is not from the current user and belongs to user's conversations, increment count
+      if (
+        payload.sender_id !== userId &&
+        conversationIdsRef.current.includes(payload.conversation_id)
+      ) {
+        setUnreadCount(prev => Math.min(prev + 1, 99))
+      }
+    }
+
+    channel.subscribe('new-message', handleNewMessage)
 
     return () => {
-      supabase.removeChannel(channel)
+      channel.unsubscribe()
+      ably.channels.release('unread-messages')
     }
   }, [userId])
 
