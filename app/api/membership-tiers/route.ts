@@ -42,8 +42,16 @@ export async function GET() {
     // Re-sort by actual price after enrichment
     enriched.sort((a, b) => Number(a.priceMonthly) - Number(b.priceMonthly))
 
+    const mapped = enriched.map((tier) => ({
+      id: tier.id,
+      name: tier.name,
+      slug: tier.slug,
+      monthly_booking_quota: tier.monthlyBookingQuota,
+      price_monthly: Number(tier.priceMonthly),
+    }))
+
     return NextResponse.json(
-      { tiers: enriched },
+      { tiers: mapped },
       { headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' } }
     )
   } catch (error) {
