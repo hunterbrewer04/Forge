@@ -54,7 +54,7 @@ export default function LoginForm() {
         await clearDynamicCache()
         window.location.href = returnTo
       } else {
-        setError('Sign-in could not be completed. Please try again.')
+        setError(`Sign-in incomplete (status: ${result.status}). Please try again.`)
         setLoading(false)
       }
     } catch (err: unknown) {
