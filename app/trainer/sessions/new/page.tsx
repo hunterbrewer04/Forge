@@ -11,7 +11,7 @@ import {
   AlertCircle,
   CheckCircle,
 } from '@/components/ui/icons'
-import type { SessionType } from '@/lib/types/sessions'
+import type { SessionType } from '@/modules/calendar-booking/types'
 import { getLocalDateString, localInputsToUtc } from '@/lib/utils/date'
 
 interface FormData {

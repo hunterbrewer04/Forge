@@ -1,4 +1,4 @@
-// Session & Booking types based on Supabase schema
+// Session & Booking types — canonical definitions for the calendar-booking module
 
 export type SessionStatus = 'scheduled' | 'cancelled' | 'completed'
 export type BookingStatus = 'confirmed' | 'cancelled' | 'attended' | 'no_show'

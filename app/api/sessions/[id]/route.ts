@@ -7,17 +7,91 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { db } from '@/lib/db'
+import { sessions, bookings, profiles } from '@/lib/db/schema'
+import { eq, and, count } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
-import { validateRequestBody } from '@/lib/api/validation'
-import { SessionSchemas } from '@/lib/api/validation'
+import { validateRequestBody, SessionSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
-import { env } from '@/lib/env-validation'
+import { getSessionAvailability } from '@/modules/calendar-booking/services/availability'
 
 interface RouteParams {
   params: Promise<{ id: string }>
+}
+
+/** Map a session + relations row to the snake_case shape the frontend expects */
+function formatSession(s: {
+  id: string
+  trainerId: string
+  sessionTypeId: string | null
+  title: string
+  description: string | null
+  durationMinutes: number
+  capacity: number | null
+  isPremium: boolean
+  location: string | null
+  startsAt: Date
+  endsAt: Date
+  status: 'scheduled' | 'cancelled' | 'completed'
+  cancelledAt: Date | null
+  cancellationReason: string | null
+  createdAt: Date
+  updatedAt: Date
+  sessionType?: {
+    id: string
+    name: string
+    slug: string
+    color: string
+    icon: string
+    isPremium: boolean
+    createdAt: Date
+    updatedAt: Date
+  } | null
+  trainer?: {
+    id: string
+    fullName: string | null
+    avatarUrl: string | null
+  } | null
+}) {
+  return {
+    id: s.id,
+    trainer_id: s.trainerId,
+    session_type_id: s.sessionTypeId,
+    title: s.title,
+    description: s.description,
+    duration_minutes: s.durationMinutes,
+    capacity: s.capacity,
+    is_premium: s.isPremium,
+    location: s.location,
+    starts_at: s.startsAt,
+    ends_at: s.endsAt,
+    status: s.status,
+    cancelled_at: s.cancelledAt,
+    cancellation_reason: s.cancellationReason,
+    created_at: s.createdAt,
+    updated_at: s.updatedAt,
+    session_type: s.sessionType
+      ? {
+          id: s.sessionType.id,
+          name: s.sessionType.name,
+          slug: s.sessionType.slug,
+          color: s.sessionType.color,
+          icon: s.sessionType.icon,
+          is_premium: s.sessionType.isPremium,
+          created_at: s.sessionType.createdAt,
+          updated_at: s.sessionType.updatedAt,
+        }
+      : null,
+    trainer: s.trainer
+      ? {
+          id: s.trainer.id,
+          full_name: s.trainer.fullName,
+          avatar_url: s.trainer.avatarUrl,
+        }
+      : null,
+  }
 }
 
 /**
@@ -34,123 +108,113 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const includeBookings = searchParams.get('include_bookings') === 'true'
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
-    // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
+    // 3. Fetch session with relations
+    const session = await db.query.sessions.findFirst({
+      where: eq(sessions.id, id),
+      with: {
+        sessionType: true,
+        trainer: {
+          columns: {
+            id: true,
+            fullName: true,
+            avatarUrl: true,
           },
-          set() {},
-          remove() {},
         },
-      }
-    )
+      },
+    })
 
-    // 4. Fetch session
-    const { data: session, error } = await supabase
-      .from('sessions')
-      .select(`
-        *,
-        session_type:session_types(*),
-        trainer:profiles!sessions_trainer_id_fkey(
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq('id', id)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
-      }
-      console.error('Error fetching session:', error)
-      return createApiError('Failed to fetch session', 500, 'DATABASE_ERROR')
+    if (!session) {
+      return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
-    // 5. Get availability
-    const { data: availabilityData } = await supabase.rpc(
-      'get_session_availability',
-      { p_session_id: id }
-    )
-    const availability = availabilityData?.[0] || {
-      capacity: session.capacity || 1,
+    // 4. Get availability and user booking in parallel
+    const [availability, userBookingRow] = await Promise.all([
+      getSessionAvailability(db, id),
+      db.query.bookings.findFirst({
+        where: and(
+          eq(bookings.sessionId, id),
+          eq(bookings.clientId, profileId),
+          eq(bookings.status, 'confirmed')
+        ),
+      }),
+    ])
+
+    const resolvedAvailability = availability ?? {
+      capacity: session.capacity ?? 1,
       booked_count: 0,
-      spots_left: session.capacity || 1,
+      spots_left: session.capacity ?? 1,
       is_full: false,
     }
 
-    // 6. Check if current user has a booking
-    const { data: bookingData } = await supabase
-      .from('bookings')
-      .select('id, status, booked_at')
-      .eq('session_id', id)
-      .eq('client_id', user.id)
-      .eq('status', 'confirmed')
-      .maybeSingle()
+    const userBooking = userBookingRow
+      ? {
+          id: userBookingRow.id,
+          status: userBookingRow.status,
+          booked_at: userBookingRow.bookedAt,
+        }
+      : null
 
-    // 7. Handle FK join format
-    const session_type = Array.isArray(session.session_type)
-      ? session.session_type[0] || null
-      : session.session_type
-    const trainer = Array.isArray(session.trainer)
-      ? session.trainer[0] || null
-      : session.trainer
-
-    // 8. Fetch bookings if requested (trainer only)
-    let bookings = null
-    if (includeBookings && session.trainer_id === user.id) {
-      const { data: bookingsData } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          client:profiles!bookings_client_id_fkey(
-            id,
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq('session_id', id)
-        .order('booked_at', { ascending: true })
-
-      bookings = (bookingsData || []).map((booking) => {
-        const client = Array.isArray(booking.client)
-          ? booking.client[0] || null
-          : booking.client
-        return { ...booking, client }
+    // 5. Fetch session bookings if requested (trainer only)
+    let sessionBookings: unknown[] | null = null
+    if (includeBookings && session.trainerId === profileId) {
+      const rawBookings = await db.query.bookings.findMany({
+        where: eq(bookings.sessionId, id),
+        orderBy: (b, { asc }) => [asc(b.bookedAt)],
+        with: {
+          client: {
+            columns: {
+              id: true,
+              fullName: true,
+              avatarUrl: true,
+            },
+          },
+        },
       })
+
+      sessionBookings = rawBookings.map((b) => ({
+        id: b.id,
+        session_id: b.sessionId,
+        client_id: b.clientId,
+        status: b.status,
+        booked_at: b.bookedAt,
+        cancelled_at: b.cancelledAt,
+        cancellation_reason: b.cancellationReason,
+        created_at: b.createdAt,
+        updated_at: b.updatedAt,
+        client: b.client
+          ? {
+              id: b.client.id,
+              full_name: b.client.fullName,
+              avatar_url: b.client.avatarUrl,
+            }
+          : null,
+      }))
     }
 
     return NextResponse.json({
       success: true,
       session: {
-        ...session,
-        session_type,
-        trainer,
-        availability,
-        user_booking: bookingData,
+        ...formatSession(session),
+        availability: resolvedAvailability,
+        user_booking: userBooking,
       },
-      bookings,
+      bookings: sessionBookings,
     })
   } catch (error) {
     return handleUnexpectedError(error, 'session-get')
@@ -180,17 +244,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -203,45 +267,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
     const body = bodyResult
 
-    // 4. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    // 4. Fetch existing session
+    const existingSession = await db.query.sessions.findFirst({
+      where: eq(sessions.id, id),
+      columns: {
+        id: true,
+        trainerId: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+      },
+    })
 
-    // 5. Check if session exists and user has permission
-    const { data: existingSession, error: fetchError } = await supabase
-      .from('sessions')
-      .select('id, trainer_id, title, starts_at, ends_at')
-      .eq('id', id)
-      .single()
-
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
-      }
-      console.error('Error fetching session:', fetchError)
-      return createApiError('Failed to fetch session', 500, 'DATABASE_ERROR')
+    if (!existingSession) {
+      return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
-    // 6. Check user has permission (trainer or admin)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
+    // 5. Check permission (owner or admin)
+    const requester = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { isAdmin: true },
+    })
 
-    const isOwner = existingSession.trainer_id === user.id
-    const isAdmin = profile?.is_admin === true
+    const isOwner = existingSession.trainerId === profileId
+    const isAdmin = requester?.isAdmin === true
 
     if (!isOwner && !isAdmin) {
       return createApiError(
@@ -251,10 +300,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 6b. Validate date range when starts_at or ends_at is updated (Issue #8)
+    // 6a. Validate date range when starts_at or ends_at is updated
     if (body.starts_at !== undefined || body.ends_at !== undefined) {
-      const newStartsAt = body.starts_at ? new Date(body.starts_at) : new Date(existingSession.starts_at)
-      const newEndsAt = body.ends_at ? new Date(body.ends_at) : new Date(existingSession.ends_at)
+      const newStartsAt = body.starts_at
+        ? new Date(body.starts_at)
+        : existingSession.startsAt
+      const newEndsAt = body.ends_at
+        ? new Date(body.ends_at)
+        : existingSession.endsAt
 
       if (Number.isNaN(newStartsAt.getTime()) || Number.isNaN(newEndsAt.getTime())) {
         return createApiError(
@@ -273,67 +326,79 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // 6c. Validate capacity reduction (Issue #9)
+    // 6b. Validate capacity reduction
     if (body.capacity !== undefined && body.capacity !== null) {
-      const { count } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('session_id', id)
-        .eq('status', 'confirmed')
+      const [{ value: confirmedCount }] = await db
+        .select({ value: count() })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.sessionId, id),
+            eq(bookings.status, 'confirmed')
+          )
+        )
 
-      if (body.capacity < (count || 0)) {
+      if (body.capacity < confirmedCount) {
         return createApiError(
-          `Cannot reduce capacity below ${count} confirmed bookings`,
+          `Cannot reduce capacity below ${confirmedCount} confirmed bookings`,
           400,
           'INVALID_CAPACITY'
         )
       }
     }
 
-    // 7. Build update object
-    const updateData: Record<string, unknown> = {}
+    // 7. Build update payload (camelCase for Drizzle)
+    const updateData: Parameters<typeof db.update>[0] extends never
+      ? never
+      : Record<string, unknown> = {}
+
     if (body.title !== undefined) updateData.title = body.title
     if (body.description !== undefined) updateData.description = body.description
-    if (body.session_type_id !== undefined) updateData.session_type_id = body.session_type_id
-    if (body.duration_minutes !== undefined) updateData.duration_minutes = body.duration_minutes
+    if (body.session_type_id !== undefined) updateData.sessionTypeId = body.session_type_id
+    if (body.duration_minutes !== undefined) updateData.durationMinutes = body.duration_minutes
     if (body.capacity !== undefined) updateData.capacity = body.capacity
-    if (body.is_premium !== undefined) updateData.is_premium = body.is_premium
+    if (body.is_premium !== undefined) updateData.isPremium = body.is_premium
     if (body.location !== undefined) updateData.location = body.location
-    if (body.starts_at !== undefined) updateData.starts_at = body.starts_at
-    if (body.ends_at !== undefined) updateData.ends_at = body.ends_at
+    if (body.starts_at !== undefined) updateData.startsAt = new Date(body.starts_at)
+    if (body.ends_at !== undefined) updateData.endsAt = new Date(body.ends_at)
     if (body.status !== undefined) {
       updateData.status = body.status
       if (body.status === 'cancelled') {
-        updateData.cancelled_at = new Date().toISOString()
+        updateData.cancelledAt = new Date()
       }
     }
-    if (body.cancellation_reason !== undefined) updateData.cancellation_reason = body.cancellation_reason
+    if (body.cancellation_reason !== undefined)
+      updateData.cancellationReason = body.cancellation_reason
 
-    // 8. Update session
-    const { data: session, error: updateError } = await supabase
-      .from('sessions')
-      .update(updateData)
-      .eq('id', id)
-      .select(`
-        *,
-        session_type:session_types(*),
-        trainer:profiles!sessions_trainer_id_fkey(
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
-      .single()
+    // Always bump updatedAt
+    updateData.updatedAt = new Date()
 
-    if (updateError) {
-      console.error('Error updating session:', updateError)
-      return createApiError('Failed to update session', 500, 'DATABASE_ERROR')
+    // 8. Perform update
+    await db.update(sessions).set(updateData).where(eq(sessions.id, id))
+
+    // 9. Fetch updated session with relations
+    const updated = await db.query.sessions.findFirst({
+      where: eq(sessions.id, id),
+      with: {
+        sessionType: true,
+        trainer: {
+          columns: {
+            id: true,
+            fullName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
+
+    if (!updated) {
+      return createApiError('Failed to fetch updated session', 500, 'DATABASE_ERROR')
     }
 
-    // 9. Log audit event
+    // 10. Log audit event
     const auditAction = body.status === 'cancelled' ? 'SESSION_CANCEL' : 'SESSION_UPDATE'
     await logAuditEventFromRequest({
-      userId: user.id,
+      userId: profileId,
       action: auditAction,
       resource: 'session',
       resourceId: id,
@@ -343,21 +408,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       },
     })
 
-    // 10. Handle FK join format
-    const session_type = Array.isArray(session.session_type)
-      ? session.session_type[0] || null
-      : session.session_type
-    const trainer = Array.isArray(session.trainer)
-      ? session.trainer[0] || null
-      : session.trainer
-
     return NextResponse.json({
       success: true,
-      data: {
-        ...session,
-        session_type,
-        trainer,
-      },
+      data: formatSession(updated),
     })
   } catch (error) {
     return handleUnexpectedError(error, 'session-update')
@@ -375,61 +428,44 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
-    // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    // 3. Fetch existing session
+    const existingSession = await db.query.sessions.findFirst({
+      where: eq(sessions.id, id),
+      columns: {
+        id: true,
+        trainerId: true,
+        title: true,
+      },
+    })
 
-    // 4. Check if session exists and user has permission
-    const { data: existingSession, error: fetchError } = await supabase
-      .from('sessions')
-      .select('id, trainer_id, title')
-      .eq('id', id)
-      .single()
-
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
-      }
-      console.error('Error fetching session:', fetchError)
-      return createApiError('Failed to fetch session', 500, 'DATABASE_ERROR')
+    if (!existingSession) {
+      return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
-    // 5. Check user has permission (trainer or admin)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
+    // 4. Check permission (owner or admin)
+    const requester = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { isAdmin: true },
+    })
 
-    const isOwner = existingSession.trainer_id === user.id
-    const isAdmin = profile?.is_admin === true
+    const isOwner = existingSession.trainerId === profileId
+    const isAdmin = requester?.isAdmin === true
 
     if (!isOwner && !isAdmin) {
       return createApiError(
@@ -439,20 +475,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 6. Delete session
-    const { error: deleteError } = await supabase
-      .from('sessions')
-      .delete()
-      .eq('id', id)
+    // 5. Delete session
+    await db.delete(sessions).where(eq(sessions.id, id))
 
-    if (deleteError) {
-      console.error('Error deleting session:', deleteError)
-      return createApiError('Failed to delete session', 500, 'DATABASE_ERROR')
-    }
-
-    // 7. Log audit event
+    // 6. Log audit event
     await logAuditEventFromRequest({
-      userId: user.id,
+      userId: profileId,
       action: 'SESSION_DELETE',
       resource: 'session',
       resourceId: id,

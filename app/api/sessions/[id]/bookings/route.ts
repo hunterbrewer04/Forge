@@ -6,11 +6,12 @@
  * Returns list of confirmed bookings with client details.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
+import { db } from '@/lib/db'
+import { sessions, bookings } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
-import { env } from '@/lib/env-validation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -22,49 +23,32 @@ interface RouteParams {
  * Fetches all confirmed bookings for a session.
  * Only accessible by the session's trainer.
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const { id: sessionId } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
-    // 2. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    // 2. Verify session exists and user is the trainer
+    const session = await db.query.sessions.findFirst({
+      where: eq(sessions.id, sessionId),
+      columns: {
+        id: true,
+        trainerId: true,
+      },
+    })
 
-    // 3. Verify session exists and user is the trainer
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id, trainer_id')
-      .eq('id', sessionId)
-      .single()
-
-    if (sessionError) {
-      if (sessionError.code === 'PGRST116') {
-        return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
-      }
-      console.error('Error fetching session:', sessionError)
-      return createApiError('Failed to fetch session', 500, 'DATABASE_ERROR')
+    if (!session) {
+      return createApiError('Session not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
-    // 4. Check if user is the trainer (only trainers can see booking list)
-    if (user.id !== session.trainer_id) {
+    // 3. Only the session trainer can view the booking list
+    if (profileId !== session.trainerId) {
       return createApiError(
         'Only the session trainer can view bookings',
         403,
@@ -72,38 +56,33 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 5. Fetch all confirmed bookings with client details
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select(`
-        id,
-        client_id,
-        status,
-        booked_at,
-        client:profiles!client_id(
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq('session_id', sessionId)
-      .eq('status', 'confirmed')
-      .order('booked_at', { ascending: true })
+    // 4. Fetch confirmed bookings with client details
+    const rawBookings = await db.query.bookings.findMany({
+      where: eq(bookings.sessionId, sessionId),
+      orderBy: (b, { asc }) => [asc(b.bookedAt)],
+      with: {
+        client: {
+          columns: {
+            id: true,
+            fullName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
 
-    if (bookingsError) {
-      console.error('Error fetching bookings:', bookingsError)
-      return createApiError('Failed to fetch bookings', 500, 'DATABASE_ERROR')
-    }
-
-    // 6. Normalize FK joins (Supabase can return arrays or objects)
-    const normalizedBookings = bookings.map(booking => ({
-      id: booking.id,
-      client_id: booking.client_id,
-      status: booking.status,
-      booked_at: booking.booked_at,
-      client: Array.isArray(booking.client)
-        ? booking.client[0] || null
-        : booking.client,
+    const normalizedBookings = rawBookings.map((b) => ({
+      id: b.id,
+      client_id: b.clientId,
+      status: b.status,
+      booked_at: b.bookedAt,
+      client: b.client
+        ? {
+            id: b.client.id,
+            full_name: b.client.fullName,
+            avatar_url: b.client.avatarUrl,
+          }
+        : null,
     }))
 
     return NextResponse.json({

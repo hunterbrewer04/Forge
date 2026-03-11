@@ -197,16 +197,16 @@ const user = authResult
 // Use user.id in queries
 ```
 
-### 5. Use Proper Supabase Clients
+### 5. Use Drizzle ORM for Database Queries
 ```typescript
-import { createServerClient } from '@/lib/supabase-server'
-import { createAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
-// For user-scoped operations (most cases)
-const supabase = createServerClient()
-
-// For admin operations ONLY (bypasses RLS)
-const adminSupabase = createAdminClient()
+// All DB queries go through Drizzle
+const profile = await db.query.profiles.findFirst({
+  where: eq(profiles.id, user.profileId),
+})
 ```
 
 ### 6. Handle Errors Safely
@@ -236,7 +236,7 @@ When creating a new API route, ensure:
 - [ ] Request body/query params are validated with Zod schemas
 - [ ] User IDs come from validated auth (not client input)
 - [ ] Errors are handled safely without leaking details
-- [ ] Proper Supabase client is used (server vs admin)
+- [ ] Database queries use Drizzle ORM (`@/lib/db`)
 - [ ] Try-catch wraps the entire handler
 - [ ] Console.log statements don't expose sensitive data
 - [ ] Error responses use standardized format
@@ -273,15 +273,13 @@ curl -X POST http://localhost:3000/api/example \
 
 See `/app/api/example/route.ts` for a comprehensive reference implementation.
 
-## Phase 1 Integration
+## Integration
 
-These utilities build on Phase 1 security:
+These utilities build on the project's security infrastructure:
 
 - Uses `env` helper from `@/lib/env-validation`
-- Works with Supabase clients from Phase 1:
-  - `@/lib/supabase-server` for server operations
-  - `@/lib/supabase-admin` for admin operations
-- Leverages RLS policies established in Phase 1
+- Database queries use Drizzle ORM (`@/lib/db`)
+- Auth handled via Clerk (`validateAuth` / `validateRole`)
 
 ## Rate Limiting Notes
 

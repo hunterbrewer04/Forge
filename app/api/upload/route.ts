@@ -10,86 +10,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { uploadToR2 } from '@/modules/messaging'
+import { db } from '@/lib/db'
+import { conversations } from '@/lib/db/schema'
+import { eq, and, or } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError } from '@/lib/api/errors'
 import { isValidUUID } from '@/lib/api/validation'
-import { env } from '@/lib/env-validation'
-
-// File size limits (in bytes)
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
-
-// Allowed MIME types
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime']
-const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES]
-
-/**
- * Validates file type using magic bytes
- */
-function validateMagicBytes(buffer: ArrayBuffer, mimeType: string): boolean {
-  const bytes = new Uint8Array(buffer)
-
-  // For images, check magic bytes
-  if (mimeType === 'image/jpeg') {
-    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
-  }
-
-  if (mimeType === 'image/png') {
-    return (
-      bytes[0] === 0x89 &&
-      bytes[1] === 0x50 &&
-      bytes[2] === 0x4e &&
-      bytes[3] === 0x47 &&
-      bytes[4] === 0x0d &&
-      bytes[5] === 0x0a &&
-      bytes[6] === 0x1a &&
-      bytes[7] === 0x0a
-    )
-  }
-
-  if (mimeType === 'image/gif') {
-    return (
-      bytes[0] === 0x47 &&
-      bytes[1] === 0x49 &&
-      bytes[2] === 0x46 &&
-      bytes[3] === 0x38
-    )
-  }
-
-  if (mimeType === 'image/webp') {
-    // WebP files start with RIFF....WEBP
-    return (
-      bytes[0] === 0x52 &&
-      bytes[1] === 0x49 &&
-      bytes[2] === 0x46 &&
-      bytes[3] === 0x46 &&
-      bytes[8] === 0x57 &&
-      bytes[9] === 0x45 &&
-      bytes[10] === 0x42 &&
-      bytes[11] === 0x50
-    )
-  }
-
-  if (mimeType === 'video/mp4' || mimeType === 'video/quicktime') {
-    // MP4/MOV files have "ftyp" at offset 4
-    return (
-      bytes[4] === 0x66 && // 'f'
-      bytes[5] === 0x74 && // 't'
-      bytes[6] === 0x79 && // 'y'
-      bytes[7] === 0x70    // 'p'
-    )
-  }
-
-  return false
-}
+import { validateMagicBytes, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_MEDIA_TYPES } from '@/lib/api/file-validation'
 
 /**
  * POST /api/upload
  *
- * Validates and uploads a file to Supabase Storage
+ * Validates and uploads a file to R2
  *
  * Request: multipart/form-data with:
  * - file: The file to upload
@@ -100,17 +34,17 @@ function validateMagicBytes(buffer: ArrayBuffer, mimeType: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.UPLOAD,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -135,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Validate MIME type
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (!ALLOWED_MEDIA_TYPES.includes(file.type)) {
       return createApiError(
         'Invalid file type. Allowed: JPEG, PNG, GIF, WebP, MP4, MOV',
         400,
@@ -166,30 +100,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 7. Create Supabase client and verify conversation access
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    // 7. Verify conversation access via Drizzle
+    const conversation = await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.id, conversationId),
+        or(
+          eq(conversations.clientId, profileId),
+          eq(conversations.trainerId, profileId)
+        )
+      ),
+      columns: { id: true },
+    })
 
-    // Verify user has access to this conversation
-    const { data: conversation, error: convError } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('id', conversationId)
-      .or(`client_id.eq.${user.id},trainer_id.eq.${user.id}`)
-      .single()
-
-    if (convError || !conversation) {
+    if (!conversation) {
       return createApiError(
         'Conversation not found or access denied',
         403,
@@ -197,23 +120,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 8. Generate unique filename and upload
+    // 8. Generate unique filename and upload to R2
     const timestamp = Date.now()
     const randomString = crypto.randomUUID().slice(0, 8)
     const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const fileName = `${timestamp}_${randomString}.${extension}`
     const filePath = `${conversationId}/${fileName}`
 
-    const { error: uploadError } = await supabase.storage
-      .from('chat-media')
-      .upload(filePath, buffer, {
-        contentType: file.type,
-        cacheControl: '3600',
-        upsert: false,
-      })
-
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError)
+    const r2Key = `chat-media/${filePath}`
+    try {
+      await uploadToR2(r2Key, buffer, file.type)
+    } catch (uploadError) {
+      console.error('R2 upload error:', uploadError)
       return createApiError(
         'Failed to upload file',
         500,
@@ -226,7 +144,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      filePath,
+      filePath: r2Key,
       mediaType,
     })
   } catch (error) {

@@ -1,85 +1,45 @@
-import { createClient } from '@/lib/supabase-browser'
+/**
+ * Client-side service for trainer client management.
+ * Thin fetch wrappers around /api/clients — no direct DB access.
+ */
+
 import type { ClientProfileJoin } from '@/lib/types/database'
 
-interface ConversationWithClient {
-  id: string
-  client_id: string
-  profiles: ClientProfileJoin | ClientProfileJoin[] | null
-}
-
 /**
- * Fetch the list of clients for a trainer via their conversations.
- * Each conversation links to a client profile via FK join.
+ * Fetch the list of clients for a trainer.
+ * Clients are derived from conversations — any client who has messaged
+ * the trainer will appear here.
+ *
+ * @param _trainerId - Unused (auth context resolved server-side)
  */
-export async function fetchTrainerClientList(trainerId: string): Promise<ClientProfileJoin[]> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('conversations')
-    .select(`
-      id,
-      client_id,
-      profiles!conversations_client_id_fkey (
-        id,
-        full_name,
-        avatar_url,
-        username,
-        email,
-        created_at
-      )
-    `)
-    .eq('trainer_id', trainerId)
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-
-  // Normalize FK join (array | object | null) and extract client profiles
-  return (data as ConversationWithClient[] || [])
-    .map(conv => {
-      const profile = Array.isArray(conv.profiles)
-        ? conv.profiles[0] ?? null
-        : conv.profiles
-      return profile
-    })
-    .filter((p): p is ClientProfileJoin => p !== null)
+export async function fetchTrainerClientList(
+  _trainerId: string
+): Promise<ClientProfileJoin[]> {
+  const res = await fetch('/api/clients')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch clients')
+  }
+  const json = await res.json()
+  return json.data ?? []
 }
 
 /**
  * Fetch a single client's profile detail for a trainer.
- * Verifies the trainer-client relationship exists via conversations.
+ * The server verifies the trainer-client relationship before responding.
+ *
+ * @param _trainerId - Unused (auth context resolved server-side)
+ * @param clientId   - The profile UUID of the client to look up
  */
 export async function fetchClientDetail(
-  trainerId: string,
+  _trainerId: string,
   clientId: string
 ): Promise<ClientProfileJoin & { conversation_id: string }> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('conversations')
-    .select(`
-      id,
-      client_id,
-      profiles!conversations_client_id_fkey (
-        id,
-        full_name,
-        avatar_url,
-        username,
-        email,
-        created_at
-      )
-    `)
-    .eq('trainer_id', trainerId)
-    .eq('client_id', clientId)
-    .single()
-
-  if (error) throw error
-
-  const conv = data as ConversationWithClient
-  const profile = Array.isArray(conv.profiles)
-    ? conv.profiles[0] ?? null
-    : conv.profiles
-
-  if (!profile) throw new Error('Client profile not found')
-
-  return { ...profile, conversation_id: conv.id }
+  const res = await fetch(`/api/clients/${clientId}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch client')
+  }
+  const json = await res.json()
+  return json.data
 }

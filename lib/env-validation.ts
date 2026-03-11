@@ -23,21 +23,39 @@ interface EnvVarConfig {
  */
 const ENV_VARS: EnvVarConfig[] = [
   {
-    name: 'NEXT_PUBLIC_SUPABASE_URL',
-    required: true,
-    description: 'Supabase project URL',
-    clientSide: true,
+    name: 'ABLY_API_KEY',
+    required: false,
+    description: 'Ably API key for real-time messaging (server-side only)',
+    clientSide: false,
   },
   {
-    name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    required: true,
-    description: 'Supabase anonymous/public key (protected by RLS)',
-    clientSide: true,
+    name: 'R2_ACCOUNT_ID',
+    required: false,
+    description: 'Cloudflare R2 account ID for media storage',
+    clientSide: false,
   },
   {
-    name: 'SUPABASE_SERVICE_ROLE_KEY',
-    required: false, // Optional for now, but recommended for admin operations
-    description: 'Supabase service role key (server-side only, bypasses RLS)',
+    name: 'R2_ACCESS_KEY_ID',
+    required: false,
+    description: 'Cloudflare R2 access key ID',
+    clientSide: false,
+  },
+  {
+    name: 'R2_SECRET_ACCESS_KEY',
+    required: false,
+    description: 'Cloudflare R2 secret access key',
+    clientSide: false,
+  },
+  {
+    name: 'R2_BUCKET_NAME',
+    required: false,
+    description: 'Cloudflare R2 bucket name (e.g., forge-media)',
+    clientSide: false,
+  },
+  {
+    name: 'R2_PUBLIC_URL',
+    required: false,
+    description: 'Cloudflare R2 public URL or custom domain',
     clientSide: false,
   },
   {
@@ -65,6 +83,24 @@ const ENV_VARS: EnvVarConfig[] = [
     clientSide: false,
   },
   {
+    name: 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+    required: true,
+    description: 'Clerk publishable key (safe to expose to browser)',
+    clientSide: true,
+  },
+  {
+    name: 'CLERK_SECRET_KEY',
+    required: true,
+    description: 'Clerk secret key (server-side only)',
+    clientSide: false,
+  },
+  {
+    name: 'CLERK_WEBHOOK_SECRET',
+    required: true,
+    description: 'Clerk webhook signing secret (server-side only)',
+    clientSide: false,
+  },
+  {
     name: 'STRIPE_SECRET_KEY',
     required: true,
     description: 'Stripe secret key for server-side API calls (sk_test_... or sk_live_...)',
@@ -81,6 +117,12 @@ const ENV_VARS: EnvVarConfig[] = [
     required: false,
     description: 'Stripe publishable key exposed to the browser (pk_test_... or pk_live_...)',
     clientSide: true,
+  },
+  {
+    name: 'POSTGRES_URL',
+    required: true,
+    description: 'Postgres connection string (Supabase Transaction Pooler, port 6543)',
+    clientSide: false,
   },
 ]
 
@@ -131,22 +173,6 @@ export function validateEnvironmentVariables(): void {
       )
     }
 
-    // Validate URL format for Supabase URL
-    if (config.name === 'NEXT_PUBLIC_SUPABASE_URL' && value) {
-      try {
-        const url = new URL(value)
-        if (!url.hostname.includes('supabase')) {
-          warnings.push(
-            `NEXT_PUBLIC_SUPABASE_URL doesn't appear to be a Supabase URL: ${value}`
-          )
-        }
-      } catch {
-        throw new EnvironmentValidationError(
-          `NEXT_PUBLIC_SUPABASE_URL is not a valid URL: ${value}`
-        )
-      }
-    }
-
     // Validate key format (basic check for JWT format)
     if (config.name.includes('KEY') && value) {
       if (value.length < 20) {
@@ -167,7 +193,7 @@ export function validateEnvironmentVariables(): void {
       ),
       '',
       '💡 Copy .env.example to .env.local and fill in the values.',
-      '   Get your Supabase credentials from: https://app.supabase.com/project/_/settings/api',
+      '   See .env.example for required values.',
     ].join('\n')
 
     throw new EnvironmentValidationError(errorMessage)
@@ -196,7 +222,7 @@ export function validateEnvironmentVariables(): void {
  * @returns The environment variable value or fallback
  *
  * @example
- * const apiUrl = getEnvVar('NEXT_PUBLIC_SUPABASE_URL')
+ * const apiUrl = getEnvVar('ABLY_API_KEY')
  * const optionalKey = getEnvVar('OPTIONAL_KEY', 'default-value')
  */
 export function getEnvVar(name: string, fallback?: string): string {
@@ -219,20 +245,31 @@ export function getEnvVar(name: string, fallback?: string): string {
  * Use this instead of process.env for better type safety.
  */
 export const env = {
-  // Public (client-side) variables
-  supabaseUrl: () => getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
-  supabaseAnonKey: () => getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  // Ably
+  ablyApiKey: () => getEnvVar('ABLY_API_KEY'),
 
-  // Server-side only variables
-  supabaseServiceRoleKey: () => getEnvVar('SUPABASE_SERVICE_ROLE_KEY', ''),
+  // Cloudflare R2
+  r2AccountId: () => getEnvVar('R2_ACCOUNT_ID'),
+  r2AccessKeyId: () => getEnvVar('R2_ACCESS_KEY_ID'),
+  r2SecretAccessKey: () => getEnvVar('R2_SECRET_ACCESS_KEY'),
+  r2BucketName: () => getEnvVar('R2_BUCKET_NAME'),
+  r2PublicUrl: () => getEnvVar('R2_PUBLIC_URL'),
 
   // Node environment
   nodeEnv: () => process.env.NODE_ENV || 'development',
   isDevelopment: () => process.env.NODE_ENV === 'development',
   isProduction: () => process.env.NODE_ENV === 'production',
 
+  // Clerk
+  clerkPublishableKey: () => getEnvVar('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY'),
+  clerkSecretKey: () => getEnvVar('CLERK_SECRET_KEY'),
+  clerkWebhookSecret: () => getEnvVar('CLERK_WEBHOOK_SECRET'),
+
   // Stripe
   stripeSecretKey: () => getEnvVar('STRIPE_SECRET_KEY'),
   stripeWebhookSecret: () => getEnvVar('STRIPE_WEBHOOK_SECRET'),
   stripePublishableKey: () => getEnvVar('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'),
+
+  // Database
+  postgresUrl: () => getEnvVar('POSTGRES_URL'),
 } as const

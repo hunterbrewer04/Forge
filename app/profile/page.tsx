@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
-import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
 import { toast } from 'sonner'
@@ -19,16 +18,13 @@ import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 const CalendarExportSheet = dynamic(() => import('./components/CalendarExportSheet'), { ssr: false })
 
-const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-
 export default function ProfilePage() {
-  const { user, profile, loading, signOut, refreshSession } = useAuth()
+  const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const { isDark, toggleTheme } = useFacilityTheme()
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
   const [showCalendarExport, setShowCalendarExport] = useState(false)
 
@@ -50,7 +46,7 @@ export default function ProfilePage() {
   }
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0 || !user) return
+    if (!event.target.files || event.target.files.length === 0 || !user || !profile) return
     if (uploadingAvatar) return
 
     const file = event.target.files[0]
@@ -67,48 +63,21 @@ export default function ProfilePage() {
       return
     }
 
-    const rawExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
-    const fileExt = ALLOWED_EXTENSIONS.includes(rawExt) ? rawExt : 'bin'
-    if (fileExt === 'bin') {
-      toast.error('Invalid file extension')
-      return
-    }
-
     setUploadingAvatar(true)
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
     try {
-      if (profile?.avatar_url) {
-        const oldPath = profile.avatar_url.split('/avatars/')[1]
-        if (oldPath && oldPath.startsWith(`${user.id}-`)) {
-          await supabase.storage.from('avatars').remove([oldPath])
-        }
-      }
+      const formData = new FormData()
+      formData.append('file', file)
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file)
+      const res = await fetch('/api/avatar', { method: 'POST', body: formData })
+      const data = await res.json()
 
-      if (uploadError) {
-        logger.error('Upload error:', uploadError)
-        toast.error(`Upload failed: ${uploadError.message}`)
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to upload avatar')
         return
       }
 
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName)
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id)
-
-      if (updateError) {
-        await supabase.storage.from('avatars').remove([fileName])
-        toast.error(`Failed to save: ${updateError.message}`)
-        return
-      }
-
-      await refreshSession()
+      await refreshProfile()
       toast.success('Avatar updated successfully')
     } catch (error) {
       logger.error('Error uploading avatar:', error)
@@ -120,18 +89,8 @@ export default function ProfilePage() {
 
   const confirmResetPassword = async () => {
     setShowResetPasswordModal(false)
-    if (!user?.email) return
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
-      })
-      if (error) throw error
-      toast.success('Password reset email sent!')
-    } catch (error) {
-      logger.error('Error sending reset password email:', error)
-      toast.error('Failed to send reset email.')
-    }
+    // TODO: Implement Clerk password management (e.g., redirect to Clerk's user profile or use Clerk's password reset flow)
+    toast.info('Password management is handled through your account provider.')
   }
 
   const getMemberInfo = () => {

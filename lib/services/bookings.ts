@@ -1,314 +1,230 @@
 /**
  * Client-side service for bookings.
- * Uses browser Supabase client - do not call from server components or API routes.
- * For server-side usage, use the API routes instead.
+ * Thin fetch wrappers around /api/bookings and /api/sessions/:id/book.
+ * No direct Supabase access — do not re-add supabase-browser import.
  */
-import { createClient } from '@/lib/supabase-browser'
+
 import type {
   Booking,
   BookingWithSession,
   BookSessionResult,
   BookingFilters,
   CancelBookingInput,
-} from '@/lib/types/sessions'
+} from '@/modules/calendar-booking/types'
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function buildBookingParams(filters: BookingFilters): string {
+  const params = new URLSearchParams()
+  if (filters.status) params.set('status', filters.status)
+  if (filters.upcoming === false) params.set('upcoming', 'false')
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
+
+// ---------------------------------------------------------------------------
+// Booking operations
+// ---------------------------------------------------------------------------
 
 /**
- * Book a session using the atomic database function
- * This handles capacity checks and prevents race conditions
+ * Book a session for the authenticated user.
+ * Uses the API route which performs atomic capacity enforcement.
  */
 export async function bookSession(
   sessionId: string,
-  clientId: string
+  _clientId: string
 ): Promise<BookSessionResult> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase.rpc('book_session', {
-    p_session_id: sessionId,
-    p_client_id: clientId,
+  const res = await fetch(`/api/sessions/${sessionId}/book`, {
+    method: 'POST',
   })
 
-  if (error) throw error
+  const json = await res.json().catch(() => ({}))
 
-  // The function returns an array with one row
-  const result = data?.[0] || {
-    success: false,
-    booking_id: null,
-    error_message: 'Unknown error occurred',
+  if (!res.ok) {
+    return {
+      success: false,
+      booking_id: null,
+      error_message: json?.error ?? 'Failed to book session',
+    }
   }
 
-  return result
+  return {
+    success: true,
+    booking_id: json?.data?.id ?? null,
+    error_message: null,
+  }
 }
 
 /**
- * Cancel a booking
+ * Cancel a booking.
  */
 export async function cancelBooking(
   bookingId: string,
   input?: CancelBookingInput
 ): Promise<Booking> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({
+  const res = await fetch(`/api/bookings/${bookingId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       status: 'cancelled',
-      cancelled_at: new Date().toISOString(),
-      cancellation_reason: input?.cancellation_reason || null,
-    })
-    .eq('id', bookingId)
-    .select()
-    .single()
+      cancellation_reason: input?.cancellation_reason ?? null,
+    }),
+  })
 
-  if (error) throw error
-  return data
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to cancel booking')
+  }
+
+  const json = await res.json()
+  return json.data
 }
 
 /**
- * Fetch a single booking by ID
+ * Fetch a single booking by ID with full session details.
  */
 export async function fetchBookingById(
   bookingId: string
 ): Promise<BookingWithSession | null> {
-  const supabase = createClient()
+  const res = await fetch(`/api/bookings/${bookingId}`)
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .select(`
-      *,
-      session:sessions(
-        *,
-        session_type:session_types(*),
-        trainer:profiles!sessions_trainer_id_fkey(
-          id,
-          full_name,
-          avatar_url
-        )
-      )
-    `)
-    .eq('id', bookingId)
-    .single()
+  if (res.status === 404) return null
 
-  if (error) {
-    if (error.code === 'PGRST116') return null // Not found
-    throw error
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch booking')
   }
 
-  // Handle Supabase FK join format
-  const session = Array.isArray(data.session)
-    ? data.session[0] || null
-    : data.session
-
-  if (session) {
-    session.session_type = Array.isArray(session.session_type)
-      ? session.session_type[0] || null
-      : session.session_type
-    session.trainer = Array.isArray(session.trainer)
-      ? session.trainer[0] || null
-      : session.trainer
-  }
-
-  return {
-    ...data,
-    session,
-  } as BookingWithSession
+  const json = await res.json()
+  return json.data ?? null
 }
 
 /**
- * Fetch bookings for the current user
+ * Fetch bookings for the current user with optional filters.
+ *
+ * @param _userId - Unused (auth context resolved server-side)
  */
 export async function fetchUserBookings(
+  _userId: string,
   filters: BookingFilters = {}
 ): Promise<BookingWithSession[]> {
-  const supabase = createClient()
-  const { data: userData } = await supabase.auth.getUser()
-  const userId = userData?.user?.id
+  const qs = buildBookingParams(filters)
+  const res = await fetch(`/api/bookings${qs}`)
 
-  if (!userId) throw new Error('User not authenticated')
-
-  let query = supabase
-    .from('bookings')
-    .select(`
-      *,
-      session:sessions(
-        *,
-        session_type:session_types(*),
-        trainer:profiles!sessions_trainer_id_fkey(
-          id,
-          full_name,
-          avatar_url
-        )
-      )
-    `)
-    .eq('client_id', userId)
-    .order('booked_at', { ascending: false })
-
-  // Filter by status
-  if (filters.status) {
-    query = query.eq('status', filters.status)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch bookings')
   }
 
-  const { data: bookings, error } = await query
-
-  if (error) throw error
-  if (!bookings) return []
-
-  // Process bookings and filter by upcoming if needed
-  const processedBookings = bookings.map((booking) => {
-    // Handle Supabase FK join format
-    const session = Array.isArray(booking.session)
-      ? booking.session[0] || null
-      : booking.session
-
-    if (session) {
-      session.session_type = Array.isArray(session.session_type)
-        ? session.session_type[0] || null
-        : session.session_type
-      session.trainer = Array.isArray(session.trainer)
-        ? session.trainer[0] || null
-        : session.trainer
-    }
-
-    return {
-      ...booking,
-      session,
-    } as BookingWithSession
-  })
-
-  // Filter for upcoming sessions only
-  if (filters.upcoming !== false) {
-    const now = new Date().toISOString()
-    return processedBookings.filter(
-      (b) => b.session && b.session.starts_at >= now
-    )
-  }
-
-  return processedBookings
+  const json = await res.json()
+  return json.data ?? []
 }
 
 /**
- * Fetch bookings for a specific session (for trainers)
+ * Fetch all bookings for a specific session (trainer view).
  */
 export async function fetchSessionBookings(
   sessionId: string
 ): Promise<Booking[]> {
-  const supabase = createClient()
+  const res = await fetch(`/api/sessions/${sessionId}/bookings`)
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .select(`
-      *,
-      client:profiles!bookings_client_id_fkey(
-        id,
-        full_name,
-        avatar_url
-      )
-    `)
-    .eq('session_id', sessionId)
-    .eq('status', 'confirmed')
-    .order('booked_at', { ascending: true })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch session bookings')
+  }
 
-  if (error) throw error
-
-  // Handle Supabase FK join format
-  return (data || []).map((booking) => {
-    const client = Array.isArray(booking.client)
-      ? booking.client[0] || null
-      : booking.client
-    return {
-      ...booking,
-      client,
-    }
-  }) as Booking[]
+  const json = await res.json()
+  return json.bookings ?? []
 }
 
 /**
- * Check if user has booked a specific session
+ * Check whether the authenticated user has an active booking for a session.
+ *
+ * @param _userId - Unused (auth context resolved server-side)
  */
 export async function hasUserBookedSession(
   sessionId: string,
-  userId: string
+  _userId: string
 ): Promise<boolean> {
-  const supabase = createClient()
+  // Re-uses the GET session detail endpoint which includes user_booking
+  const res = await fetch(`/api/sessions/${sessionId}`)
+  if (!res.ok) return false
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('id')
-    .eq('session_id', sessionId)
-    .eq('client_id', userId)
-    .eq('status', 'confirmed')
-    .maybeSingle()
-
-  if (error) throw error
-  return data !== null
+  const json = await res.json()
+  return !!json?.session?.user_booking
 }
 
 /**
- * Get user's booking for a specific session
+ * Get the authenticated user's booking record for a specific session,
+ * or null if they haven't booked it.
+ *
+ * @param _userId - Unused (auth context resolved server-side)
  */
 export async function getUserBookingForSession(
   sessionId: string,
-  userId: string
+  _userId: string
 ): Promise<Booking | null> {
-  const supabase = createClient()
+  const res = await fetch(`/api/sessions/${sessionId}`)
+  if (!res.ok) return null
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*')
-    .eq('session_id', sessionId)
-    .eq('client_id', userId)
-    .eq('status', 'confirmed')
-    .maybeSingle()
-
-  if (error) throw error
-  return data
+  const json = await res.json()
+  const userBooking = json?.session?.user_booking
+  return userBooking ?? null
 }
 
 /**
- * Mark booking as attended (trainer only)
+ * Mark a booking as attended (trainer only).
  */
 export async function markBookingAttended(bookingId: string): Promise<Booking> {
-  const supabase = createClient()
+  const res = await fetch(`/api/bookings/${bookingId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'attended' }),
+  })
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({ status: 'attended' })
-    .eq('id', bookingId)
-    .select()
-    .single()
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to mark booking as attended')
+  }
 
-  if (error) throw error
-  return data
+  const json = await res.json()
+  return json.data
 }
 
 /**
- * Mark booking as no-show (trainer only)
+ * Mark a booking as no-show (trainer only).
  */
 export async function markBookingNoShow(bookingId: string): Promise<Booking> {
-  const supabase = createClient()
+  const res = await fetch(`/api/bookings/${bookingId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'no_show' }),
+  })
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .update({ status: 'no_show' })
-    .eq('id', bookingId)
-    .select()
-    .single()
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to mark booking as no-show')
+  }
 
-  if (error) throw error
-  return data
+  const json = await res.json()
+  return json.data
 }
 
 /**
- * Get booking count for a user (confirmed bookings only)
+ * Get the count of confirmed bookings for the authenticated user.
+ *
+ * @param _userId - Unused (auth context resolved server-side)
  */
-export async function getUserBookingCount(userId: string): Promise<number> {
-  const supabase = createClient()
+export async function getUserBookingCount(_userId: string): Promise<number> {
+  const res = await fetch('/api/bookings?count_only=true')
 
-  const { count, error } = await supabase
-    .from('bookings')
-    .select('*', { count: 'exact', head: true })
-    .eq('client_id', userId)
-    .eq('status', 'confirmed')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch booking count')
+  }
 
-  if (error) throw error
-  return count || 0
+  const json = await res.json()
+  return typeof json.count === 'number' ? json.count : 0
 }

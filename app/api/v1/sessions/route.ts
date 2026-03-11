@@ -10,9 +10,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
-import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { handleUnexpectedError } from '@/lib/api/errors'
 import { validateQueryParams } from '@/lib/api/validation'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { sessions, bookings } from '@/lib/db/schema'
+import { eq, and, gt, gte, lte, inArray, count } from 'drizzle-orm'
 
 /**
  * Query parameter schema for public session listing.
@@ -67,93 +69,91 @@ export async function GET(request: NextRequest) {
     }
     const params = paramsResult
 
-    // 3. Get admin client to bypass RLS (no authenticated user context)
-    const supabase = getAdminClient()
+    // 3. Build date filter conditions
+    const now = new Date()
+    const conditions = [
+      eq(sessions.status, 'scheduled'),
+      gt(sessions.startsAt, now),
+    ]
 
-    // 4. Build query — always filter for scheduled, future sessions only
-    let query = supabase
-      .from('sessions')
-      .select(`
-        *,
-        session_type:session_types(*),
-        trainer:profiles!sessions_trainer_id_fkey(
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq('status', 'scheduled')
-      .gt('starts_at', new Date().toISOString())
-      .order('starts_at', { ascending: true })
-
-    // 5. Apply date filters
     if (params.date) {
-      const startOfDay = `${params.date}T00:00:00.000Z`
-      const endOfDay = `${params.date}T23:59:59.999Z`
-      query = query.gte('starts_at', startOfDay).lte('starts_at', endOfDay)
-    } else if (params.from || params.to) {
+      const startOfDay = new Date(`${params.date}T00:00:00.000Z`)
+      const endOfDay = new Date(`${params.date}T23:59:59.999Z`)
+      conditions.push(gte(sessions.startsAt, startOfDay))
+      conditions.push(lte(sessions.startsAt, endOfDay))
+    } else {
       if (params.from) {
-        query = query.gte('starts_at', params.from)
+        conditions.push(gte(sessions.startsAt, new Date(params.from)))
       }
       if (params.to) {
-        // Add time component to include the full day
-        query = query.lte('starts_at', `${params.to}T23:59:59`)
+        conditions.push(lte(sessions.startsAt, new Date(`${params.to}T23:59:59`)))
       }
     }
 
-    // 6. Execute query
-    const { data: sessions, error } = await query
+    // 4. Fetch sessions with related session type and trainer
+    const rows = await db.query.sessions.findMany({
+      where: and(...conditions),
+      orderBy: (s, { asc }) => [asc(s.startsAt)],
+      with: {
+        sessionType: true,
+        trainer: {
+          columns: {
+            id: true,
+            fullName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
 
-    if (error) {
-      console.error('Error fetching public sessions:', { code: error?.code, message: error?.message })
-      return createApiError('Failed to fetch sessions', 500, 'DATABASE_ERROR')
-    }
-
-    // 7. Filter by session type slug if specified (post-query, using Array.isArray pattern)
-    let filteredSessions = sessions || []
+    // 5. Filter by session type slug if specified (Drizzle join is always an object, no array coercion needed)
+    let filteredSessions = rows
     if (params.type) {
-      filteredSessions = filteredSessions.filter((s) => {
-        const sessionType = Array.isArray(s.session_type)
-          ? s.session_type[0]
-          : s.session_type
-        return sessionType?.slug === params.type
-      })
+      filteredSessions = filteredSessions.filter(
+        (s) => s.sessionType?.slug === params.type
+      )
     }
 
-    // 8. Fetch availability in batch — single RPC instead of N queries
+    if (filteredSessions.length === 0) {
+      return NextResponse.json({ success: true, sessions: [], count: 0 })
+    }
+
+    // 6. Fetch confirmed booking counts in batch — replaces get_sessions_availability_batch RPC
     const sessionIds = filteredSessions.map((s) => s.id)
 
-    const { data: availabilityData } = sessionIds.length > 0
-      ? await supabase.rpc('get_sessions_availability_batch', { p_session_ids: sessionIds })
-      : { data: [] }
+    const bookingCounts = await db
+      .select({
+        sessionId: bookings.sessionId,
+        bookedCount: count(bookings.id),
+      })
+      .from(bookings)
+      .where(
+        and(
+          inArray(bookings.sessionId, sessionIds),
+          eq(bookings.status, 'confirmed')
+        )
+      )
+      .groupBy(bookings.sessionId)
 
     // Create lookup map for O(1) access
-    const availabilityMap = new Map(
-      (availabilityData || []).map((a: { session_id: string; capacity: number; booked_count: number; spots_left: number; is_full: boolean }) => [a.session_id, a])
+    const bookedCountMap = new Map(
+      bookingCounts.map((b) => [b.sessionId, Number(b.bookedCount)])
     )
 
-    // 9. Map sessions with normalized FK joins and availability data
+    // 7. Map sessions with availability data
     const sessionsWithDetails = filteredSessions.map((session) => {
-      const availability = availabilityMap.get(session.id) || {
-        capacity: session.capacity || 1,
-        booked_count: 0,
-        spots_left: session.capacity || 1,
-        is_full: false,
-      }
-
-      // Handle FK join format (Supabase can return as array or object)
-      const session_type = Array.isArray(session.session_type)
-        ? session.session_type[0] || null
-        : session.session_type
-      const trainer = Array.isArray(session.trainer)
-        ? session.trainer[0] || null
-        : session.trainer
+      const bookedCount = bookedCountMap.get(session.id) ?? 0
+      const capacity = session.capacity ?? 1
+      const spotsLeft = Math.max(0, capacity - bookedCount)
 
       return {
         ...session,
-        session_type,
-        trainer,
-        availability,
+        availability: {
+          capacity,
+          booked_count: bookedCount,
+          spots_left: spotsLeft,
+          is_full: spotsLeft === 0,
+        },
       }
     })
 

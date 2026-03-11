@@ -6,14 +6,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { db } from '@/lib/db'
+import { bookings, profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { BookingSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
 import { sendPushToUser } from '@/lib/services/push-send'
-import { env } from '@/lib/env-validation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -30,90 +31,112 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
-    // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
+    // 3. Fetch booking with relations
+    const booking = await db.query.bookings.findFirst({
+      where: eq(bookings.id, id),
+      with: {
+        session: {
+          with: {
+            sessionType: true,
+            trainer: {
+              columns: {
+                id: true,
+                fullName: true,
+                avatarUrl: true,
+              },
+            },
           },
-          set() {},
-          remove() {},
         },
-      }
-    )
+        client: {
+          columns: {
+            id: true,
+            fullName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    })
 
-    // 4. Fetch booking (RLS will handle access control)
-    const { data: booking, error } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        session:sessions(
-          *,
-          session_type:session_types(*),
-          trainer:profiles!sessions_trainer_id_fkey(
-            id,
-            full_name,
-            avatar_url
-          )
-        ),
-        client:profiles!bookings_client_id_fkey(
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq('id', id)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return createApiError('Booking not found', 404, 'RESOURCE_NOT_FOUND')
-      }
-      console.error('Error fetching booking:', error)
-      return createApiError('Failed to fetch booking', 500, 'DATABASE_ERROR')
+    if (!booking) {
+      return createApiError('Booking not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
-    // 5. Handle FK join format
-    const session = Array.isArray(booking.session)
-      ? booking.session[0] || null
-      : booking.session
+    const session = booking.session
+      ? {
+          id: booking.session.id,
+          trainer_id: booking.session.trainerId,
+          session_type_id: booking.session.sessionTypeId,
+          title: booking.session.title,
+          description: booking.session.description,
+          duration_minutes: booking.session.durationMinutes,
+          capacity: booking.session.capacity,
+          is_premium: booking.session.isPremium,
+          location: booking.session.location,
+          starts_at: booking.session.startsAt,
+          ends_at: booking.session.endsAt,
+          status: booking.session.status,
+          cancelled_at: booking.session.cancelledAt,
+          cancellation_reason: booking.session.cancellationReason,
+          created_at: booking.session.createdAt,
+          updated_at: booking.session.updatedAt,
+          session_type: booking.session.sessionType
+            ? {
+                id: booking.session.sessionType.id,
+                name: booking.session.sessionType.name,
+                slug: booking.session.sessionType.slug,
+                color: booking.session.sessionType.color,
+                icon: booking.session.sessionType.icon,
+                is_premium: booking.session.sessionType.isPremium,
+                created_at: booking.session.sessionType.createdAt,
+                updated_at: booking.session.sessionType.updatedAt,
+              }
+            : null,
+          trainer: booking.session.trainer
+            ? {
+                id: booking.session.trainer.id,
+                full_name: booking.session.trainer.fullName,
+                avatar_url: booking.session.trainer.avatarUrl,
+              }
+            : null,
+        }
+      : null
 
-    if (session) {
-      session.session_type = Array.isArray(session.session_type)
-        ? session.session_type[0] || null
-        : session.session_type
-      session.trainer = Array.isArray(session.trainer)
-        ? session.trainer[0] || null
-        : session.trainer
-    }
-
-    const client = Array.isArray(booking.client)
-      ? booking.client[0] || null
-      : booking.client
+    const client = booking.client
+      ? {
+          id: booking.client.id,
+          full_name: booking.client.fullName,
+          avatar_url: booking.client.avatarUrl,
+        }
+      : null
 
     return NextResponse.json({
       success: true,
       data: {
-        ...booking,
+        id: booking.id,
+        session_id: booking.sessionId,
+        client_id: booking.clientId,
+        status: booking.status,
+        booked_at: booking.bookedAt,
+        cancelled_at: booking.cancelledAt,
+        cancellation_reason: booking.cancellationReason,
+        created_at: booking.createdAt,
+        updated_at: booking.updatedAt,
         session,
         client,
       },
@@ -126,209 +149,294 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 /**
  * PATCH /api/bookings/[id]
  *
- * Cancels a booking.
- * Only the booking owner, session trainer, or admin can cancel.
+ * Updates a booking's status.
+ *
+ * Supported status transitions:
+ * - cancelled  — booking owner, session trainer, or admin
+ * - attended   — session trainer or admin only
+ * - no_show    — session trainer or admin only
  *
  * Body:
- * - cancellation_reason?: string
+ * - status: 'cancelled' | 'attended' | 'no_show'
+ * - cancellation_reason?: string  (only meaningful when status = 'cancelled')
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
 
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.BOOKING,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
     // 3. Parse and validate request body
-    let body: { cancellation_reason?: string | null } = {}
+    // Accept both the legacy cancel-only shape and the new status-aware shape.
+    type PatchBody = {
+      status?: 'cancelled' | 'attended' | 'no_show'
+      cancellation_reason?: string | null
+    }
+    let body: PatchBody = {}
     try {
       const text = await request.text()
       if (text) {
         const parsed = JSON.parse(text)
-        const result = BookingSchemas.cancel.safeParse(parsed)
-        if (!result.success) {
+        // Validate cancellation_reason via existing schema when cancelling
+        const cancelResult = BookingSchemas.cancel.safeParse(parsed)
+        if (!cancelResult.success) {
           return createApiError(
-            `Validation failed: ${result.error.errors.map(e => e.message).join(', ')}`,
+            `Validation failed: ${cancelResult.error.errors.map((e) => e.message).join(', ')}`,
             400,
             'VALIDATION_ERROR'
           )
         }
-        body = result.data
+        // status is optional in the cancel schema — accept it separately
+        const allowedStatuses = ['cancelled', 'attended', 'no_show'] as const
+        const incomingStatus = parsed?.status
+        if (incomingStatus !== undefined && !allowedStatuses.includes(incomingStatus)) {
+          return createApiError(
+            `Invalid status. Allowed: ${allowedStatuses.join(', ')}`,
+            400,
+            'VALIDATION_ERROR'
+          )
+        }
+        body = {
+          status: incomingStatus as PatchBody['status'],
+          cancellation_reason: cancelResult.data.cancellation_reason,
+        }
       }
     } catch {
       return createApiError('Invalid JSON body', 400, 'INVALID_REQUEST')
     }
 
-    // 4. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
+    // Default to 'cancelled' when no status is supplied (backward-compat)
+    const targetStatus = body.status ?? 'cancelled'
+
+    // 4. Fetch existing booking with session details for permission check
+    const existingBooking = await db.query.bookings.findFirst({
+      where: eq(bookings.id, id),
+      with: {
+        session: {
+          columns: {
+            id: true,
+            title: true,
+            trainerId: true,
+            startsAt: true,
           },
-          set() {},
-          remove() {},
         },
-      }
-    )
+      },
+      columns: {
+        id: true,
+        clientId: true,
+        status: true,
+      },
+    })
 
-    // 5. Fetch existing booking to check ownership and get details
-    const { data: existingBooking, error: fetchError } = await supabase
-      .from('bookings')
-      .select(`
-        id,
-        client_id,
-        status,
-        session:sessions(
-          id,
-          title,
-          trainer_id,
-          starts_at
-        )
-      `)
-      .eq('id', id)
-      .single()
-
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        return createApiError('Booking not found', 404, 'RESOURCE_NOT_FOUND')
-      }
-      console.error('Error fetching booking:', fetchError)
-      return createApiError('Failed to fetch booking', 500, 'DATABASE_ERROR')
+    if (!existingBooking) {
+      return createApiError('Booking not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
-    // 6. Check if already cancelled
-    if (existingBooking.status === 'cancelled') {
-      return createApiError('Booking is already cancelled', 400, 'ALREADY_CANCELLED')
-    }
+    const session = existingBooking.session
 
-    // 6b. Prevent cancellation for past sessions (Issue #11)
-    const session = Array.isArray(existingBooking.session)
-      ? existingBooking.session[0]
-      : existingBooking.session
-
-    if (session?.starts_at && new Date(session.starts_at) <= new Date()) {
+    // 5. Guard: already in the target state
+    if (existingBooking.status === targetStatus) {
       return createApiError(
-        'Cannot cancel booking for a session that has already started',
+        `Booking is already ${targetStatus.replace('_', '-')}`,
         400,
-        'SESSION_STARTED'
+        'INVALID_STATUS_TRANSITION'
       )
     }
 
-    // 7. Check user has permission (booking owner, trainer, or admin)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
-
-    const isBookingOwner = existingBooking.client_id === user.id
-    const isSessionTrainer = session?.trainer_id === user.id
-    const isAdmin = profile?.is_admin === true
-
-    if (!isBookingOwner && !isSessionTrainer && !isAdmin) {
-      return createApiError(
-        'You do not have permission to cancel this booking',
-        403,
-        'FORBIDDEN'
-      )
-    }
-
-    // 8. Cancel the booking
-    const { data: booking, error: updateError } = await supabase
-      .from('bookings')
-      .update({
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString(),
-        cancellation_reason: body.cancellation_reason || null,
-      })
-      .eq('id', id)
-      .select(`
-        *,
-        session:sessions(
-          *,
-          session_type:session_types(*),
-          trainer:profiles!sessions_trainer_id_fkey(
-            id,
-            full_name,
-            avatar_url
-          )
+    // 5b. For cancellation: prevent acting on past sessions (client path)
+    if (targetStatus === 'cancelled') {
+      if (session?.startsAt && session.startsAt <= new Date()) {
+        return createApiError(
+          'Cannot cancel booking for a session that has already started',
+          400,
+          'SESSION_STARTED'
         )
-      `)
-      .single()
-
-    if (updateError) {
-      console.error('Error cancelling booking:', updateError)
-      return createApiError('Failed to cancel booking', 500, 'DATABASE_ERROR')
+      }
     }
 
-    // 9. Log audit event
+    // 6. Resolve requester role
+    const requester = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { isAdmin: true },
+    })
+
+    const isBookingOwner = existingBooking.clientId === profileId
+    const isSessionTrainer = session?.trainerId === profileId
+    const isAdmin = requester?.isAdmin === true
+    const isTrainerOrAdmin = isSessionTrainer || isAdmin
+
+    // 7. Permission checks per target status
+    if (targetStatus === 'cancelled') {
+      if (!isBookingOwner && !isTrainerOrAdmin) {
+        return createApiError(
+          'You do not have permission to cancel this booking',
+          403,
+          'FORBIDDEN'
+        )
+      }
+    } else {
+      // attended / no_show — trainer or admin only
+      if (!isTrainerOrAdmin) {
+        return createApiError(
+          'Only the session trainer or an admin can mark attendance',
+          403,
+          'FORBIDDEN'
+        )
+      }
+    }
+
+    // 8. Build update payload
+    const updatePayload: Record<string, unknown> = {
+      status: targetStatus,
+      updatedAt: new Date(),
+    }
+    if (targetStatus === 'cancelled') {
+      updatePayload.cancelledAt = new Date()
+      updatePayload.cancellationReason = body.cancellation_reason ?? null
+    }
+
+    // 9. Apply update
+    const [updatedBooking] = await db
+      .update(bookings)
+      .set(updatePayload)
+      .where(eq(bookings.id, id))
+      .returning()
+
+    // 10. Fetch updated booking with session relations for response
+    const bookingWithSession = await db.query.bookings.findFirst({
+      where: eq(bookings.id, id),
+      with: {
+        session: {
+          with: {
+            sessionType: true,
+            trainer: {
+              columns: {
+                id: true,
+                fullName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    // 11. Log audit event
+    const auditAction =
+      targetStatus === 'cancelled'
+        ? 'BOOKING_CANCEL'
+        : targetStatus === 'attended'
+          ? 'BOOKING_ATTEND'
+          : 'BOOKING_NO_SHOW'
+
     await logAuditEventFromRequest({
-      userId: user.id,
-      action: 'BOOKING_CANCEL',
+      userId: profileId,
+      action: auditAction,
       resource: 'booking',
       resourceId: id,
       metadata: {
         session_id: session?.id,
         session_title: session?.title,
-        cancelled_by: isBookingOwner ? 'client' : isSessionTrainer ? 'trainer' : 'admin',
+        updated_by: isBookingOwner ? 'client' : isSessionTrainer ? 'trainer' : 'admin',
         reason: body.cancellation_reason,
       },
     })
 
-    // 10. Send push notification to the other party
-    const notifyUserId = isBookingOwner ? session?.trainer_id : existingBooking.client_id
-    if (notifyUserId) {
-      const cancelledBy = isBookingOwner ? 'client' : isSessionTrainer ? 'trainer' : 'admin'
-      sendPushToUser(notifyUserId, {
-        title: 'Booking Cancelled',
-        body: `A booking for "${session?.title || 'session'}" was cancelled by the ${cancelledBy}.`,
-        url: '/schedule',
-        type: 'booking',
-      }).catch(() => {}) // Best-effort
+    // 12. Push notification for cancellations only (best-effort)
+    if (targetStatus === 'cancelled') {
+      const notifyUserId = isBookingOwner ? session?.trainerId : existingBooking.clientId
+      if (notifyUserId) {
+        const cancelledBy = isBookingOwner ? 'client' : isSessionTrainer ? 'trainer' : 'admin'
+        sendPushToUser(notifyUserId, {
+          title: 'Booking Cancelled',
+          body: `A booking for "${session?.title || 'session'}" was cancelled by the ${cancelledBy}.`,
+          url: '/schedule',
+          type: 'booking',
+        }).catch(() => {})
+      }
     }
 
-    // 11. Handle FK join format
-    const sessionData = Array.isArray(booking.session)
-      ? booking.session[0] || null
-      : booking.session
+    // 13. Build response
+    const s = bookingWithSession?.session
+    const sessionData = s
+      ? {
+          id: s.id,
+          trainer_id: s.trainerId,
+          session_type_id: s.sessionTypeId,
+          title: s.title,
+          description: s.description,
+          duration_minutes: s.durationMinutes,
+          capacity: s.capacity,
+          is_premium: s.isPremium,
+          location: s.location,
+          starts_at: s.startsAt,
+          ends_at: s.endsAt,
+          status: s.status,
+          cancelled_at: s.cancelledAt,
+          cancellation_reason: s.cancellationReason,
+          created_at: s.createdAt,
+          updated_at: s.updatedAt,
+          session_type: s.sessionType
+            ? {
+                id: s.sessionType.id,
+                name: s.sessionType.name,
+                slug: s.sessionType.slug,
+                color: s.sessionType.color,
+                icon: s.sessionType.icon,
+                is_premium: s.sessionType.isPremium,
+                created_at: s.sessionType.createdAt,
+                updated_at: s.sessionType.updatedAt,
+              }
+            : null,
+          trainer: s.trainer
+            ? {
+                id: s.trainer.id,
+                full_name: s.trainer.fullName,
+                avatar_url: s.trainer.avatarUrl,
+              }
+            : null,
+        }
+      : null
 
-    if (sessionData?.session_type) {
-      sessionData.session_type = Array.isArray(sessionData.session_type)
-        ? sessionData.session_type[0] || null
-        : sessionData.session_type
-    }
-    if (sessionData?.trainer) {
-      sessionData.trainer = Array.isArray(sessionData.trainer)
-        ? sessionData.trainer[0] || null
-        : sessionData.trainer
-    }
+    const statusLabel =
+      targetStatus === 'cancelled'
+        ? 'cancelled'
+        : targetStatus === 'attended'
+          ? 'marked as attended'
+          : 'marked as no-show'
 
     return NextResponse.json({
       success: true,
       data: {
-        ...booking,
+        id: updatedBooking.id,
+        session_id: updatedBooking.sessionId,
+        client_id: updatedBooking.clientId,
+        status: updatedBooking.status,
+        booked_at: updatedBooking.bookedAt,
+        cancelled_at: updatedBooking.cancelledAt,
+        cancellation_reason: updatedBooking.cancellationReason,
+        created_at: updatedBooking.createdAt,
+        updated_at: updatedBooking.updatedAt,
         session: sessionData,
       },
-      message: 'Booking cancelled successfully',
+      message: `Booking ${statusLabel} successfully`,
     })
   } catch (error) {
-    return handleUnexpectedError(error, 'booking-cancel')
+    return handleUnexpectedError(error, 'booking-update')
   }
 }

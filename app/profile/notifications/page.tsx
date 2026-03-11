@@ -20,7 +20,7 @@ import { logger } from '@/lib/utils/logger'
 type PushState = 'loading' | 'unsupported' | 'denied' | 'enabled' | 'disabled'
 
 export default function NotificationSettingsPage() {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const router = useRouter()
   const [pushState, setPushState] = useState<PushState>('loading')
   const [toggling, setToggling] = useState(false)
@@ -53,12 +53,12 @@ export default function NotificationSettingsPage() {
   }, [])
 
   const handleToggle = useCallback(async () => {
-    if (!user || toggling) return
+    if (!user || !profile || toggling) return
     setToggling(true)
 
     try {
       if (pushState === 'enabled') {
-        const success = await unsubscribeFromPush(user.id)
+        const success = await unsubscribeFromPush(profile.id)
         if (success) {
           setPushState('disabled')
           toast.success('Push notifications disabled')
@@ -76,7 +76,7 @@ export default function NotificationSettingsPage() {
         }
 
         if (permission === 'granted') {
-          const success = await subscribeToPush(user.id)
+          const success = await subscribeToPush(profile.id)
           if (success) {
             setPushState('enabled')
             toast.success('Push notifications enabled')
@@ -91,7 +91,7 @@ export default function NotificationSettingsPage() {
     } finally {
       setToggling(false)
     }
-  }, [user, pushState, toggling])
+  }, [user, profile, pushState, toggling])
 
   const isEnabled = pushState === 'enabled'
   const canToggle = pushState === 'enabled' || pushState === 'disabled'

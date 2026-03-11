@@ -1,13 +1,6 @@
-import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 
-const SIGNED_URL_EXPIRY = 3600 // 1 hour
 const CACHE_TTL_MS = 45 * 60 * 1000 // 45 minutes (refresh before 1-hour expiry)
-
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo']
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
 
 // In-memory cache for signed URLs to avoid redundant API calls
 const MAX_CACHE_SIZE = 500
@@ -23,15 +16,18 @@ export async function getSignedMediaUrl(filePath: string): Promise<string | null
     return cached.url
   }
 
-  const supabase = createClient()
-
   try {
-    const { data, error } = await supabase.storage
-      .from('chat-media')
-      .createSignedUrl(filePath, SIGNED_URL_EXPIRY)
+    const res = await fetch(`/api/media/signed-url?path=${encodeURIComponent(filePath)}`)
+    if (!res.ok) {
+      logger.error('Error generating signed URL:', res.status)
+      return null
+    }
 
-    if (error) {
-      logger.error('Error generating signed URL:', error)
+    const data = await res.json()
+    const signedUrl = data.signed_url
+
+    if (!signedUrl) {
+      logger.error('No signed URL returned from API')
       return null
     }
 
@@ -53,11 +49,11 @@ export async function getSignedMediaUrl(filePath: string): Promise<string | null
     }
 
     signedUrlCache.set(filePath, {
-      url: data.signedUrl,
+      url: signedUrl,
       expiresAt: now + CACHE_TTL_MS,
     })
 
-    return data.signedUrl
+    return signedUrl
   } catch (err) {
     logger.error('Unexpected error generating signed URL:', err)
     return null
@@ -65,58 +61,7 @@ export async function getSignedMediaUrl(filePath: string): Promise<string | null
 }
 
 /**
- * Upload media to Supabase storage with type and size validation.
- * Returns the file path and media type, or null on failure.
- */
-export async function uploadMedia(
-  file: File,
-  conversationId: string
-): Promise<{ path: string; type: 'image' | 'video' } | null> {
-  const isImage = ALLOWED_IMAGE_TYPES.includes(file.type)
-  const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type)
-
-  if (!isImage && !isVideo) {
-    logger.error('Upload rejected: invalid file type', file.type)
-    return null
-  }
-
-  if (isImage && file.size > MAX_IMAGE_SIZE) {
-    logger.error('Upload rejected: image too large', file.size)
-    return null
-  }
-
-  if (isVideo && file.size > MAX_VIDEO_SIZE) {
-    logger.error('Upload rejected: video too large', file.size)
-    return null
-  }
-
-  const supabase = createClient()
-
-  const timestamp = Date.now()
-  const randomString = crypto.randomUUID().slice(0, 8)
-  const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
-  const fileName = `${timestamp}-${randomString}.${extension}`
-  const filePath = `${conversationId}/${fileName}`
-
-  const { error } = await supabase.storage
-    .from('chat-media')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false
-    })
-
-  if (error) {
-    logger.error('Upload error:', error)
-    return null
-  }
-
-  const mediaType = isImage ? 'image' : 'video'
-  return { path: filePath, type: mediaType }
-}
-
-/**
  * Process a message to add signed URL for media
- * Used to transform messages with media_url into displayable URLs
  */
 export async function processMessageMedia<T extends { media_url: string | null; media_type: string | null }>(
   message: T

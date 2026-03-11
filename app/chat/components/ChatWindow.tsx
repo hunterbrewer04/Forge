@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { createClient } from '@/lib/supabase-browser'
+import Ably from 'ably'
+import { getAblyClient } from '@/lib/ably-browser'
 import MessageInput from './MessageInput'
 import { useMediaViewer } from './useMediaViewer'
 
@@ -67,7 +68,6 @@ export default function ChatWindow({
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const prevMessagesLength = useRef(0)
   const senderProfileCache = useRef<Map<string, SenderProfile>>(new Map())
-  const supabase = useMemo(() => createClient(), [])
 
   const scrollToBottom = useCallback((smooth = false) => {
     const container = messagesContainerRef.current
@@ -84,15 +84,17 @@ export default function ChatWindow({
     setShowUserInfo(true)
 
     if (!userProfile) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url, username, email, created_at, is_trainer, has_full_access')
-        .eq('id', otherUserId)
-        .single()
-
-      if (data) setUserProfile(data)
+      try {
+        const res = await fetch(`/api/users/${otherUserId}`)
+        if (res.ok) {
+          const json = await res.json()
+          if (json.user) setUserProfile(json.user)
+        }
+      } catch {
+        // Non-critical — user info panel will show partial data from props
+      }
     }
-  }, [otherUserId, supabase, userProfile])
+  }, [otherUserId, userProfile])
 
   // Body scroll lock and escape key for user info panel
   useEffect(() => {
@@ -246,77 +248,73 @@ export default function ChatWindow({
   }, [loadMessages])
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`messages:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        async (payload) => {
-          const senderName = await getCachedSenderProfile(payload.new.sender_id)
+    const ably = getAblyClient()
+    const channel = ably.channels.get(`messages:${conversationId}`)
 
-          const newMessage: Message = {
-            id: payload.new.id,
-            conversation_id: payload.new.conversation_id,
-            sender_id: payload.new.sender_id,
-            content: payload.new.content,
-            media_url: payload.new.media_url,
-            media_type: payload.new.media_type,
-            created_at: payload.new.created_at,
-            read_at: payload.new.read_at,
-            sender_name: senderName,
-            pending: false,
-          }
+    const handleNewMessage = async (message: Ably.Message) => {
+      const payload = message.data as {
+        id: string; conversation_id: string; sender_id: string;
+        content: string | null; media_url: string | null; media_type: string | null;
+        created_at: string; read_at: string | null;
+      }
 
-          const processedMessage = await processMessage(newMessage)
+      const senderName = await getCachedSenderProfile(payload.sender_id)
 
-          setMessages((prev) => {
-            if (payload.new.sender_id === currentUserId) {
-              const withoutOptimistic = prev.filter(msg =>
-                !(msg.pending && msg.content === payload.new.content)
-              )
-              return [...withoutOptimistic, processedMessage]
-            }
-            return [...prev, processedMessage]
-          })
+      const newMessage: Message = {
+        id: payload.id,
+        conversation_id: payload.conversation_id,
+        sender_id: payload.sender_id,
+        content: payload.content,
+        media_url: payload.media_url,
+        media_type: payload.media_type,
+        created_at: payload.created_at,
+        read_at: payload.read_at,
+        sender_name: senderName,
+        pending: false,
+      }
 
-          // Mark new messages from other users as read
-          if (payload.new.sender_id !== currentUserId) {
-            try {
-              await markMessagesAsRead(conversationId, currentUserId)
-            } catch (err) {
-              logger.error('Error marking new message as read:', err)
-            }
-          }
+      const processedMessage = await processMessage(newMessage)
+
+      setMessages((prev) => {
+        if (payload.sender_id === currentUserId) {
+          const withoutOptimistic = prev.filter(msg =>
+            !(msg.pending && msg.content === payload.content)
+          )
+          return [...withoutOptimistic, processedMessage]
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          // Update local message state when read_at changes
-          setMessages(prev => prev.map(msg =>
-            msg.id === payload.new.id
-              ? { ...msg, read_at: payload.new.read_at }
-              : msg
-          ))
+        return [...prev, processedMessage]
+      })
+
+      // Mark new messages from other users as read
+      if (payload.sender_id !== currentUserId) {
+        try {
+          await markMessagesAsRead(conversationId, currentUserId)
+        } catch (err) {
+          logger.error('Error marking new message as read:', err)
         }
-      )
-      .subscribe()
+      }
+    }
+
+    const handleMessagesRead = (message: Ably.Message) => {
+      const payload = message.data as { reader_id: string; read_at: string }
+      // Update read_at for all messages sent by current user (the other party read them)
+      if (payload.reader_id !== currentUserId) {
+        setMessages(prev => prev.map(msg =>
+          msg.sender_id === currentUserId && !msg.read_at
+            ? { ...msg, read_at: payload.read_at }
+            : msg
+        ))
+      }
+    }
+
+    channel.subscribe('new-message', handleNewMessage)
+    channel.subscribe('messages-read', handleMessagesRead)
 
     return () => {
-      supabase.removeChannel(channel)
+      channel.unsubscribe()
+      ably.channels.release(`messages:${conversationId}`)
     }
-  }, [conversationId, supabase, getCachedSenderProfile, currentUserId, processMessage])
+  }, [conversationId, getCachedSenderProfile, currentUserId, processMessage])
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)

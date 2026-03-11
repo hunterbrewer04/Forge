@@ -3,11 +3,9 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
-import type { ProfileJoin } from '@/lib/types/database'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
@@ -33,14 +31,13 @@ export default function HomePage() {
   const isDesktop = useIsDesktop()
   const [messagingStats, setMessagingStats] = useState<Stats>({ totalConversations: 0 })
   const [loadingMessagingStats, setLoadingMessagingStats] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
 
   // Fetch real home data — pass userId to avoid redundant getUser() call
-  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData(user?.id)
+  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData(profile?.id)
 
   // Use shared unread count hook for real-time message count
   const { unreadCount } = useUnreadCount({
-    userId: user?.id,
+    userId: profile?.id,
     isTrainer: profile?.is_trainer,
     isClient: profile?.has_full_access,
   })
@@ -70,47 +67,41 @@ export default function HomePage() {
 
       setLoadingMessagingStats(true)
 
-      if (profile.is_trainer) {
-        const { data: conversations, error } = await supabase
-          .from('conversations')
-          .select('id, client_id')
-          .eq('trainer_id', user.id)
-
-        if (!error && conversations) {
-          setMessagingStats({
-            totalConversations: conversations.length,
-            clientsCount: conversations.length,
-          })
+      try {
+        if (profile.is_trainer) {
+          const res = await fetch('/api/conversations?role=trainer')
+          if (res.ok) {
+            const json = await res.json()
+            const conversations: { id: string }[] = json.conversations || []
+            setMessagingStats({
+              totalConversations: conversations.length,
+              clientsCount: conversations.length,
+            })
+          }
+        } else if (profile.has_full_access) {
+          const res = await fetch('/api/conversations?role=client')
+          if (res.ok) {
+            const json = await res.json()
+            const conversation = json.conversation as {
+              trainer: { full_name: string | null } | null
+            } | null
+            if (conversation) {
+              setMessagingStats({
+                totalConversations: 1,
+                trainerName: conversation.trainer?.full_name || 'Coach',
+              })
+            }
+          }
         }
-      } else if (profile.has_full_access) {
-        const { data: conversation, error } = await supabase
-          .from('conversations')
-          .select(`
-            id,
-            trainer:profiles!conversations_trainer_id_fkey (
-              full_name
-            )
-          `)
-          .eq('client_id', user.id)
-          .single()
-
-        if (!error && conversation) {
-          const trainerData = conversation.trainer
-          const trainer = Array.isArray(trainerData)
-            ? trainerData[0] as ProfileJoin | undefined
-            : trainerData as ProfileJoin | null
-          setMessagingStats({
-            totalConversations: 1,
-            trainerName: trainer?.full_name || 'Coach',
-          })
-        }
+      } catch (err) {
+        console.error('Error fetching messaging stats:', err)
       }
 
       setLoadingMessagingStats(false)
     }
 
     fetchStats()
-  }, [user, profile, supabase])
+  }, [user, profile])
 
   if (loading) {
     return (

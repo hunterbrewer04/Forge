@@ -9,21 +9,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { timingSafeEqual } from 'crypto'
-import { env } from '@/lib/env-validation'
+import { db } from '@/lib/db'
+import { profiles, bookings } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 import { isValidUUID } from '@/lib/api/validation'
-import { generateICalFeed } from '@/lib/services/calendar'
-import type { Session, SessionType } from '@/lib/types/sessions'
+import { generateICalFeed } from '@/modules/calendar-booking/services/calendar'
 
 interface RouteParams {
   params: Promise<{ clientId: string }>
-}
-
-interface SessionForCalendar extends Session {
-  session_type?: SessionType | null
-  booked_count?: number
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -60,21 +55,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
     }
 
-    // Use admin client to bypass RLS for token validation
-    const supabase = createClient(
-      env.supabaseUrl(),
-      env.supabaseServiceRoleKey(),
-      { auth: { persistSession: false } }
-    )
-
     // Validate token and get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, full_name, calendar_token')
-      .eq('id', cleanClientId)
-      .single()
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, cleanClientId),
+      columns: { id: true, fullName: true, calendarToken: true },
+    })
 
-    if (profileError || !profile) {
+    if (!profile) {
       return new NextResponse('Not Found - User not found', {
         status: 404,
         headers: { 'Content-Type': 'text/plain' },
@@ -82,7 +69,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Use constant-time comparison to prevent timing attacks
-    const storedToken = profile.calendar_token || ''
+    const storedToken = profile.calendarToken || ''
     let tokensMatch = false
     try {
       const a = Buffer.from(token, 'utf8')
@@ -106,61 +93,52 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const endDate = new Date(now)
     endDate.setDate(endDate.getDate() + 90)
 
-    // Fetch client's confirmed bookings with session data
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select(`
-        session_id,
-        session:sessions!inner(
-          *,
-          session_type:session_types(*)
-        )
-      `)
-      .eq('client_id', cleanClientId)
-      .eq('status', 'confirmed')
+    // Fetch client's confirmed bookings with nested session and session type
+    const clientBookings = await db.query.bookings.findMany({
+      where: and(
+        eq(bookings.clientId, cleanClientId),
+        eq(bookings.status, 'confirmed')
+      ),
+      with: {
+        session: {
+          with: {
+            sessionType: true,
+          },
+        },
+      },
+    })
 
-    if (bookingsError) {
-      console.error('Error fetching bookings for calendar:', bookingsError)
-      return new NextResponse('Internal Server Error', {
-        status: 500,
-        headers: { 'Content-Type': 'text/plain' },
-      })
-    }
-
-    // Filter sessions by date range and map to SessionForCalendar format
-    const sessionsWithBookings: SessionForCalendar[] = (bookings || [])
-      .map((booking) => {
-        // Handle FK join array format
-        const sessionData = Array.isArray(booking.session)
-          ? booking.session[0]
-          : booking.session
-
-        if (!sessionData) return null
-
-        const session_type = Array.isArray(sessionData.session_type)
-          ? sessionData.session_type[0] || null
-          : sessionData.session_type
+    // Filter by date range and map to feed shape
+    const sessionsForFeed = clientBookings
+      .map(booking => {
+        const session = booking.session
+        if (!session) return null
 
         return {
-          ...sessionData,
-          session_type,
-          booked_count: 0, // Not relevant for client view
-        } as SessionForCalendar
+          id: session.id,
+          title: session.title,
+          description: session.description,
+          location: session.location,
+          startsAt: session.startsAt,
+          endsAt: session.endsAt,
+          status: session.status,
+          isPremium: session.isPremium,
+          capacity: session.capacity,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+          sessionType: session.sessionType ?? null,
+          bookedCount: 0, // Not relevant for client view
+        }
       })
-      .filter((session): session is SessionForCalendar => {
+      .filter((session): session is NonNullable<typeof session> => {
         if (!session) return false
-
         // Filter by date range
-        const sessionDate = new Date(session.starts_at)
-        return sessionDate >= startDate && sessionDate <= endDate
+        return session.startsAt >= startDate && session.startsAt <= endDate
       })
-      .sort((a, b) => {
-        // Sort by start time
-        return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
-      })
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
 
     // Generate iCal feed
-    const ical = generateICalFeed(sessionsWithBookings)
+    const ical = generateICalFeed(sessionsForFeed)
 
     // Return iCal file with appropriate headers
     return new NextResponse(ical, {

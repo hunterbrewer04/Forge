@@ -4,11 +4,13 @@
  * Provides audit logging capabilities for tracking security-sensitive
  * operations and user actions in the application.
  *
- * IMPORTANT: Requires the audit_logs table to exist in Supabase.
+ * IMPORTANT: Requires the audit_logs table to exist in the database.
  * Run the migration in docs/migrations/create_audit_logs.sql
  */
 
-import { createAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { auditLogs } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
 // ============================================================================
@@ -35,6 +37,8 @@ export type AuditAction =
   | 'SESSION_DELETE'
   | 'BOOKING_CREATE'
   | 'BOOKING_CANCEL'
+  | 'BOOKING_ATTEND'
+  | 'BOOKING_NO_SHOW'
   | 'ADMIN_ACTION'
   | 'RATE_LIMIT_EXCEEDED'
   | 'SECURITY_ALERT'
@@ -61,14 +65,14 @@ export interface AuditLogEntry {
 
 export interface AuditLogRecord {
   id: string
-  user_id: string
+  userId: string
   action: string
   resource: string
-  resource_id: string | null
+  resourceId: string | null
   metadata: Record<string, unknown> | null
-  ip_address: string | null
-  user_agent: string | null
-  created_at: string
+  ipAddress: string | null
+  userAgent: string | null
+  createdAt: Date
 }
 
 // ============================================================================
@@ -147,32 +151,24 @@ function sanitizeMetadata(
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<boolean> {
   try {
-    const supabase = createAdminClient()
-
     const ipAddress = entry.ipAddress || await getClientIp()
     const userAgent = entry.userAgent || await getUserAgent()
     const sanitizedMetadata = sanitizeMetadata(entry.metadata)
 
-    const { error } = await supabase.from('audit_logs').insert({
-      user_id: entry.userId,
+    await db.insert(auditLogs).values({
+      userId: entry.userId,
       action: entry.action,
       resource: entry.resource,
-      resource_id: entry.resourceId || null,
+      resourceId: entry.resourceId || null,
       metadata: sanitizedMetadata,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      created_at: new Date().toISOString(),
+      ipAddress: ipAddress,
+      userAgent: userAgent,
     })
-
-    if (error) {
-      // Log error but don't throw - audit logging should never break the app
-      console.error('Failed to write audit log:', error.message)
-      return false
-    }
 
     return true
   } catch (error) {
     // Catch any errors (including missing table) gracefully
+    // Audit logging should never break the app
     console.error('Audit logging error:', error)
     return false
   }
@@ -281,21 +277,13 @@ export async function getAuditLogsForUser(
   limit = 100
 ): Promise<AuditLogRecord[]> {
   try {
-    const supabase = createAdminClient()
+    const rows = await db.query.auditLogs.findMany({
+      where: eq(auditLogs.userId, userId),
+      orderBy: (logs, { desc }) => [desc(logs.createdAt)],
+      limit,
+    })
 
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.error('Failed to query audit logs:', error.message)
-      return []
-    }
-
-    return data as AuditLogRecord[]
+    return rows as AuditLogRecord[]
   } catch (error) {
     console.error('Audit log query error:', error)
     return []
@@ -313,21 +301,13 @@ export async function getAuditLogsByAction(
   limit = 100
 ): Promise<AuditLogRecord[]> {
   try {
-    const supabase = createAdminClient()
+    const rows = await db.query.auditLogs.findMany({
+      where: eq(auditLogs.action, action),
+      orderBy: (logs, { desc }) => [desc(logs.createdAt)],
+      limit,
+    })
 
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('action', action)
-      .order('created_at', { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.error('Failed to query audit logs:', error.message)
-      return []
-    }
-
-    return data as AuditLogRecord[]
+    return rows as AuditLogRecord[]
   } catch (error) {
     console.error('Audit log query error:', error)
     return []

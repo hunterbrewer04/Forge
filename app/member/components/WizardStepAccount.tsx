@@ -8,9 +8,9 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Check, Circle } from 'lucide-react'
-import { createClient } from '@/lib/supabase-browser'
+import { useSignUp } from '@clerk/nextjs'
 import { PASSWORD_REQUIREMENTS, validatePassword } from '@/lib/utils/password'
-import { getErrorMessage } from '@/lib/utils/errors'
+import { getClerkErrorMessage } from '@/lib/utils/errors'
 import { Input } from '@/components/ui/shadcn/input'
 import { Label } from '@/components/ui/shadcn/label'
 import { Button } from '@/components/ui/shadcn/button'
@@ -37,7 +37,7 @@ export default function WizardStepAccount({ onComplete }: WizardStepAccountProps
   const [loading, setLoading] = useState(false)
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false)
 
-  const supabase = useMemo(() => createClient(), [])
+  const { isLoaded, signUp, setActive } = useSignUp()
 
   const passwordStatus = useMemo(() => {
     const results = PASSWORD_REQUIREMENTS.map((req) => ({
@@ -78,37 +78,39 @@ export default function WizardStepAccount({ onComplete }: WizardStepAccountProps
       return
     }
 
+    if (!isLoaded) return
+
     setLoading(true)
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
+      const nameParts = fullName.trim().split(' ')
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+
+      const result = await signUp.create({
+        emailAddress: email,
         password,
-        options: {
-          data: { full_name: fullName },
-        },
+        firstName,
+        lastName,
       })
 
-      if (signUpError) throw signUpError
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId })
 
-      if (data.user && data.session) {
-        // Email confirmation disabled — active session, claim member flag immediately
         try {
           const claimRes = await fetch('/api/member/claim', { method: 'POST' })
-          if (!claimRes.ok) {
-            console.error('Member claim failed:', claimRes.status, await claimRes.text())
-          }
+          if (!claimRes.ok) console.error('Member claim failed:', claimRes.status)
         } catch (err) {
           console.error('Member claim request failed:', err)
         }
+
         onComplete()
-      } else if (data.user) {
-        // Email confirmation enabled — inform user
-        setError('Check your email to confirm your account, then sign in to continue.')
+      } else {
+        setError('Account creation incomplete. Please try again.')
         setLoading(false)
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err))
+      setError(getClerkErrorMessage(err, 'Account creation failed. Please try again.'))
       setLoading(false)
     }
   }

@@ -7,7 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { sessionTypes } from '@/lib/db/schema'
+import { asc } from 'drizzle-orm'
 
 /**
  * GET /api/v1/session-types
@@ -23,23 +25,29 @@ export async function GET(request: NextRequest) {
       return rateLimitResult
     }
 
-    // 2. Query session types via admin client (bypasses RLS)
-    const supabase = getAdminClient()
-
-    const { data: sessionTypes, error } = await supabase
-      .from('session_types')
-      .select('id, name, slug, color, icon, is_premium')
-      .order('name', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching session types:', { code: error?.code, message: error?.message })
+    // 2. Query session types via Drizzle
+    let results
+    try {
+      results = await db.query.sessionTypes.findMany({
+        columns: {
+          id: true,
+          name: true,
+          slug: true,
+          color: true,
+          icon: true,
+          isPremium: true,
+        },
+        orderBy: asc(sessionTypes.name),
+      })
+    } catch (dbErr) {
+      console.error('Error fetching session types:', dbErr)
       return createApiError('Failed to fetch session types', 500, 'DATABASE_ERROR')
     }
 
     // 3. Return public session types
     return NextResponse.json({
       success: true,
-      sessionTypes: sessionTypes || [],
+      sessionTypes: results,
     })
   } catch (error) {
     return handleUnexpectedError(error, 'v1-session-types-list')

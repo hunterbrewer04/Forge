@@ -21,8 +21,8 @@ export default function ClientDetailPage() {
   const params = useParams()
   const router = useRouter()
   const clientId = params.id as string
-  const { user } = useAuth()
-  const { client, loading, error } = useClientDetail(user?.id, clientId)
+  const { profile } = useAuth()
+  const { client, loading, error } = useClientDetail(profile?.id, clientId)
 
   const formatJoinDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

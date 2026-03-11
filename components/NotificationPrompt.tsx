@@ -11,11 +11,11 @@ import {
 } from '@/lib/services/push-notifications'
 
 export default function NotificationPrompt() {
-  const { user } = useAuth()
+  const { profile } = useAuth()
   const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
-    if (!user?.id || !isPushSupported()) return
+    if (!profile?.id || !isPushSupported()) return
 
     // Don't show if already granted or denied
     const permission = getNotificationPermission()
@@ -34,14 +34,14 @@ export default function NotificationPrompt() {
     }, 45_000)
 
     return () => clearTimeout(timer)
-  }, [user?.id])
+  }, [profile?.id])
 
   const handleEnable = async () => {
-    if (!user?.id) return
+    if (!profile?.id) return
 
     const permission = await requestNotificationPermission()
     if (permission === 'granted') {
-      await subscribeToPush(user.id)
+      await subscribeToPush(profile.id)
     }
     setShowPrompt(false)
   }

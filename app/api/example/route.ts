@@ -6,7 +6,7 @@
  * - Rate limiting
  * - Request validation
  * - Error handling
- * - Proper use of Supabase clients from Phase 1
+ * - Proper use of Drizzle ORM for database queries
  *
  * Copy this pattern when creating new API routes
  */
@@ -37,17 +37,17 @@ const RequestSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit (60 requests per minute)
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // In a real endpoint, you would fetch data from the database here
     const data = {
       message: 'This is a secure API endpoint',
-      userId: user.id,
+      userId: profileId,
       timestamp: new Date().toISOString(),
     }
 
@@ -77,17 +77,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit (stricter for POST operations)
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.MESSAGING,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
@@ -102,14 +102,13 @@ export async function POST(request: NextRequest) {
 
     // 4. Process request
     // In a real endpoint, you would:
-    // - Use createServerClient() from @/lib/supabase-server for user-scoped operations
-    // - Use createAdminClient() from @/lib/supabase-admin only when necessary
-    // - Never trust client-provided user IDs - always use auth.uid() or the validated user.id
+    // - Use db from @/lib/db for database operations
+    // - Never trust client-provided user IDs - always use the validated profileId
 
     const data = {
       success: true,
       message: 'Data processed successfully',
-      userId: user.id,
+      userId: profileId,
       receivedMessage: message,
       priority: priority,
       timestamp: new Date().toISOString(),

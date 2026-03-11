@@ -1,6 +1,6 @@
 # Forge Sports Performance — Project Context
 
-Forge is a PWA for sports performance training — a trainer-client platform with messaging, session bookings, and payments. Hosted on Vercel (frontend) + Supabase (backend/auth/db/storage).
+Forge is a PWA for sports performance training — a trainer-client platform with messaging, session bookings, and payments. Hosted on Vercel (frontend) + Supabase (Postgres host, Realtime, Storage) with Clerk (auth) and Drizzle ORM (database queries).
 
 ## Important: Do NOT Build Locally
 
@@ -11,7 +11,7 @@ Forge is a PWA for sports performance training — a trainer-client platform wit
 
 ## Commands (for reference only)
 
-- `npm run dev` — local dev server (requires `.env.local` with Supabase credentials)
+- `npm run dev` — local dev server (requires `.env.local`)
 - `npm run build` — production build
 - `npm run lint` — ESLint
 - `npm run start` — serve production build
@@ -19,10 +19,13 @@ Forge is a PWA for sports performance training — a trainer-client platform wit
 ## Tech Stack
 
 - Next.js 16 (App Router), React 19, TypeScript (strict)
-- Supabase (auth, Postgres DB, storage, realtime subscriptions, RLS)
+- **Drizzle ORM** + `postgres` driver — all database queries
+- Supabase (Postgres host, Realtime subscriptions, Storage) — NOT used for queries anymore
+- Clerk (authentication)
 - TanStack React Query v5 (client-side data fetching/caching)
 - Tailwind CSS v4 (PostCSS plugin, CSS-variable-based theming)
 - Zod (API request validation)
+- Stripe (payments, subscriptions)
 - web-push (push notifications via VAPID)
 - Lucide React (icons), Sonner (toasts)
 - PWA: service worker (`public/sw.js`), manifest, offline support
@@ -32,10 +35,10 @@ Forge is a PWA for sports performance training — a trainer-client platform wit
 ```
 app/                    # Next.js App Router pages
   trainer/              # Trainer routes (sessions, settings, clients — role-gated via layout)
-  api/                  # API routes (bookings, sessions, calendar, push, upload)
+  api/                  # API routes (bookings, sessions, calendar, conversations, clients, push, upload)
   chat/                 # Messaging UI (role-based: trainer sees all, client sees one)
   home/                 # Dashboard
-  login/ signup/        # Auth pages
+  member/               # Signup/login
   payments/             # Payment management
   profile/              # User profile
   schedule/             # Session booking with calendar
@@ -45,17 +48,22 @@ components/
   skeletons/            # Loading skeleton components
   ui/                   # ConfirmModal, EmptyState, Toast, icons
 contexts/
-  AuthContext.tsx        # Global auth state, profile, session management
+  AuthContext.tsx        # Global auth state (Clerk), profile, session management
   FacilityThemeContext.tsx  # Light/dark/system theme, facility branding
 lib/
   api/                  # API utilities (auth, rate-limit, validation, errors)
+  db/                   # Drizzle ORM layer
+    schema.ts           # Table definitions + relations (9 tables)
+    index.ts            # Drizzle client singleton (server-only)
+    types.ts            # Inferred select/insert types from schema
+    queries/            # Complex query helpers (bookings, sessions, calendar)
   hooks/                # useHomeData, usePullToRefresh, useScheduleData, useUnreadCount, useToast
-  services/             # Business logic (bookings, sessions, messages, conversations, etc.)
-  types/                # TypeScript types (database.ts, sessions.ts)
+  services/             # Client-side fetch wrappers (bookings, sessions, messages, conversations, etc.)
+  types/                # API response types (database.ts, sessions.ts)
   utils/                # date, errors, haptics, logger
-  supabase-browser.ts   # Client-side Supabase (RLS-protected)
-  supabase-server.ts    # Server-side Supabase (cookie-based auth)
-  supabase-admin.ts     # Admin Supabase (service role, server-only)
+  supabase-browser.ts   # Client-side Supabase (Realtime + Storage ONLY)
+  supabase-admin.ts     # Server-side Supabase (Storage uploads ONLY)
+drizzle.config.ts       # Drizzle Kit config (for introspection/migrations)
 public/
   sw.js                 # Service worker (cache v8)
   manifest.json         # PWA manifest
@@ -65,12 +73,13 @@ public/
 
 - **Path alias**: `@/*` maps to project root
 - **Server vs client**: Pages are server components by default; `'use client'` for interactive components
-- **Supabase clients**: 3 variants (browser/server/admin) — never use admin client on client-side
-- **Auth**: `AuthContext` provides `user`, `profile`, `loading`, `signOut` — wraps entire app
-- **Roles**: `profiles` table has `is_trainer`, `is_admin`, `is_client` flags — admin layout checks server-side
-- **FK join handling**: Supabase returns FK joins as arrays sometimes — services normalize to objects
-- **Data fetching**: React Query for client-side; direct Supabase calls in server components/API routes
-- **Realtime**: Supabase Realtime subscriptions for new messages and unread counts
+- **Database**: All DB queries use Drizzle ORM (`lib/db/index.ts`). Schema at `lib/db/schema.ts`. Column names are camelCase in Drizzle, snake_case in the actual Postgres columns.
+- **Auth**: Clerk for authentication. `AuthContext` wraps the app. API routes use `validateAuth()` / `validateRole()` from `lib/api/auth.ts`.
+- **Roles**: `profiles` table has `isTrainer`, `isAdmin`, `isMember`, `hasFullAccess` flags
+- **Data fetching**: React Query for client-side; Drizzle queries in server components/API routes
+- **Client services**: `lib/services/*.ts` are fetch wrappers to API routes — no direct DB access from the browser
+- **Realtime**: Supabase Realtime subscriptions for new messages and unread counts (migrates to Ably in Phase 4)
+- **Storage**: Supabase Storage for chat media and avatars (migrates to R2 in Phase 4)
 - **API security**: Rate limiting, Zod validation, auth middleware, audit logging
 
 ## Design System
@@ -91,9 +100,10 @@ public/
 
 ## Gotchas
 
-- Supabase FK joins can return `array | object | null` — always check with `Array.isArray()`
 - Service worker (`sw.js`) must be updated manually (bump cache version)
-- `supabase-admin.ts` uses `'server-only'` import — will error if imported in client code
+- `lib/db/index.ts` uses `'server-only'` import — will error if imported in client code
+- `supabase-admin.ts` is Storage-only — do NOT use for DB queries (use `lib/db` instead)
 - Env validation runs on server startup — will throw if required vars missing
 - CSS uses `@theme inline` (Tailwind v4 syntax) — not compatible with Tailwind v3
 - No `middleware.ts` — auth protection happens in layouts and API route helpers
+- Drizzle schema uses camelCase (`trainerId`), Postgres columns are snake_case (`trainer_id`). API responses use snake_case for frontend compatibility.

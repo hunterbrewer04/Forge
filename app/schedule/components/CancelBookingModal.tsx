@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { X, AlertTriangle, CheckCircle, Loader2 } from '@/components/ui/icons'
-import type { SessionWithDetails } from '@/lib/types/sessions'
+import type { SessionWithDetails } from '@/modules/calendar-booking/types'
 
 interface CancelBookingModalProps {
   session: SessionWithDetails

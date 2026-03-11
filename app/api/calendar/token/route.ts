@@ -6,11 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { validateAuth } from '@/lib/api/auth'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { getOrCreateCalendarToken, regenerateCalendarToken } from '@/modules/calendar-booking/services/calendar'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
-import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
-import { env } from '@/lib/env-validation'
+import { handleUnexpectedError } from '@/lib/api/errors'
 
 /**
  * Derive base URL from the incoming request.
@@ -35,67 +37,44 @@ function getBaseUrl(request: NextRequest): string {
 export async function GET(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.GENERAL,
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
-    // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    // 3. Get or create token
+    const token = await getOrCreateCalendarToken(db, profileId)
 
-    // 4. Get or create token
-    const { data: token, error } = await supabase.rpc('get_or_create_calendar_token', {
-      p_user_id: user.id,
+    // 4. Get user profile to determine role
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { isTrainer: true },
     })
 
-    if (error) {
-      console.error('Error getting calendar token:', error)
-      return createApiError('Failed to get calendar token', 500, 'DATABASE_ERROR')
-    }
+    const isTrainer = profile?.isTrainer ?? false
 
-    // 5. Get user profile to determine role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_trainer')
-      .eq('id', user.id)
-      .single()
-
-    const isTrainer = profile?.is_trainer ?? false
-
-    // 6. Build feed URL based on role
+    // 5. Build feed URL based on role
     const baseUrl = getBaseUrl(request)
     const feedUrl = isTrainer
-      ? `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
-      : `${baseUrl}/api/calendar/client/${user.id}.ics?token=${token}`
+      ? `${baseUrl}/api/calendar/${profileId}.ics?token=${token}`
+      : `${baseUrl}/api/calendar/client/${profileId}.ics?token=${token}`
 
     return NextResponse.json({
       success: true,
       token,
       feedUrl,
-      userId: user.id,
+      userId: profileId,
     })
   } catch (error) {
     return handleUnexpectedError(error, 'calendar-token-get')
@@ -110,67 +89,44 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 1. Validate authentication
-    const authResult = await validateAuth(request)
+    const authResult = await validateAuth()
     if (authResult instanceof NextResponse) {
       return authResult
     }
-    const user = authResult
+    const { profileId } = authResult
 
     // 2. Check rate limit (stricter for regeneration)
     const rateLimitResult = await checkRateLimit(
       request,
       RateLimitPresets.BOOKING, // Use booking preset (10/min) for regeneration
-      user.id
+      profileId
     )
     if (rateLimitResult) {
       return rateLimitResult
     }
 
-    // 3. Create Supabase client
-    const supabase = createServerClient(
-      env.supabaseUrl(),
-      env.supabaseAnonKey(),
-      {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    // 3. Regenerate token
+    const token = await regenerateCalendarToken(db, profileId)
 
-    // 4. Regenerate token
-    const { data: token, error } = await supabase.rpc('regenerate_calendar_token', {
-      p_user_id: user.id,
+    // 4. Get user profile to determine role
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { isTrainer: true },
     })
 
-    if (error) {
-      console.error('Error regenerating calendar token:', error)
-      return createApiError('Failed to regenerate calendar token', 500, 'DATABASE_ERROR')
-    }
+    const isTrainer = profile?.isTrainer ?? false
 
-    // 5. Get user profile to determine role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_trainer')
-      .eq('id', user.id)
-      .single()
-
-    const isTrainer = profile?.is_trainer ?? false
-
-    // 6. Build new feed URL based on role
+    // 5. Build new feed URL based on role
     const baseUrl = getBaseUrl(request)
     const feedUrl = isTrainer
-      ? `${baseUrl}/api/calendar/${user.id}.ics?token=${token}`
-      : `${baseUrl}/api/calendar/client/${user.id}.ics?token=${token}`
+      ? `${baseUrl}/api/calendar/${profileId}.ics?token=${token}`
+      : `${baseUrl}/api/calendar/client/${profileId}.ics?token=${token}`
 
     return NextResponse.json({
       success: true,
       token,
       feedUrl,
-      userId: user.id,
+      userId: profileId,
       message: 'Calendar token regenerated. Old feed URLs are now invalid.',
     })
   } catch (error) {

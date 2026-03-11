@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { stripe } from '@/lib/stripe'
 import { handleUnexpectedError } from '@/lib/api/errors'
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await validateAuth(request)
+    const auth = await validateAuth()
     if (auth instanceof NextResponse) return auth
+    const { profileId } = auth
 
-    const supabase = getAdminClient()
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', auth.id)
-      .single()
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { stripeCustomerId: true },
+    })
 
-    if (!profile?.stripe_customer_id) {
+    if (!profile?.stripeCustomerId) {
       return NextResponse.json({ invoices: [] })
     }
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(limitParam || '10', 10), 100)
 
     const invoices = await stripe.invoices.list({
-      customer: profile.stripe_customer_id,
+      customer: profile.stripeCustomerId,
       limit,
     })
 

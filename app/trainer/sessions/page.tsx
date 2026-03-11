@@ -16,7 +16,7 @@ import {
   RefreshCw,
   Settings,
 } from '@/components/ui/icons'
-import type { SessionWithDetails, SessionType } from '@/lib/types/sessions'
+import type { SessionWithDetails, SessionType } from '@/modules/calendar-booking/types'
 import { motion } from 'framer-motion'
 import { staggerContainer } from '@/lib/motion'
 

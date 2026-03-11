@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles, membershipTiers } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { handleUnexpectedError } from '@/lib/api/errors'
 import { env } from '@/lib/env-validation'
 
@@ -20,13 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
-    const supabase = getAdminClient()
-
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object
-        const userId = subscription.metadata?.supabase_user_id
+        const userId = subscription.metadata?.profile_id ?? subscription.metadata?.supabase_user_id
         const tierId = subscription.metadata?.membership_tier_id
 
         if (!userId) break
@@ -36,40 +36,39 @@ export async function POST(request: NextRequest) {
           : subscription.status === 'past_due' ? 'past_due'
           : 'canceled'
 
-        await supabase
-          .from('profiles')
-          .update({
-            membership_status: status,
-            stripe_subscription_id: subscription.id,
-            ...(tierId ? { membership_tier_id: tierId } : {}),
-            ...(status === 'active' ? { is_member: true } : {}),
+        await db
+          .update(profiles)
+          .set({
+            membershipStatus: status,
+            stripeSubscriptionId: subscription.id,
+            ...(tierId ? { membershipTierId: tierId } : {}),
+            ...(status === 'active' ? { isMember: true } : {}),
           })
-          .eq('id', userId)
+          .where(eq(profiles.id, userId))
         break
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object
-        const userId = subscription.metadata?.supabase_user_id
+        const userId = subscription.metadata?.profile_id ?? subscription.metadata?.supabase_user_id
         if (!userId) break
 
-        await supabase
-          .from('profiles')
-          .update({ membership_status: 'canceled' })
-          .eq('id', userId)
+        await db
+          .update(profiles)
+          .set({ membershipStatus: 'canceled' })
+          .where(eq(profiles.id, userId))
         break
       }
 
       case 'price.updated': {
         const price = event.data.object
         if (price.unit_amount != null) {
-          await supabase
-            .from('membership_tiers')
-            .update({
-              price_monthly: price.unit_amount / 100,
-              updated_at: new Date().toISOString(),
+          await db
+            .update(membershipTiers)
+            .set({
+              priceMonthly: String(price.unit_amount / 100),
             })
-            .eq('stripe_price_id', price.id)
+            .where(eq(membershipTiers.stripePriceId, price.id))
         }
         break
       }
@@ -79,10 +78,10 @@ export async function POST(request: NextRequest) {
         const customerId = typeof invoice.customer === 'string' ? invoice.customer : null
         if (!customerId) break
 
-        await supabase
-          .from('profiles')
-          .update({ membership_status: 'past_due' })
-          .eq('stripe_customer_id', customerId)
+        await db
+          .update(profiles)
+          .set({ membershipStatus: 'past_due' })
+          .where(eq(profiles.stripeCustomerId, customerId))
         break
       }
     }

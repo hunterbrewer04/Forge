@@ -1,22 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
-import { getAdminClient } from '@/lib/supabase-admin'
+import { db } from '@/lib/db'
+import { profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { stripe } from '@/lib/stripe'
 import { handleUnexpectedError } from '@/lib/api/errors'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const auth = await validateAuth(request)
+    const auth = await validateAuth()
     if (auth instanceof NextResponse) return auth
+    const { profileId } = auth
 
-    const supabase = getAdminClient()
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id, stripe_subscription_id')
-      .eq('id', auth.id)
-      .single()
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.id, profileId),
+      columns: { stripeCustomerId: true, stripeSubscriptionId: true },
+    })
 
-    if (!profile?.stripe_customer_id) {
+    if (!profile?.stripeCustomerId) {
       return NextResponse.json({
         paymentMethods: [],
         hasActiveSubscription: false,
@@ -26,12 +27,12 @@ export async function GET(request: NextRequest) {
 
     // Fetch payment methods
     const methods = await stripe.paymentMethods.list({
-      customer: profile.stripe_customer_id,
+      customer: profile.stripeCustomerId,
       type: 'card',
     })
 
     // Get default payment method from customer
-    const customer = await stripe.customers.retrieve(profile.stripe_customer_id)
+    const customer = await stripe.customers.retrieve(profile.stripeCustomerId)
     const defaultPmId =
       typeof customer !== 'string' && !customer.deleted
         ? (customer.invoice_settings?.default_payment_method as string | null)
@@ -55,9 +56,9 @@ export async function GET(request: NextRequest) {
     let hasActiveSubscription = false
     let currentPeriodEnd: number | null = null
 
-    if (profile.stripe_subscription_id) {
+    if (profile.stripeSubscriptionId) {
       try {
-        const sub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id, {
+        const sub = await stripe.subscriptions.retrieve(profile.stripeSubscriptionId, {
           expand: ['items'],
         })
         hasActiveSubscription = sub.status === 'active'
