@@ -18,6 +18,7 @@ import { conversations, messages } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { publishMessage, publishUnreadNotification } from '@/modules/messaging'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -195,6 +196,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (!msgWithSender) {
       return createApiError('Failed to fetch inserted message', 500, 'DATABASE_ERROR')
+    }
+
+    // Publish to Ably for real-time delivery (best-effort)
+    try {
+      const formatted = formatMessage(msgWithSender)
+      await publishMessage(id, {
+        id: formatted.id,
+        conversation_id: formatted.conversation_id,
+        sender_id: formatted.sender_id,
+        content: formatted.content,
+        media_url: formatted.media_url,
+        media_type: formatted.media_type,
+        created_at: typeof formatted.created_at === 'string' ? formatted.created_at : new Date(formatted.created_at).toISOString(),
+        read_at: formatted.read_at ? (typeof formatted.read_at === 'string' ? formatted.read_at : new Date(formatted.read_at).toISOString()) : null,
+      })
+      await publishUnreadNotification(id, profileId)
+    } catch (ablyError) {
+      console.error('Ably publish error:', ablyError)
     }
 
     return NextResponse.json(
