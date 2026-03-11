@@ -18,75 +18,7 @@ import { eq, and, or } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError } from '@/lib/api/errors'
 import { isValidUUID } from '@/lib/api/validation'
-
-// File size limits (in bytes)
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
-
-// Allowed MIME types
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime']
-const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES]
-
-/**
- * Validates file type using magic bytes
- */
-function validateMagicBytes(buffer: ArrayBuffer, mimeType: string): boolean {
-  const bytes = new Uint8Array(buffer)
-
-  // For images, check magic bytes
-  if (mimeType === 'image/jpeg') {
-    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
-  }
-
-  if (mimeType === 'image/png') {
-    return (
-      bytes[0] === 0x89 &&
-      bytes[1] === 0x50 &&
-      bytes[2] === 0x4e &&
-      bytes[3] === 0x47 &&
-      bytes[4] === 0x0d &&
-      bytes[5] === 0x0a &&
-      bytes[6] === 0x1a &&
-      bytes[7] === 0x0a
-    )
-  }
-
-  if (mimeType === 'image/gif') {
-    return (
-      bytes[0] === 0x47 &&
-      bytes[1] === 0x49 &&
-      bytes[2] === 0x46 &&
-      bytes[3] === 0x38
-    )
-  }
-
-  if (mimeType === 'image/webp') {
-    // WebP files start with RIFF....WEBP
-    return (
-      bytes[0] === 0x52 &&
-      bytes[1] === 0x49 &&
-      bytes[2] === 0x46 &&
-      bytes[3] === 0x46 &&
-      bytes[8] === 0x57 &&
-      bytes[9] === 0x45 &&
-      bytes[10] === 0x42 &&
-      bytes[11] === 0x50
-    )
-  }
-
-  if (mimeType === 'video/mp4' || mimeType === 'video/quicktime') {
-    // MP4/MOV files have "ftyp" at offset 4
-    return (
-      bytes[4] === 0x66 && // 'f'
-      bytes[5] === 0x74 && // 't'
-      bytes[6] === 0x79 && // 'y'
-      bytes[7] === 0x70    // 'p'
-    )
-  }
-
-  return false
-}
+import { validateMagicBytes, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_MEDIA_TYPES } from '@/lib/api/file-validation'
 
 /**
  * POST /api/upload
@@ -137,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Validate MIME type
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (!ALLOWED_MEDIA_TYPES.includes(file.type)) {
       return createApiError(
         'Invalid file type. Allowed: JPEG, PNG, GIF, WebP, MP4, MOV',
         400,

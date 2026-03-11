@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
-import { createClient } from '@/lib/supabase-browser'
 import { logger } from '@/lib/utils/logger'
 import { ProfileSkeleton } from '@/components/skeletons/ProfileSkeleton'
 import { toast } from 'sonner'
@@ -19,8 +18,6 @@ import { staggerContainer, fadeUpItem } from '@/lib/motion'
 
 const CalendarExportSheet = dynamic(() => import('./components/CalendarExportSheet'), { ssr: false })
 
-const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-
 export default function ProfilePage() {
   const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const { isDark, toggleTheme } = useFacilityTheme()
@@ -28,7 +25,6 @@ export default function ProfilePage() {
   const [signingOut, setSigningOut] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
   const [showCalendarExport, setShowCalendarExport] = useState(false)
 
@@ -67,46 +63,17 @@ export default function ProfilePage() {
       return
     }
 
-    const rawExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
-    const fileExt = ALLOWED_EXTENSIONS.includes(rawExt) ? rawExt : 'bin'
-    if (fileExt === 'bin') {
-      toast.error('Invalid file extension')
-      return
-    }
-
     setUploadingAvatar(true)
-    const fileName = `${profile.id}-${Date.now()}.${fileExt}`
 
     try {
-      if (profile?.avatar_url) {
-        const oldPath = profile.avatar_url.split('/avatars/')[1]
-        if (oldPath && oldPath.startsWith(`${profile.id}-`)) {
-          await supabase.storage.from('avatars').remove([oldPath])
-        }
-      }
+      const formData = new FormData()
+      formData.append('file', file)
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file)
+      const res = await fetch('/api/avatar', { method: 'POST', body: formData })
+      const data = await res.json()
 
-      if (uploadError) {
-        logger.error('Upload error:', uploadError)
-        toast.error(`Upload failed: ${uploadError.message}`)
-        return
-      }
-
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName)
-
-      const updateRes = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatar_url: publicUrl }),
-      })
-
-      if (!updateRes.ok) {
-        const errorData = await updateRes.json().catch(() => ({}))
-        await supabase.storage.from('avatars').remove([fileName])
-        toast.error(`Failed to save: ${errorData.error || 'Unknown error'}`)
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to upload avatar')
         return
       }
 
