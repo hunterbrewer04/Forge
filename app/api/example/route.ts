@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     // 4. Process request
     // In a real endpoint, you would:
-    // - Use getAdminClient() from @/lib/supabase-admin for DB operations
+    // - Use db from @/lib/db for database operations
     // - Never trust client-provided user IDs - always use the validated profileId
 
     const data = {
