@@ -96,25 +96,37 @@ export function useUnreadCount({ userId, isTrainer, isClient }: UseUnreadCountOp
   useEffect(() => {
     if (!userId) return
 
-    const ably = getAblyClient()
-    const channel = ably.channels.get('unread-messages')
+    let channel: Ably.RealtimeChannel | null = null
 
-    const handleNewMessage = (message: Ably.Message) => {
-      const payload = message.data as { conversation_id: string; sender_id: string }
-      // If the new message is not from the current user and belongs to user's conversations, increment count
-      if (
-        payload.sender_id !== userId &&
-        conversationIdsRef.current.includes(payload.conversation_id)
-      ) {
-        setUnreadCount(prev => Math.min(prev + 1, 99))
+    try {
+      const ably = getAblyClient()
+      channel = ably.channels.get('unread-messages')
+
+      const handleNewMessage = (message: Ably.Message) => {
+        const payload = message.data as { conversation_id: string; sender_id: string }
+        // If the new message is not from the current user and belongs to user's conversations, increment count
+        if (
+          payload.sender_id !== userId &&
+          conversationIdsRef.current.includes(payload.conversation_id)
+        ) {
+          setUnreadCount(prev => Math.min(prev + 1, 99))
+        }
       }
+
+      channel.subscribe('new-message', handleNewMessage)
+    } catch (err) {
+      logger.error('Failed to set up Ably subscription for unread count:', err)
     }
 
-    channel.subscribe('new-message', handleNewMessage)
-
     return () => {
-      channel.unsubscribe()
-      ably.channels.release('unread-messages')
+      try {
+        if (channel) {
+          channel.unsubscribe()
+          getAblyClient().channels.release('unread-messages')
+        }
+      } catch {
+        // Ignore cleanup errors — client may already be closed
+      }
     }
   }, [userId])
 

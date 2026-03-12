@@ -248,71 +248,83 @@ export default function ChatWindow({
   }, [loadMessages])
 
   useEffect(() => {
-    const ably = getAblyClient()
-    const channel = ably.channels.get(`messages:${conversationId}`)
+    let channel: Ably.RealtimeChannel | null = null
 
-    const handleNewMessage = async (message: Ably.Message) => {
-      const payload = message.data as {
-        id: string; conversation_id: string; sender_id: string;
-        content: string | null; media_url: string | null; media_type: string | null;
-        created_at: string; read_at: string | null;
-      }
+    try {
+      const ably = getAblyClient()
+      channel = ably.channels.get(`messages:${conversationId}`)
 
-      const senderName = await getCachedSenderProfile(payload.sender_id)
-
-      const newMessage: Message = {
-        id: payload.id,
-        conversation_id: payload.conversation_id,
-        sender_id: payload.sender_id,
-        content: payload.content,
-        media_url: payload.media_url,
-        media_type: payload.media_type,
-        created_at: payload.created_at,
-        read_at: payload.read_at,
-        sender_name: senderName,
-        pending: false,
-      }
-
-      const processedMessage = await processMessage(newMessage)
-
-      setMessages((prev) => {
-        if (payload.sender_id === currentUserId) {
-          const withoutOptimistic = prev.filter(msg =>
-            !(msg.pending && msg.content === payload.content)
-          )
-          return [...withoutOptimistic, processedMessage]
+      const handleNewMessage = async (message: Ably.Message) => {
+        const payload = message.data as {
+          id: string; conversation_id: string; sender_id: string;
+          content: string | null; media_url: string | null; media_type: string | null;
+          created_at: string; read_at: string | null;
         }
-        return [...prev, processedMessage]
-      })
 
-      // Mark new messages from other users as read
-      if (payload.sender_id !== currentUserId) {
-        try {
-          await markMessagesAsRead(conversationId, currentUserId)
-        } catch (err) {
-          logger.error('Error marking new message as read:', err)
+        const senderName = await getCachedSenderProfile(payload.sender_id)
+
+        const newMessage: Message = {
+          id: payload.id,
+          conversation_id: payload.conversation_id,
+          sender_id: payload.sender_id,
+          content: payload.content,
+          media_url: payload.media_url,
+          media_type: payload.media_type,
+          created_at: payload.created_at,
+          read_at: payload.read_at,
+          sender_name: senderName,
+          pending: false,
+        }
+
+        const processedMessage = await processMessage(newMessage)
+
+        setMessages((prev) => {
+          if (payload.sender_id === currentUserId) {
+            const withoutOptimistic = prev.filter(msg =>
+              !(msg.pending && msg.content === payload.content)
+            )
+            return [...withoutOptimistic, processedMessage]
+          }
+          return [...prev, processedMessage]
+        })
+
+        // Mark new messages from other users as read
+        if (payload.sender_id !== currentUserId) {
+          try {
+            await markMessagesAsRead(conversationId, currentUserId)
+          } catch (err) {
+            logger.error('Error marking new message as read:', err)
+          }
         }
       }
-    }
 
-    const handleMessagesRead = (message: Ably.Message) => {
-      const payload = message.data as { reader_id: string; read_at: string }
-      // Update read_at for all messages sent by current user (the other party read them)
-      if (payload.reader_id !== currentUserId) {
-        setMessages(prev => prev.map(msg =>
-          msg.sender_id === currentUserId && !msg.read_at
-            ? { ...msg, read_at: payload.read_at }
-            : msg
-        ))
+      const handleMessagesRead = (message: Ably.Message) => {
+        const payload = message.data as { reader_id: string; read_at: string }
+        // Update read_at for all messages sent by current user (the other party read them)
+        if (payload.reader_id !== currentUserId) {
+          setMessages(prev => prev.map(msg =>
+            msg.sender_id === currentUserId && !msg.read_at
+              ? { ...msg, read_at: payload.read_at }
+              : msg
+          ))
+        }
       }
-    }
 
-    channel.subscribe('new-message', handleNewMessage)
-    channel.subscribe('messages-read', handleMessagesRead)
+      channel.subscribe('new-message', handleNewMessage)
+      channel.subscribe('messages-read', handleMessagesRead)
+    } catch (err) {
+      logger.error('Failed to set up Ably subscription for chat:', err)
+    }
 
     return () => {
-      channel.unsubscribe()
-      ably.channels.release(`messages:${conversationId}`)
+      try {
+        if (channel) {
+          channel.unsubscribe()
+          getAblyClient().channels.release(`messages:${conversationId}`)
+        }
+      } catch {
+        // Ignore cleanup errors — client may already be closed
+      }
     }
   }, [conversationId, getCachedSenderProfile, currentUserId, processMessage])
 
