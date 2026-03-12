@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateAuth } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError } from '@/lib/api/errors'
+import { db } from '@/lib/db'
+import { conversations } from '@/lib/db/schema'
+import { eq, or } from 'drizzle-orm'
 import Ably from 'ably'
 
 let ablyRest: Ably.Rest | null = null
@@ -23,13 +26,29 @@ export async function GET(request: NextRequest) {
     const rateLimitResult = await checkRateLimit(request, RateLimitPresets.GENERAL, profileId)
     if (rateLimitResult) return rateLimitResult
 
+    // Query user's conversation IDs for scoped capabilities
+    const userConvs = await db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(
+        or(
+          eq(conversations.trainerId, profileId),
+          eq(conversations.clientId, profileId)
+        )
+      )
+
+    // Build per-conversation capability map
+    const capability: Record<string, ['subscribe']> = {
+      'unread-messages': ['subscribe'],
+    }
+    for (const conv of userConvs) {
+      capability[`messages:${conv.id}`] = ['subscribe']
+    }
+
     const rest = getAblyRest()
     const tokenRequest = await rest.auth.createTokenRequest({
       clientId: profileId,
-      capability: {
-        'messages:*': ['subscribe'],
-        'unread-messages': ['subscribe'],
-      },
+      capability,
       ttl: 3600000, // 1 hour
     })
 

@@ -115,12 +115,18 @@ export const bookings = pgTable('bookings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const conversations = pgTable('conversations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  clientId: uuid('client_id').notNull().references(() => profiles.id),
-  trainerId: uuid('trainer_id').notNull().references(() => profiles.id),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const conversations = pgTable(
+  'conversations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clientId: uuid('client_id').notNull().references(() => profiles.id),
+    trainerId: uuid('trainer_id').notNull().references(() => profiles.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('conversations_trainer_client_idx').on(table.trainerId, table.clientId),
+  ]
+)
 
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),

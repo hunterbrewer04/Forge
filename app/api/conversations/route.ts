@@ -9,12 +9,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { validateAuth } from '@/lib/api/auth'
+import { validateAuth, validateRole } from '@/lib/api/auth'
 import { db } from '@/lib/db'
-import { conversations, messages } from '@/lib/db/schema'
+import { conversations, messages, profiles } from '@/lib/db/schema'
 import { eq, desc, and, ne, isNull, count } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { validateRequestBody } from '@/lib/api/validation'
+import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,6 +39,18 @@ function formatLastMessage(
     content: msg.content,
     created_at: msg.createdAt,
     sender_id: msg.senderId,
+  }
+}
+
+function formatConversation(
+  conv: { id: string; clientId: string; trainerId: string; createdAt: Date } | null | undefined
+) {
+  if (!conv) return null
+  return {
+    id: conv.id,
+    client_id: conv.clientId,
+    trainer_id: conv.trainerId,
+    created_at: conv.createdAt,
   }
 }
 
@@ -169,5 +183,99 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     return handleUnexpectedError(error, 'conversations-list')
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/conversations
+// ---------------------------------------------------------------------------
+
+const createConversationSchema = z.object({
+  client_id: z.string().uuid(),
+})
+
+export async function POST(request: NextRequest) {
+  try {
+    const authResult = await validateRole('trainer')
+    if (authResult instanceof NextResponse) return authResult
+    const { profileId } = authResult
+
+    const rateLimitResult = await checkRateLimit(request, RateLimitPresets.GENERAL, profileId)
+    if (rateLimitResult) return rateLimitResult
+
+    const body = await validateRequestBody(request, createConversationSchema)
+    if (body instanceof NextResponse) return body
+
+    // Verify the client_id belongs to a valid member (not a trainer)
+    const client = await db.query.profiles.findFirst({
+      where: and(
+        eq(profiles.id, body.client_id),
+        eq(profiles.isTrainer, false)
+      ),
+      columns: { id: true, isMember: true, hasFullAccess: true },
+    })
+
+    if (!client) {
+      return createApiError('Client not found or is not a valid member', 404, 'RESOURCE_NOT_FOUND')
+    }
+
+    if (!client.isMember && !client.hasFullAccess) {
+      return createApiError('Client does not have member access', 400, 'VALIDATION_ERROR')
+    }
+
+    // Check if conversation already exists
+    const existing = await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.trainerId, profileId),
+        eq(conversations.clientId, body.client_id)
+      ),
+      columns: { id: true, clientId: true, trainerId: true, createdAt: true },
+    })
+
+    if (existing) {
+      return NextResponse.json({
+        success: true,
+        existing: true,
+        conversation: formatConversation(existing),
+      })
+    }
+
+    // Insert new conversation (onConflictDoNothing as race condition safety)
+    const [newConv] = await db
+      .insert(conversations)
+      .values({
+        trainerId: profileId,
+        clientId: body.client_id,
+      })
+      .onConflictDoNothing()
+      .returning()
+
+    // If onConflictDoNothing swallowed a race condition, fetch the existing one
+    if (!newConv) {
+      const raceConv = await db.query.conversations.findFirst({
+        where: and(
+          eq(conversations.trainerId, profileId),
+          eq(conversations.clientId, body.client_id)
+        ),
+        columns: { id: true, clientId: true, trainerId: true, createdAt: true },
+      })
+
+      return NextResponse.json({
+        success: true,
+        existing: true,
+        conversation: formatConversation(raceConv),
+      })
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        existing: false,
+        conversation: formatConversation(newConv),
+      },
+      { status: 201 }
+    )
+  } catch (error) {
+    return handleUnexpectedError(error, 'create-conversation')
   }
 }
