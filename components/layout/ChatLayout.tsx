@@ -11,6 +11,7 @@ interface ChatLayoutProps {
   mobileHeader: ReactNode;
   showActiveChat: boolean;
   onSignOut?: () => void;
+  onNewConversation?: () => void;
 }
 
 export default function ChatLayout({
@@ -19,6 +20,7 @@ export default function ChatLayout({
   mobileHeader,
   showActiveChat,
   onSignOut,
+  onNewConversation,
 }: ChatLayoutProps) {
   return (
     <div className="fixed inset-0 bg-bg-primary flex overflow-hidden transition-colors duration-200">
@@ -46,6 +48,7 @@ export default function ChatLayout({
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-text-primary">Messages</h2>
               <button
+                onClick={onNewConversation}
                 className="flex items-center justify-center size-10 bg-primary hover:bg-primary/90 transition-colors rounded-full shadow-lg shadow-primary/20 active:scale-95"
                 aria-label="New conversation"
               >

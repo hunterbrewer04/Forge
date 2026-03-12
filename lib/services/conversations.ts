@@ -13,6 +13,28 @@ import type {
 } from '@/lib/types/database'
 
 // ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface AvailableClient {
+  id: string
+  full_name: string | null
+  avatar_url: string | null
+  email: string | null
+}
+
+export interface CreateConversationResponse {
+  success: boolean
+  existing: boolean
+  conversation: {
+    id: string
+    client_id: string
+    trainer_id: string
+    created_at: string
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Fetch helpers
 // ---------------------------------------------------------------------------
 
@@ -219,4 +241,37 @@ export async function getUnreadCount(
     (c) => c.id === conversationId
   )
   return conv?.unread_count ?? 0
+}
+
+// ---------------------------------------------------------------------------
+// Trainer: new conversation creation
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch clients available for a new conversation (no existing conversation with this trainer).
+ */
+export async function fetchAvailableClients(): Promise<AvailableClient[]> {
+  const res = await fetch('/api/conversations/available-clients')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to fetch available clients')
+  }
+  const data = await res.json()
+  return data.clients ?? []
+}
+
+/**
+ * Create a new conversation with a client.
+ */
+export async function createConversation(clientId: string): Promise<CreateConversationResponse> {
+  const res = await fetch('/api/conversations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: clientId }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error ?? 'Failed to create conversation')
+  }
+  return res.json()
 }
