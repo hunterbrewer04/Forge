@@ -49,7 +49,7 @@ export type AuditAction =
   | 'admin.invitation.revoke'
   | 'admin.tier.create'
   | 'admin.tier.update'
-  | 'admin.tier.archive'
+  | 'admin.tier.delete'
   | 'admin.subscription.cancel'
   | 'admin.subscription.pause'
   | 'admin.subscription.resume'
