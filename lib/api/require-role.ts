@@ -17,7 +17,7 @@ export async function requireRole(role: 'isAdmin' | 'isTrainer') {
 
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.clerkUserId, userId),
-    columns: { [role]: true },
+    columns: { isAdmin: true, isTrainer: true },
   })
 
   if (!profile?.[role]) {
