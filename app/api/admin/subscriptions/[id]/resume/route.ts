@@ -39,8 +39,6 @@ export async function POST(
       action: 'admin.subscription.resume',
       resource: 'subscription',
       resourceId: id,
-      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
     }).catch(console.error)
 
     return NextResponse.json({ success: true, data: result })

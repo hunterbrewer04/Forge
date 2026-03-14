@@ -9,6 +9,7 @@ interface ToggleSwitchProps {
 export default function ToggleSwitch({ checked, onChange, disabled = false }: ToggleSwitchProps) {
   return (
     <button
+      type="button"
       onClick={() => onChange(!checked)}
       disabled={disabled}
       className={`relative w-11 h-6 rounded-full transition-colors ${

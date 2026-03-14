@@ -17,12 +17,11 @@ import {
   User,
   Users,
   Plus,
+  X,
   ChevronLeft,
   ChevronRight,
   Filter,
-  Loader2,
   BadgeCheck,
-  Mail,
 } from '@/components/ui/icons'
 import type { UserListItem, UserDetail, FilterRole } from '@/modules/admin/types'
 import { INVITE_ROLES, FILTER_ROLES } from '@/modules/admin/types'

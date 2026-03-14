@@ -42,8 +42,6 @@ export async function POST(request: NextRequest) {
       resource: 'refund',
       resourceId: refund.id,
       metadata: { chargeId: body.chargeId, amount: body.amount ?? null },
-      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
     }).catch(console.error)
 
     return NextResponse.json({ success: true, data: refund })

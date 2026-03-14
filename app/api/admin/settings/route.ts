@@ -53,8 +53,6 @@ export async function PATCH(request: NextRequest) {
       action: 'admin.settings.update',
       resource: 'settings',
       metadata: body,
-      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
     }).catch(console.error)
 
     return NextResponse.json({ success: true, data: updated })

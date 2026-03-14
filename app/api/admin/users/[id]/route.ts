@@ -80,8 +80,6 @@ export async function PATCH(
       resource: 'profile',
       resourceId: id,
       metadata: body,
-      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
     }).catch(console.error)
 
     return NextResponse.json({ success: true, data: updated })
@@ -116,8 +114,6 @@ export async function DELETE(
       action: 'admin.user.deactivate',
       resource: 'profile',
       resourceId: id,
-      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
     }).catch(console.error)
 
     return NextResponse.json({ success: true, data: deactivated })
