@@ -19,9 +19,10 @@ import {
   X,
   Settings,
   CreditCard,
+  TrendingUp,
 } from '@/components/ui/icons'
 
-type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients' | 'sessions' | 'payments' | 'admin-users' | 'admin-tiers'
+type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients' | 'sessions' | 'payments' | 'admin-users' | 'admin-tiers' | 'admin-finances'
 
 interface NavItem {
   href: string
@@ -49,6 +50,8 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
       return <Settings size={size} strokeWidth={strokeWidth} />
     case 'admin-tiers':
       return <CreditCard size={size} strokeWidth={strokeWidth} />
+    case 'admin-finances':
+      return <TrendingUp size={size} strokeWidth={strokeWidth} />
   }
 }
 
@@ -104,6 +107,7 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
     ? [
         { href: '/admin/users', iconKey: 'admin-users', label: 'Admin' },
         { href: '/admin/tiers', iconKey: 'admin-tiers', label: 'Tiers' },
+        { href: '/admin/finances', iconKey: 'admin-finances', label: 'Finances' },
       ]
     : []
 

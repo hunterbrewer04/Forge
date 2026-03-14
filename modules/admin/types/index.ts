@@ -89,3 +89,33 @@ export interface TierUpdate {
   monthlyBookingQuota?: number
   isActive?: boolean
 }
+
+// Phase 3: Financial management types
+
+export interface RevenueStats {
+  mrr: number
+  active_subscriptions: number
+  total_members: number
+  total_trainers: number
+  new_this_month: number
+}
+
+export interface CancelOptions {
+  immediate?: boolean
+}
+
+export interface InvoiceListItem {
+  id: string
+  customer_email: string | null
+  amount_due: number
+  amount_paid: number
+  status: string | null
+  created: number
+  invoice_pdf: string | null
+  hosted_invoice_url: string | null
+}
+
+export interface RefundInput {
+  chargeId: string
+  amount?: number
+}
