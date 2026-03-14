@@ -12,6 +12,7 @@ import {
   CreditCard,
   TrendingUp,
   Settings2,
+  ShieldCheck,
 } from '@/components/ui/icons'
 import type { LucideIcon } from '@/components/ui/icons'
 
@@ -23,6 +24,7 @@ export const SIDEBAR_ICON_MAP = {
   sessions: Dumbbell,
   payments: Wallet,
   profile: User,
+  admin: ShieldCheck,
   'admin-users': Settings,
   'admin-tiers': CreditCard,
   'admin-finances': TrendingUp,

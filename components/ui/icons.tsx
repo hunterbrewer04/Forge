@@ -82,6 +82,7 @@ import {
   CalendarOff,
   Sun,
   Moon,
+  ShieldCheck,
 } from "lucide-react";
 
 // Re-export LucideIcon type for external use
@@ -232,4 +233,5 @@ export {
   CalendarOff,
   Sun,
   Moon,
+  ShieldCheck,
 };

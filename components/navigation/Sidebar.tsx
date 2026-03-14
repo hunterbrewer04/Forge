@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut } from "@/components/ui/icons";
+import { LogOut, ChevronDown } from "@/components/ui/icons";
 import { SidebarIcon, type IconKey } from "@/components/navigation/sidebar-icons";
 
 interface NavItem {
@@ -28,6 +30,7 @@ interface SidebarProps {
 export default function Sidebar({ onSignOut }: SidebarProps) {
   const pathname = usePathname();
   const { profile } = useAuth();
+  const [adminOpen, setAdminOpen] = useState(() => pathname.startsWith("/admin"));
 
   const isActive = (href: string) => {
     if (href === "/home") {
@@ -35,6 +38,8 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
     }
     return pathname.startsWith(href);
   };
+
+  const isAdminActive = pathname.startsWith("/admin");
 
   const messagesNavItem: NavItem[] =
     profile?.is_trainer || profile?.has_full_access
@@ -45,14 +50,14 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
     ? [{ href: "/trainer/clients", iconKey: "clients", label: "Clients" }]
     : [];
 
-  const adminNavItems: NavItem[] = profile?.is_admin
-    ? [
-        { href: "/admin/users", iconKey: "admin-users", label: "Admin" },
-        { href: "/admin/tiers", iconKey: "admin-tiers", label: "Tiers" },
-        { href: "/admin/finances", iconKey: "admin-finances", label: "Finances" },
-        { href: "/admin/settings", iconKey: "admin-settings", label: "Settings" },
-      ]
-    : [];
+  const adminSubItems: NavItem[] = [
+    { href: "/admin/users", iconKey: "admin-users", label: "Users" },
+    { href: "/admin/tiers", iconKey: "admin-tiers", label: "Tiers" },
+    { href: "/admin/finances", iconKey: "admin-finances", label: "Finances" },
+    { href: "/admin/settings", iconKey: "admin-settings", label: "Settings" },
+  ];
+
+  const allNavItems = [...mainNavItems, ...messagesNavItem, ...trainerNavItems];
 
   return (
     <aside className="hidden lg:flex flex-col w-64 xl:w-72 h-screen bg-[#1C1C1C] border-r border-steel/20 sticky top-0">
@@ -72,7 +77,7 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
       {/* Main Navigation */}
       <nav className="flex-1 px-3 py-6">
         <ul className="space-y-1">
-          {[...mainNavItems, ...messagesNavItem, ...trainerNavItems, ...adminNavItems].map((item) => (
+          {allNavItems.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
@@ -91,6 +96,78 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
               </Link>
             </li>
           ))}
+
+          {/* Admin Dropdown */}
+          {profile?.is_admin && (
+            <li>
+              <div className="mt-2 mb-1 px-4">
+                <div className="border-t border-steel/20" />
+              </div>
+              <button
+                onClick={() => setAdminOpen((prev) => !prev)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full ${
+                  isAdminActive
+                    ? "bg-primary text-white shadow-lg shadow-primary/20"
+                    : "text-stone-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <SidebarIcon
+                  iconKey="admin"
+                  size={22}
+                  strokeWidth={isAdminActive ? 2.5 : 2}
+                />
+                <span className="font-medium flex-1 text-left">Admin Panel</span>
+                <motion.span
+                  animate={{ rotate: adminOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
+                >
+                  <ChevronDown size={16} />
+                </motion.span>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {adminOpen && (
+                  <motion.ul
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: [0.25, 0.4, 0.25, 1] }}
+                    className="overflow-hidden"
+                  >
+                    {adminSubItems.map((item, index) => (
+                      <motion.li
+                        key={item.href}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{
+                          duration: 0.2,
+                          delay: index * 0.05,
+                          ease: [0.25, 0.4, 0.25, 1],
+                        }}
+                      >
+                        <Link
+                          href={item.href}
+                          className={`flex items-center gap-3 pl-8 pr-4 py-2.5 rounded-xl transition-all ${
+                            isActive(item.href)
+                              ? "bg-primary/80 text-white shadow-md shadow-primary/10"
+                              : "text-stone-400 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <SidebarIcon
+                            iconKey={item.iconKey}
+                            size={18}
+                            strokeWidth={isActive(item.href) ? 2.5 : 2}
+                          />
+                          <span className="font-medium text-sm">{item.label}</span>
+                        </Link>
+                      </motion.li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </li>
+          )}
         </ul>
       </nav>
 
