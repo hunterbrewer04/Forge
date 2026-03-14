@@ -8,6 +8,23 @@ function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+type TierRow = typeof membershipTiers.$inferSelect
+
+function serializeTier(tier: TierRow, subscriberCount?: number) {
+  return {
+    id: tier.id,
+    name: tier.name,
+    slug: tier.slug,
+    stripe_price_id: tier.stripePriceId,
+    monthly_booking_quota: tier.monthlyBookingQuota,
+    price_monthly: tier.priceMonthly,
+    is_active: tier.isActive,
+    ...(subscriberCount !== undefined ? { subscriber_count: subscriberCount } : {}),
+    created_at: tier.createdAt.toISOString(),
+    updated_at: tier.updatedAt.toISOString(),
+  }
+}
+
 export async function listTiers(db: DrizzleInstance) {
   const tiers = await db
     .select({
@@ -19,18 +36,7 @@ export async function listTiers(db: DrizzleInstance) {
     .groupBy(membershipTiers.id)
     .orderBy(membershipTiers.createdAt)
 
-  return tiers.map(({ tier, subscriberCount }) => ({
-    id: tier.id,
-    name: tier.name,
-    slug: tier.slug,
-    stripe_price_id: tier.stripePriceId,
-    monthly_booking_quota: tier.monthlyBookingQuota,
-    price_monthly: tier.priceMonthly,
-    is_active: tier.isActive,
-    subscriber_count: subscriberCount,
-    created_at: tier.createdAt.toISOString(),
-    updated_at: tier.updatedAt.toISOString(),
-  }))
+  return tiers.map(({ tier, subscriberCount }) => serializeTier(tier, subscriberCount))
 }
 
 export async function createTier(db: DrizzleInstance, input: TierInput) {
@@ -62,17 +68,7 @@ export async function createTier(db: DrizzleInstance, input: TierInput) {
     })
     .returning()
 
-  return {
-    id: tier.id,
-    name: tier.name,
-    slug: tier.slug,
-    stripe_price_id: tier.stripePriceId,
-    monthly_booking_quota: tier.monthlyBookingQuota,
-    price_monthly: tier.priceMonthly,
-    is_active: tier.isActive,
-    created_at: tier.createdAt.toISOString(),
-    updated_at: tier.updatedAt.toISOString(),
-  }
+  return serializeTier(tier)
 }
 
 export async function updateTier(
@@ -129,17 +125,7 @@ export async function updateTier(
     .where(eq(membershipTiers.id, tierId))
     .returning()
 
-  return {
-    id: updated.id,
-    name: updated.name,
-    slug: updated.slug,
-    stripe_price_id: updated.stripePriceId,
-    monthly_booking_quota: updated.monthlyBookingQuota,
-    price_monthly: updated.priceMonthly,
-    is_active: updated.isActive,
-    created_at: updated.createdAt.toISOString(),
-    updated_at: updated.updatedAt.toISOString(),
-  }
+  return serializeTier(updated)
 }
 
 export async function toggleTierVisibility(
