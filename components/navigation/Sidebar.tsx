@@ -10,9 +10,10 @@ import {
   Users,
   MessageCircle,
   LogOut,
+  Settings,
 } from "@/components/ui/icons";
 
-type IconKey = "home" | "messages" | "calendar" | "profile" | "clients";
+type IconKey = "home" | "messages" | "calendar" | "profile" | "clients" | "admin-users";
 
 interface NavItem {
   href: string;
@@ -41,6 +42,8 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
       return <Users size={size} strokeWidth={strokeWidth} />;
     case "profile":
       return <User size={size} strokeWidth={strokeWidth} />;
+    case "admin-users":
+      return <Settings size={size} strokeWidth={strokeWidth} />;
   }
 }
 
@@ -68,6 +71,10 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
     ? [{ href: "/trainer/clients", iconKey: "clients", label: "Clients" }]
     : [];
 
+  const adminNavItems: NavItem[] = profile?.is_admin
+    ? [{ href: "/admin/users", iconKey: "admin-users", label: "Admin" }]
+    : [];
+
   return (
     <aside className="hidden lg:flex flex-col w-64 xl:w-72 h-screen bg-[#1C1C1C] border-r border-steel/20 sticky top-0">
       {/* Logo/Brand */}
@@ -86,7 +93,7 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
       {/* Main Navigation */}
       <nav className="flex-1 px-3 py-6">
         <ul className="space-y-1">
-          {[...mainNavItems, ...messagesNavItem, ...trainerNavItems].map((item) => (
+          {[...mainNavItems, ...messagesNavItem, ...trainerNavItems, ...adminNavItems].map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}

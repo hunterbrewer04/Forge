@@ -17,9 +17,10 @@ import {
   Wallet,
   LogOut,
   X,
+  Settings,
 } from '@/components/ui/icons'
 
-type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients' | 'sessions' | 'payments'
+type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients' | 'sessions' | 'payments' | 'admin-users'
 
 interface NavItem {
   href: string
@@ -43,6 +44,8 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
       return <Wallet size={size} strokeWidth={strokeWidth} />
     case 'profile':
       return <User size={size} strokeWidth={strokeWidth} />
+    case 'admin-users':
+      return <Settings size={size} strokeWidth={strokeWidth} />
   }
 }
 
@@ -94,7 +97,11 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
       ? [{ href: '/payments', iconKey: 'payments', label: 'Payments' }]
       : []
 
-  const allNavItems = [...mainNavItems, ...messagesNavItem, ...scheduleNavItem, ...trainerNavItems, ...paymentsNavItem]
+  const adminNavItems: NavItem[] = profile?.is_admin
+    ? [{ href: '/admin/users', iconKey: 'admin-users', label: 'Admin' }]
+    : []
+
+  const allNavItems = [...mainNavItems, ...messagesNavItem, ...scheduleNavItem, ...trainerNavItems, ...paymentsNavItem, ...adminNavItems]
 
   const bottomNavItems: NavItem[] = [
     { href: '/profile', iconKey: 'profile', label: 'Profile' },

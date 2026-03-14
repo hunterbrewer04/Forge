@@ -45,10 +45,13 @@ export async function POST(request: Request) {
   try {
     switch (evt.type) {
       case 'user.created': {
-        const { id, email_addresses, first_name, last_name, image_url } = evt.data
+        const { id, email_addresses, first_name, last_name, image_url, public_metadata } = evt.data
         const email = email_addresses.find(
           e => e.id === evt.data.primary_email_address_id
         )?.email_address
+
+        // Check for pre-assigned role from admin invitation
+        const intendedRole = (public_metadata as Record<string, unknown> | undefined)?.intendedRole as string | undefined
 
         try {
           await db.insert(profiles).values({
@@ -56,10 +59,10 @@ export async function POST(request: Request) {
             fullName: buildFullName(first_name ?? null, last_name ?? null),
             avatarUrl: image_url || null,
             email: email || null,
-            isTrainer: false,
-            isAdmin: false,
+            isTrainer: intendedRole === 'trainer',
+            isAdmin: intendedRole === 'admin',
             hasFullAccess: false,
-            isMember: false,
+            isMember: intendedRole === 'member',
           })
         } catch (insertErr) {
           console.error('Failed to create profile for Clerk user:', id, insertErr)
