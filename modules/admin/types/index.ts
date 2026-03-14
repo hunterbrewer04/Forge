@@ -69,6 +69,7 @@ export interface TierListItem {
   name: string
   slug: string
   stripe_price_id: string
+  stripe_product_id: string | null
   monthly_booking_quota: number
   price_monthly: string
   is_active: boolean

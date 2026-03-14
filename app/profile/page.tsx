@@ -156,7 +156,7 @@ export default function ProfilePage() {
         aria-label="Upload profile picture"
       />
 
-      <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
+      <motion.div variants={staggerContainer} initial="hidden" animate="show" className="lg:grid lg:grid-cols-[1fr_2fr] lg:gap-8 space-y-6 lg:space-y-0">
         {/* Left column: Identity card */}
         <motion.div variants={fadeUpItem}>
           <GlassCard variant="subtle" className="p-6">
@@ -207,7 +207,7 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* Right two columns: Account Management + Preferences */}
-        <motion.div variants={fadeUpItem} className="lg:col-span-2 space-y-6">
+        <motion.div variants={fadeUpItem} className="space-y-6">
           {/* Account Management Section */}
           <GlassCard variant="subtle" className="p-6">
             <section>

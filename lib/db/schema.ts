@@ -66,6 +66,7 @@ export const membershipTiers = pgTable('membership_tiers', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   stripePriceId: text('stripe_price_id').notNull(),
+  stripeProductId: text('stripe_product_id'),
   monthlyBookingQuota: integer('monthly_booking_quota').notNull(),
   priceMonthly: numeric('price_monthly').notNull(),
   isActive: boolean('is_active').notNull().default(true),

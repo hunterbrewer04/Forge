@@ -357,11 +357,11 @@ export default function HomePage() {
           </GlassCard>
           </motion.div>
 
-          {/* Main grid: 5-col (3+2) when messaging is available, balanced 2-col otherwise */}
+          {/* Main grid: balanced 2-column layout */}
           <motion.div variants={fadeUpItem}>
-          <div className={hasMessaging ? "grid grid-cols-5 gap-6 items-start" : "grid grid-cols-2 gap-6 items-start"}>
+          <div className="grid grid-cols-2 gap-6 items-start">
             {/* Left column */}
-            <div className={hasMessaging ? "col-span-3 space-y-4" : "space-y-4"}>
+            <div className="space-y-4">
               {/* Sessions CTA */}
               <GlassCard
                 variant="subtle"
@@ -404,7 +404,7 @@ export default function HomePage() {
             </div>
 
             {/* Right column */}
-            <div className={hasMessaging ? "col-span-2 space-y-4" : "space-y-4"}>
+            <div className="space-y-4">
               {/* Messages Card — only for trainers and full-access users */}
               {hasMessaging && (
                 <GlassCard

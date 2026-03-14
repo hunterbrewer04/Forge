@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 export interface HistoryItem {
   id: string
@@ -191,7 +192,7 @@ export function useHistoryData(
         setData({
           items: [],
           loading: false,
-          error: err instanceof Error ? err.message : 'Failed to load history',
+          error: getErrorMessage(err, 'Failed to load history'),
         })
       }
     }

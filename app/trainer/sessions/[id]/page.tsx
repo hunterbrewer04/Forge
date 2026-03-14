@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/icons'
 import type { SessionWithDetails, SessionType, Booking } from '@/modules/calendar-booking/types'
 import { utcToLocalInputs, localInputsToUtc } from '@/lib/utils/date'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 type ViewMode = 'view' | 'edit'
 type ModalType = 'cancel' | 'duplicate' | 'complete' | null
@@ -82,7 +83,7 @@ export default function EditSessionPage() {
         duration_minutes: s.duration_minutes || 60,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load session')
+      setError(getErrorMessage(err, 'Failed to load session'))
     } finally {
       setIsLoading(false)
     }
@@ -160,7 +161,7 @@ export default function EditSessionPage() {
       fetchSession()
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update session')
+      setError(getErrorMessage(err, 'Failed to update session'))
     } finally {
       setIsSaving(false)
     }
@@ -189,7 +190,7 @@ export default function EditSessionPage() {
       setActiveModal(null)
       fetchSession()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel session')
+      setError(getErrorMessage(err, 'Failed to cancel session'))
     } finally {
       setIsSaving(false)
     }
@@ -215,7 +216,7 @@ export default function EditSessionPage() {
       setActiveModal(null)
       fetchSession()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark session as complete')
+      setError(getErrorMessage(err, 'Failed to mark session as complete'))
     } finally {
       setIsSaving(false)
     }
@@ -256,7 +257,7 @@ export default function EditSessionPage() {
       setActiveModal(null)
       router.push(`/trainer/sessions/${data.data.id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to duplicate session')
+      setError(getErrorMessage(err, 'Failed to duplicate session'))
     } finally {
       setIsSaving(false)
     }

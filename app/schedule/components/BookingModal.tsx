@@ -5,6 +5,7 @@ import { X, Clock, MapPin, User, Calendar, AlertCircle, Loader2 } from '@/compon
 import { toast } from 'sonner'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import type { SessionWithDetails } from '@/modules/calendar-booking/types'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface BookingModalProps {
   session: SessionWithDetails
@@ -95,9 +96,7 @@ export default function BookingModal({
       }, 1500)
     } catch (error) {
       setModalState('error')
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to book session'
-      )
+      setErrorMessage(getErrorMessage(error, 'Failed to book session'))
     }
   }
 

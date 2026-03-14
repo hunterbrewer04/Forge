@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import GlassCard from '@/components/ui/GlassCard'
-import { LogOut, X, ChevronDown } from '@/components/ui/icons'
+import { LogOut, ChevronDown, ChevronLeft } from '@/components/ui/icons'
 import { SidebarIcon, type IconKey } from '@/components/navigation/sidebar-icons'
 
 interface NavItem {
@@ -93,15 +93,15 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
           alt="Forge Sports Performance"
           width={240}
           height={160}
-          className="h-28 w-auto object-contain"
+          className="h-36 w-auto object-contain"
         />
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute right-4 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
-            aria-label="Close sidebar"
+            className="absolute right-4 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-all"
+            aria-label="Collapse sidebar"
           >
-            <X size={18} />
+            <ChevronLeft size={18} />
           </button>
         )}
       </div>

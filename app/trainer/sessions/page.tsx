@@ -19,6 +19,7 @@ import {
 import type { SessionWithDetails, SessionType } from '@/modules/calendar-booking/types'
 import { motion } from 'framer-motion'
 import { staggerContainer } from '@/lib/motion'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 type FilterType = 'all' | 'upcoming' | 'past' | 'cancelled'
 
@@ -56,7 +57,7 @@ export default function AdminSessionsPage() {
       const data = await response.json()
       setSessions(data.sessions || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load sessions')
+      setError(getErrorMessage(err, 'Failed to load sessions'))
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)

@@ -6,6 +6,7 @@ import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import StatusBadge from '@/components/ui/StatusBadge'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import {
@@ -59,7 +60,8 @@ export default function AdminFinancesPage() {
       const json = await res.json()
       setStats(json.data)
     } catch {
-      toast.error('Failed to load revenue stats')
+      // Show zeroed stats instead of error toast
+      setStats({ mrr: 0, active_subscriptions: 0, total_members: 0, total_trainers: 0, new_this_month: 0 })
     } finally {
       setLoadingStats(false)
     }
@@ -87,7 +89,8 @@ export default function AdminFinancesPage() {
       }
       setInvoicesHasMore(json.has_more)
     } catch {
-      toast.error('Failed to load invoices')
+      // Show empty state instead of error toast
+      if (!startingAfter) setInvoices([])
     } finally {
       setLoadingInvoices(false)
       setLoadingMore(false)
@@ -187,15 +190,14 @@ export default function AdminFinancesPage() {
 
                   {/* Status */}
                   <div className="w-24 text-center">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
-                      invoice.status === 'paid'
-                        ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                        : invoice.status === 'open'
-                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                        : 'bg-bg-secondary text-text-muted border-border'
-                    }`}>
-                      {invoice.status || 'unknown'}
-                    </span>
+                    <StatusBadge
+                      label={invoice.status || 'unknown'}
+                      variant={
+                        invoice.status === 'paid' ? 'success'
+                        : invoice.status === 'open' ? 'warning'
+                        : 'neutral'
+                      }
+                    />
                   </div>
 
                   {/* Date */}

@@ -6,6 +6,7 @@ import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
+import FormInput from '@/components/ui/FormInput'
 import {
   Loader2,
   Upload,
@@ -13,6 +14,7 @@ import {
   Settings2,
 } from '@/components/ui/icons'
 import type { FacilitySettings } from '@/modules/admin/types'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 const DAY_LABELS: Record<string, string> = {
@@ -48,16 +50,14 @@ export default function AdminSettingsPage() {
       const json = await res.json()
       const data = json.data as FacilitySettings | null
       setSettings(data)
-      if (data) {
-        setName(data.name)
-        setPrimaryColor(data.primary_color)
-        setAdvanceNotice(data.booking_advance_notice?.toString() || '')
-        setCancellationWindow(data.cancellation_window?.toString() || '')
-        if (data.business_hours) setBusinessHours(data.business_hours)
-        if (data.notification_preferences) setNotifications(data.notification_preferences)
-      }
-    } catch {
-      toast.error('Failed to load settings')
+      setName(data?.name || '')
+      setPrimaryColor(data?.primary_color || '#1973f0')
+      setAdvanceNotice(data?.booking_advance_notice?.toString() || '')
+      setCancellationWindow(data?.cancellation_window?.toString() || '')
+      if (data?.business_hours) setBusinessHours(data.business_hours)
+      if (data?.notification_preferences) setNotifications(data.notification_preferences)
+    } catch (err) {
+      console.error('Failed to load settings:', err)
     } finally {
       setLoading(false)
     }
@@ -132,7 +132,7 @@ export default function AdminSettingsPage() {
       toast.success('Logo uploaded')
       fetchSettings()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to upload logo')
+      toast.error(getErrorMessage(err, 'Failed to upload logo'))
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -177,7 +177,7 @@ export default function AdminSettingsPage() {
         </button>
       }
     >
-      <div className="space-y-8 max-w-3xl">
+      <div className="space-y-8">
         {/* Branding */}
         <section>
           <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
@@ -185,17 +185,12 @@ export default function AdminSettingsPage() {
           </h3>
           <GlassCard variant="subtle" className="p-5 space-y-5">
             {/* Facility Name */}
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Facility Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-              />
-            </div>
+            <FormInput
+              label="Facility Name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
 
             {/* Logo Upload */}
             <div>
@@ -263,34 +258,24 @@ export default function AdminSettingsPage() {
           </h3>
           <GlassCard variant="subtle" className="p-5 space-y-5">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Advance Notice (minutes)
-                </label>
-                <input
-                  type="number"
-                  value={advanceNotice}
-                  onChange={(e) => setAdvanceNotice(e.target.value)}
-                  placeholder="60"
-                  min="0"
-                  className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-                />
-                <p className="text-text-muted text-xs mt-1">Minimum time before a session can be booked</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                  Cancellation Window (minutes)
-                </label>
-                <input
-                  type="number"
-                  value={cancellationWindow}
-                  onChange={(e) => setCancellationWindow(e.target.value)}
-                  placeholder="120"
-                  min="0"
-                  className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-                />
-                <p className="text-text-muted text-xs mt-1">Time before session when cancellation is no longer allowed</p>
-              </div>
+              <FormInput
+                label="Advance Notice (minutes)"
+                type="number"
+                value={advanceNotice}
+                onChange={(e) => setAdvanceNotice(e.target.value)}
+                placeholder="60"
+                min="0"
+                hint="Minimum time before a session can be booked"
+              />
+              <FormInput
+                label="Cancellation Window (minutes)"
+                type="number"
+                value={cancellationWindow}
+                onChange={(e) => setCancellationWindow(e.target.value)}
+                placeholder="120"
+                min="0"
+                hint="Time before session when cancellation is no longer allowed"
+              />
             </div>
 
             {/* Business Hours */}

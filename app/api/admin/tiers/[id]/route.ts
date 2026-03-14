@@ -2,7 +2,7 @@
  * Admin Tier Detail API
  *
  * PATCH  /api/admin/tiers/[id] — update a membership tier's fields
- * DELETE /api/admin/tiers/[id] — archive a membership tier (soft delete)
+ * DELETE /api/admin/tiers/[id] — hard-delete a membership tier
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -12,7 +12,7 @@ import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody, isValidUUID } from '@/lib/api/validation'
 import { db } from '@/lib/db'
-import { updateTier, archiveTier } from '@/modules/admin/services/tiers'
+import { updateTier, deleteTier } from '@/modules/admin/services/tiers'
 import { logAuditEvent } from '@/lib/services/audit'
 
 const updateTierSchema = z.object({
@@ -76,23 +76,23 @@ export async function DELETE(
       return createApiError('Invalid tier ID', 400, 'VALIDATION_ERROR')
     }
 
-    const archived = await archiveTier(db, id)
-    if (!archived) {
+    const deleted = await deleteTier(db, id)
+    if (!deleted) {
       return createApiError('Tier not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
     logAuditEvent({
       userId: authResult.profileId,
-      action: 'admin.tier.archive',
+      action: 'admin.tier.delete',
       resource: 'tier',
       resourceId: id,
     }).catch(console.error)
 
-    return NextResponse.json({ success: true, data: archived })
+    return NextResponse.json({ success: true, data: deleted })
   } catch (error) {
     if (error instanceof Error && error.message.includes('active subscriber')) {
       return createApiError(error.message, 409, 'CONFLICT')
     }
-    return handleUnexpectedError(error, 'admin-tier-archive')
+    return handleUnexpectedError(error, 'admin-tier-delete')
   }
 }

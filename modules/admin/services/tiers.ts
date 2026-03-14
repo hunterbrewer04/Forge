@@ -1,4 +1,4 @@
-import { eq, count, and, not } from 'drizzle-orm'
+import { eq, count, and, not, sql } from 'drizzle-orm'
 import { membershipTiers, profiles } from '@/lib/db/schema'
 import { stripe } from '@/lib/stripe'
 import type { DrizzleInstance } from '../config'
@@ -6,21 +6,26 @@ import type { TierInput, TierUpdate } from '../types'
 import { slugify } from '@/lib/utils/string'
 
 async function uniqueSlug(db: DrizzleInstance, base: string, excludeId?: string): Promise<string> {
-  const existing = await db.query.membershipTiers.findFirst({
-    where: excludeId
-      ? and(eq(membershipTiers.slug, base), not(eq(membershipTiers.id, excludeId)))
-      : eq(membershipTiers.slug, base),
-    columns: { id: true },
-  })
-  if (!existing) return base
+  // Fetch all slugs matching the base pattern in a single query
+  const rows = await db
+    .select({ slug: membershipTiers.slug })
+    .from(membershipTiers)
+    .where(
+      excludeId
+        ? and(
+            sql`${membershipTiers.slug} LIKE ${base + '%'}`,
+            not(eq(membershipTiers.id, excludeId))
+          )
+        : sql`${membershipTiers.slug} LIKE ${base + '%'}`
+    )
+
+  const existingSlugs = new Set(rows.map(r => r.slug))
+
+  if (!existingSlugs.has(base)) return base
 
   for (let i = 2; i < 100; i++) {
     const candidate = `${base}-${i}`
-    const found = await db.query.membershipTiers.findFirst({
-      where: eq(membershipTiers.slug, candidate),
-      columns: { id: true },
-    })
-    if (!found) return candidate
+    if (!existingSlugs.has(candidate)) return candidate
   }
   return `${base}-${Date.now()}`
 }
@@ -33,6 +38,7 @@ function serializeTier(tier: TierRow, subscriberCount?: number) {
     name: tier.name,
     slug: tier.slug,
     stripe_price_id: tier.stripePriceId,
+    stripe_product_id: tier.stripeProductId,
     monthly_booking_quota: tier.monthlyBookingQuota,
     price_monthly: tier.priceMonthly,
     is_active: tier.isActive,
@@ -81,6 +87,7 @@ export async function createTier(db: DrizzleInstance, input: TierInput) {
         name: input.name,
         slug,
         stripePriceId: price.id,
+        stripeProductId: product.id,
         monthlyBookingQuota: input.monthlyBookingQuota,
         priceMonthly: String(input.priceMonthly),
         isActive: true,
@@ -113,8 +120,7 @@ export async function updateTier(
 
   // Fetch Stripe price once if either name or price changed
   if (nameChanged || priceChanged) {
-    const currentPrice = await stripe.prices.retrieve(current.stripePriceId)
-    const productId = currentPrice.product as string
+    const productId = current.stripeProductId || (await stripe.prices.retrieve(current.stripePriceId)).product as string
 
     if (nameChanged) {
       dbUpdates.name = updates.name
@@ -196,7 +202,7 @@ export async function toggleTierVisibility(
   return updated ?? null
 }
 
-export async function archiveTier(db: DrizzleInstance, tierId: string) {
+export async function deleteTier(db: DrizzleInstance, tierId: string) {
   // Check for active subscribers and fetch tier in parallel
   const [[{ value: activeCount }], tier] = await Promise.all([
     db.select({ value: count() }).from(profiles).where(eq(profiles.membershipTierId, tierId)),
@@ -206,18 +212,19 @@ export async function archiveTier(db: DrizzleInstance, tierId: string) {
   if (!tier) return null
 
   if (activeCount > 0) {
-    throw new Error(`Cannot archive tier with ${activeCount} active subscriber(s)`)
+    throw new Error(`Cannot delete tier with ${activeCount} active subscriber(s)`)
   }
 
-  // Archive Stripe Price
-  await stripe.prices.update(tier.stripePriceId, { active: false })
+  // Retrieve the price to get the product ID, then delete the product
+  // (deleting the product automatically archives all its prices)
+  const productId = tier.stripeProductId || (await stripe.prices.retrieve(tier.stripePriceId)).product as string
+  await stripe.products.del(productId)
 
-  // Set inactive in DB
-  const [updated] = await db
-    .update(membershipTiers)
-    .set({ isActive: false, updatedAt: new Date() })
+  // Hard-delete the row
+  const [deleted] = await db
+    .delete(membershipTiers)
     .where(eq(membershipTiers.id, tierId))
     .returning({ id: membershipTiers.id })
 
-  return updated
+  return deleted
 }

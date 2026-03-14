@@ -14,6 +14,7 @@ import { sessions, bookings, profiles, membershipTiers } from '@/lib/db/schema'
 import { eq, and, gte, lt, count } from 'drizzle-orm'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { getErrorMessage } from '@/lib/utils/errors'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
 import { bookSession } from '@/modules/calendar-booking/services/bookings'
 
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
       newBooking = await bookSession(db, sessionId, profileId)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to book session'
+      const message = getErrorMessage(err, 'Failed to book session')
 
       if (message === 'Session not available') {
         return createApiError(message, 400, 'SESSION_NOT_AVAILABLE')

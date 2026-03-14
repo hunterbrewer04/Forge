@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import type { SessionWithDetails, SessionType } from '@/modules/calendar-booking/types'
 import { getLocalDateString } from '@/lib/utils/date'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface UseScheduleDataParams {
   userId: string | undefined
@@ -123,7 +124,7 @@ export function useScheduleData({
       if (!isMountedRef.current) return
 
       console.error('Error fetching sessions:', err)
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(getErrorMessage(err, 'An error occurred'))
     } finally {
       if (isMountedRef.current) {
         setLoading(false)

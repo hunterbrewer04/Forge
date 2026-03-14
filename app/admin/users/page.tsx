@@ -9,7 +9,9 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ToggleSwitch from '@/components/ui/ToggleSwitch'
+import StatusBadge from '@/components/ui/StatusBadge'
 import FormModal from '@/components/admin/FormModal'
+import FormInput from '@/components/ui/FormInput'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import {
@@ -25,6 +27,7 @@ import {
 } from '@/components/ui/icons'
 import type { UserListItem, UserDetail, FilterRole } from '@/modules/admin/types'
 import { INVITE_ROLES, FILTER_ROLES } from '@/modules/admin/types'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 type RoleFilter = 'all' | FilterRole
 
@@ -38,19 +41,16 @@ const ROLE_OPTIONS: { value: RoleFilter; label: string }[] = [
 
 const PAGE_SIZE = 20
 
+const ROLE_VARIANTS: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
+  Admin: 'danger',
+  Trainer: 'info',
+  Member: 'success',
+  'Full Access': 'warning',
+}
+
 function RoleBadge({ label, active }: { label: string; active: boolean }) {
   if (!active) return null
-  const colors: Record<string, string> = {
-    Admin: 'bg-red-500/10 text-red-500 border-red-500/20',
-    Trainer: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    Member: 'bg-green-500/10 text-green-500 border-green-500/20',
-    'Full Access': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-  }
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${colors[label] || 'bg-bg-secondary text-text-secondary border-border'}`}>
-      {label}
-    </span>
-  )
+  return <StatusBadge label={label} variant={ROLE_VARIANTS[label] ?? 'neutral'} />
 }
 
 function UserDetailPanel({
@@ -236,7 +236,7 @@ function InviteModal({
       await onInvite(email.trim(), role || undefined)
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send invitation')
+      setError(getErrorMessage(err, 'Failed to send invitation'))
     } finally {
       setSending(false)
     }
@@ -252,19 +252,14 @@ function InviteModal({
       disabled={!email.trim()}
       error={error}
     >
-      <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">
-          Email Address
-        </label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="user@example.com"
-          required
-          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-        />
-      </div>
+      <FormInput
+        label="Email Address"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="user@example.com"
+        required
+      />
 
       <div>
         <label className="block text-sm font-medium text-text-secondary mb-1.5">
@@ -518,8 +513,11 @@ export default function AdminUsersPage() {
                 <div className="flex items-center gap-1 w-40 justify-center flex-wrap">
                   <RoleBadge label="Admin" active={user.is_admin} />
                   <RoleBadge label="Trainer" active={user.is_trainer} />
-                  <RoleBadge label="Member" active={user.is_member} />
-                  <RoleBadge label="Full Access" active={user.has_full_access} />
+                  {user.has_full_access ? (
+                    <RoleBadge label="Full Access" active />
+                  ) : (
+                    <RoleBadge label="Member" active={user.is_member} />
+                  )}
                   {!user.is_admin && !user.is_trainer && !user.is_member && !user.has_full_access && (
                     <span className="text-text-muted text-xs">None</span>
                   )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface NextSession {
   id: string
@@ -127,7 +128,7 @@ export function useHomeData(userId: string | undefined): HomeData {
         setData(prev => ({
           ...prev,
           loading: false,
-          error: err instanceof Error ? err.message : 'Failed to load data'
+          error: getErrorMessage(err, 'Failed to load data')
         }))
       }
     }

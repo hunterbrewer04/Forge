@@ -23,7 +23,22 @@ function serializeSettings(s: SettingsRow) {
 
 export async function getSettings(db: DrizzleInstance) {
   const settings = await db.query.facilitySettings.findFirst()
-  if (!settings) return null
+  if (!settings) {
+    // Return defaults when no settings row exists yet
+    const now = new Date().toISOString()
+    return {
+      id: null,
+      name: '',
+      logo_url: null,
+      primary_color: '#1973f0',
+      business_hours: null,
+      booking_advance_notice: null,
+      cancellation_window: null,
+      notification_preferences: null,
+      created_at: now,
+      updated_at: now,
+    }
+  }
   return serializeSettings(settings)
 }
 

@@ -8,6 +8,9 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import EmptyState from '@/components/ui/EmptyState'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import FormModal from '@/components/admin/FormModal'
+import FormInput from '@/components/ui/FormInput'
+import StatusBadge from '@/components/ui/StatusBadge'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import {
@@ -15,8 +18,10 @@ import {
   Users,
   CreditCard,
   Pencil,
+  Trash2,
 } from '@/components/ui/icons'
 import type { TierListItem } from '@/modules/admin/types'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 function TierFormModal({
   tier,
@@ -46,7 +51,7 @@ function TierFormModal({
       })
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save tier')
+      setError(getErrorMessage(err, 'Failed to save tier'))
     } finally {
       setSaving(false)
     }
@@ -62,51 +67,36 @@ function TierFormModal({
       disabled={!name.trim() || !price || !quota}
       error={error}
     >
-      <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">
-          Tier Name
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Premium"
-          required
-          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-        />
-      </div>
+      <FormInput
+        label="Tier Name"
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="e.g. Premium"
+        required
+      />
 
-      <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">
-          Monthly Price ($)
-        </label>
-        <input
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          placeholder="49.99"
-          required
-          min="0.01"
-          step="0.01"
-          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-        />
-      </div>
+      <FormInput
+        label="Monthly Price ($)"
+        type="number"
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
+        placeholder="49.99"
+        required
+        min="0.01"
+        step="0.01"
+      />
 
-      <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1.5">
-          Monthly Booking Quota
-        </label>
-        <input
-          type="number"
-          value={quota}
-          onChange={(e) => setQuota(e.target.value)}
-          placeholder="8"
-          required
-          min="1"
-          step="1"
-          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-        />
-      </div>
+      <FormInput
+        label="Monthly Booking Quota"
+        type="number"
+        value={quota}
+        onChange={(e) => setQuota(e.target.value)}
+        placeholder="8"
+        required
+        min="1"
+        step="1"
+      />
     </FormModal>
   )
 }
@@ -116,7 +106,7 @@ export default function AdminTiersPage() {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingTier, setEditingTier] = useState<TierListItem | null>(null)
-  const [archivingTier, setArchivingTier] = useState<TierListItem | null>(null)
+  const [deletingTier, setDeletingTier] = useState<TierListItem | null>(null)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -173,22 +163,22 @@ export default function AdminTiersPage() {
     fetchTiers()
   }
 
-  const handleArchive = async () => {
-    if (!archivingTier) return
+  const handleDelete = async () => {
+    if (!deletingTier) return
     try {
-      const res = await fetch(`/api/admin/tiers/${archivingTier.id}`, {
+      const res = await fetch(`/api/admin/tiers/${deletingTier.id}`, {
         method: 'DELETE',
       })
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
-        throw new Error(json.error || 'Failed to archive tier')
+        throw new Error(json.error || 'Failed to delete tier')
       }
-      toast.success('Tier archived')
+      toast.success('Tier deleted')
       fetchTiers()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to archive tier')
+      toast.error(getErrorMessage(err, 'Failed to delete tier'))
     } finally {
-      setArchivingTier(null)
+      setDeletingTier(null)
     }
   }
 
@@ -208,9 +198,6 @@ export default function AdminTiersPage() {
       setTogglingId(null)
     }
   }
-
-  const activeTiers = tiers.filter(t => t.is_active)
-  const inactiveTiers = tiers.filter(t => !t.is_active)
 
   return (
     <GlassAppLayout
@@ -235,104 +222,77 @@ export default function AdminTiersPage() {
           description="Create your first membership tier to get started."
         />
       ) : (
-        <div className="space-y-8">
-          {/* Active Tiers */}
-          {activeTiers.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-                Active Tiers ({activeTiers.length})
-              </h3>
-              <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
-                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
-              >
-                {activeTiers.map((tier) => (
-                  <motion.div key={tier.id} variants={fadeUpItem}>
-                    <GlassCard variant="subtle" className="p-5 space-y-4">
-                      {/* Header */}
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="text-lg font-bold text-text-primary">{tier.name}</h4>
-                          <p className="text-2xl font-bold text-primary mt-1">
-                            ${parseFloat(tier.price_monthly).toFixed(2)}
-                            <span className="text-sm font-normal text-text-muted">/mo</span>
-                          </p>
-                        </div>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-green-500/10 text-green-500 border border-green-500/20">
-                          Active
-                        </span>
-                      </div>
-
-                      {/* Stats */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-bg-secondary rounded-lg px-3 py-2">
-                          <p className="text-text-muted text-xs">Booking Quota</p>
-                          <p className="text-text-primary font-semibold">{tier.monthly_booking_quota}/mo</p>
-                        </div>
-                        <div className="bg-bg-secondary rounded-lg px-3 py-2">
-                          <p className="text-text-muted text-xs">Subscribers</p>
-                          <p className="text-text-primary font-semibold flex items-center gap-1">
-                            <Users size={14} className="text-text-muted" />
-                            {tier.subscriber_count}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          onClick={() => setEditingTier(tier)}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-bg-secondary rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary transition-all"
-                        >
-                          <Pencil size={14} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setArchivingTier(tier)}
-                          className="flex-1 py-2 px-3 bg-bg-secondary rounded-lg text-sm font-medium text-red-500 hover:bg-red-500/10 transition-all"
-                        >
-                          Archive
-                        </button>
-                      </div>
-                    </GlassCard>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
-          )}
-
-          {/* Inactive Tiers */}
-          {inactiveTiers.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-                Archived Tiers ({inactiveTiers.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {inactiveTiers.map((tier) => (
-                  <GlassCard key={tier.id} variant="subtle" className="p-5 opacity-60">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 className="text-lg font-bold text-text-primary">{tier.name}</h4>
-                        <p className="text-xl font-bold text-text-secondary mt-1">
-                          ${parseFloat(tier.price_monthly).toFixed(2)}
-                          <span className="text-sm font-normal text-text-muted">/mo</span>
-                        </p>
-                      </div>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-bg-secondary text-text-muted border border-border">
-                        Archived
-                      </span>
-                    </div>
-                    <p className="text-text-muted text-xs">
-                      {tier.monthly_booking_quota} bookings/mo &middot; {tier.subscriber_count} subscribers
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+        >
+          {tiers.map((tier) => (
+            <motion.div key={tier.id} variants={fadeUpItem}>
+              <GlassCard variant="subtle" className={`p-6 space-y-4 ${!tier.is_active ? 'opacity-60' : ''}`}>
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-lg font-bold text-text-primary">{tier.name}</h4>
+                    <p className="text-2xl font-bold text-primary mt-1">
+                      ${parseFloat(tier.price_monthly).toFixed(2)}
+                      <span className="text-sm font-normal text-text-muted">/mo</span>
                     </p>
-                  </GlassCard>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+                  </div>
+                  {tier.is_active ? (
+                    <StatusBadge label="Active" variant="success" />
+                  ) : (
+                    <StatusBadge label="Hidden" variant="neutral" />
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-bg-secondary rounded-lg px-3 py-2">
+                    <p className="text-text-muted text-xs">Booking Quota</p>
+                    <p className="text-text-primary font-semibold">{tier.monthly_booking_quota}/mo</p>
+                  </div>
+                  <div className="bg-bg-secondary rounded-lg px-3 py-2">
+                    <p className="text-text-muted text-xs">Subscribers</p>
+                    <p className="text-text-primary font-semibold flex items-center gap-1">
+                      <Users size={14} className="text-text-muted" />
+                      {tier.subscriber_count}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Paywall Toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-text-secondary font-medium">Show on Paywall</span>
+                  <ToggleSwitch
+                    checked={tier.is_active}
+                    onChange={() => handleToggleVisibility(tier)}
+                    disabled={togglingId === tier.id}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setEditingTier(tier)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-bg-secondary rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary transition-all"
+                  >
+                    <Pencil size={14} />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setDeletingTier(tier)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-bg-secondary rounded-lg text-sm font-medium text-red-500 hover:bg-red-500/10 transition-all"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              </GlassCard>
+            </motion.div>
+          ))}
+        </motion.div>
       )}
 
       {/* Create Modal */}
@@ -356,18 +316,18 @@ export default function AdminTiersPage() {
         )}
       </AnimatePresence>
 
-      {/* Archive Confirmation */}
-      {archivingTier && (
+      {/* Delete Confirmation */}
+      {deletingTier && (
         <ConfirmModal
-          title="Archive Tier"
+          title="Delete Tier"
           message={
-            archivingTier.subscriber_count > 0
-              ? `"${archivingTier.name}" has ${archivingTier.subscriber_count} active subscriber(s). You cannot archive a tier with active subscribers.`
-              : `Are you sure you want to archive "${archivingTier.name}"? This will hide it from the paywall and archive the Stripe price.`
+            deletingTier.subscriber_count > 0
+              ? `"${deletingTier.name}" has ${deletingTier.subscriber_count} active subscriber(s). You cannot delete a tier with active subscribers.`
+              : `Are you sure you want to delete "${deletingTier.name}"? This will permanently remove it and delete the associated Stripe product.`
           }
-          confirmText={archivingTier.subscriber_count > 0 ? 'OK' : 'Archive'}
-          onConfirm={archivingTier.subscriber_count > 0 ? () => setArchivingTier(null) : handleArchive}
-          onCancel={() => setArchivingTier(null)}
+          confirmText={deletingTier.subscriber_count > 0 ? 'OK' : 'Delete'}
+          onConfirm={deletingTier.subscriber_count > 0 ? () => setDeletingTier(null) : handleDelete}
+          onCancel={() => setDeletingTier(null)}
         />
       )}
     </GlassAppLayout>
