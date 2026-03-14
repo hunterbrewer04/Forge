@@ -18,9 +18,10 @@ import {
   LogOut,
   X,
   Settings,
+  CreditCard,
 } from '@/components/ui/icons'
 
-type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients' | 'sessions' | 'payments' | 'admin-users'
+type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients' | 'sessions' | 'payments' | 'admin-users' | 'admin-tiers'
 
 interface NavItem {
   href: string
@@ -46,6 +47,8 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
       return <User size={size} strokeWidth={strokeWidth} />
     case 'admin-users':
       return <Settings size={size} strokeWidth={strokeWidth} />
+    case 'admin-tiers':
+      return <CreditCard size={size} strokeWidth={strokeWidth} />
   }
 }
 
@@ -98,7 +101,10 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
       : []
 
   const adminNavItems: NavItem[] = profile?.is_admin
-    ? [{ href: '/admin/users', iconKey: 'admin-users', label: 'Admin' }]
+    ? [
+        { href: '/admin/users', iconKey: 'admin-users', label: 'Admin' },
+        { href: '/admin/tiers', iconKey: 'admin-tiers', label: 'Tiers' },
+      ]
     : []
 
   const allNavItems = [...mainNavItems, ...messagesNavItem, ...scheduleNavItem, ...trainerNavItems, ...paymentsNavItem, ...adminNavItems]

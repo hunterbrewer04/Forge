@@ -61,3 +61,31 @@ export interface PaginatedResponse<T> {
   limit: number
   offset: number
 }
+
+// Phase 2: Tier management types
+
+export interface TierListItem {
+  id: string
+  name: string
+  slug: string
+  stripe_price_id: string
+  monthly_booking_quota: number
+  price_monthly: string
+  is_active: boolean
+  subscriber_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface TierInput {
+  name: string
+  priceMonthly: number
+  monthlyBookingQuota: number
+}
+
+export interface TierUpdate {
+  name?: string
+  priceMonthly?: number
+  monthlyBookingQuota?: number
+  isActive?: boolean
+}
