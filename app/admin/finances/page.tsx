@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
-import ConfirmModal from '@/components/ui/ConfirmModal'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import {
@@ -51,9 +50,6 @@ export default function AdminFinancesPage() {
   const [loadingStats, setLoadingStats] = useState(true)
   const [loadingInvoices, setLoadingInvoices] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [cancelTarget, setCancelTarget] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/revenue')
@@ -100,50 +96,6 @@ export default function AdminFinancesPage() {
     fetchStats()
     fetchInvoices()
   }, [fetchStats, fetchInvoices])
-
-  const handleCancelSubscription = async (profileId: string, immediate: boolean) => {
-    try {
-      const res = await fetch(`/api/admin/subscriptions/${profileId}/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ immediate }),
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error(json.error || 'Failed to cancel')
-      }
-      toast.success(immediate ? 'Subscription cancelled immediately' : 'Subscription will cancel at period end')
-      fetchStats()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to cancel subscription')
-    }
-  }
-
-  const handlePause = async (profileId: string) => {
-    try {
-      const res = await fetch(`/api/admin/subscriptions/${profileId}/pause`, {
-        method: 'POST',
-      })
-      if (!res.ok) throw new Error('Failed to pause')
-      toast.success('Subscription paused')
-      fetchStats()
-    } catch {
-      toast.error('Failed to pause subscription')
-    }
-  }
-
-  const handleResume = async (profileId: string) => {
-    try {
-      const res = await fetch(`/api/admin/subscriptions/${profileId}/resume`, {
-        method: 'POST',
-      })
-      if (!res.ok) throw new Error('Failed to resume')
-      toast.success('Subscription resumed')
-      fetchStats()
-    } catch {
-      toast.error('Failed to resume subscription')
-    }
-  }
 
   return (
     <GlassAppLayout title="Finances" desktopTitle="Financial Overview">

@@ -157,21 +157,17 @@ export async function toggleTierVisibility(
 }
 
 export async function archiveTier(db: DrizzleInstance, tierId: string) {
-  // Check for active subscribers
-  const [{ value: activeCount }] = await db
-    .select({ value: count() })
-    .from(profiles)
-    .where(eq(profiles.membershipTierId, tierId))
+  // Check for active subscribers and fetch tier in parallel
+  const [[{ value: activeCount }], tier] = await Promise.all([
+    db.select({ value: count() }).from(profiles).where(eq(profiles.membershipTierId, tierId)),
+    db.query.membershipTiers.findFirst({ where: eq(membershipTiers.id, tierId) }),
+  ])
+
+  if (!tier) return null
 
   if (activeCount > 0) {
     throw new Error(`Cannot archive tier with ${activeCount} active subscriber(s)`)
   }
-
-  // Get the tier to archive its Stripe price
-  const tier = await db.query.membershipTiers.findFirst({
-    where: eq(membershipTiers.id, tierId),
-  })
-  if (!tier) return null
 
   // Archive Stripe Price
   await stripe.prices.update(tier.stripePriceId, { active: false })

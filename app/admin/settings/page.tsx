@@ -71,8 +71,8 @@ export default function AdminSettingsPage() {
       const body: Record<string, unknown> = {}
       if (name !== settings?.name) body.name = name
       if (primaryColor !== settings?.primary_color) body.primary_color = primaryColor
-      if (advanceNotice) body.booking_advance_notice = parseInt(advanceNotice, 10)
-      if (cancellationWindow) body.cancellation_window = parseInt(cancellationWindow, 10)
+      if (advanceNotice !== '') body.booking_advance_notice = parseInt(advanceNotice, 10)
+      if (cancellationWindow !== '') body.cancellation_window = parseInt(cancellationWindow, 10)
       if (Object.keys(businessHours).length > 0) body.business_hours = businessHours
       body.notification_preferences = notifications
 

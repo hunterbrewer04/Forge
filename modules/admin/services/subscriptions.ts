@@ -3,11 +3,7 @@ import { profiles } from '@/lib/db/schema'
 import { stripe } from '@/lib/stripe'
 import type { DrizzleInstance } from '../config'
 
-export async function cancelSubscription(
-  db: DrizzleInstance,
-  profileId: string,
-  options: { immediate?: boolean } = {}
-) {
+async function getSubscriptionId(db: DrizzleInstance, profileId: string): Promise<string> {
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.id, profileId),
     columns: { stripeSubscriptionId: true },
@@ -15,11 +11,20 @@ export async function cancelSubscription(
   if (!profile?.stripeSubscriptionId) {
     throw new Error('No active subscription found')
   }
+  return profile.stripeSubscriptionId
+}
+
+export async function cancelSubscription(
+  db: DrizzleInstance,
+  profileId: string,
+  options: { immediate?: boolean } = {}
+) {
+  const subscriptionId = await getSubscriptionId(db, profileId)
 
   if (options.immediate) {
-    await stripe.subscriptions.cancel(profile.stripeSubscriptionId)
+    await stripe.subscriptions.cancel(subscriptionId)
   } else {
-    await stripe.subscriptions.update(profile.stripeSubscriptionId, {
+    await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     })
   }
@@ -28,15 +33,9 @@ export async function cancelSubscription(
 }
 
 export async function pauseSubscription(db: DrizzleInstance, profileId: string) {
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
-    columns: { stripeSubscriptionId: true },
-  })
-  if (!profile?.stripeSubscriptionId) {
-    throw new Error('No active subscription found')
-  }
+  const subscriptionId = await getSubscriptionId(db, profileId)
 
-  await stripe.subscriptions.update(profile.stripeSubscriptionId, {
+  await stripe.subscriptions.update(subscriptionId, {
     pause_collection: { behavior: 'void' },
   })
 
@@ -44,16 +43,10 @@ export async function pauseSubscription(db: DrizzleInstance, profileId: string) 
 }
 
 export async function resumeSubscription(db: DrizzleInstance, profileId: string) {
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, profileId),
-    columns: { stripeSubscriptionId: true },
-  })
-  if (!profile?.stripeSubscriptionId) {
-    throw new Error('No active subscription found')
-  }
+  const subscriptionId = await getSubscriptionId(db, profileId)
 
-  await stripe.subscriptions.update(profile.stripeSubscriptionId, {
-    pause_collection: '',
+  await stripe.subscriptions.update(subscriptionId, {
+    pause_collection: null,
   })
 
   return { success: true }

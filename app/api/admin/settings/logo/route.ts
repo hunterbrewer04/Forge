@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateRole } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
+import { validateMagicBytes } from '@/lib/api/file-validation'
 import { db } from '@/lib/db'
 import { uploadLogo, updateSettings } from '@/modules/admin/services/settings'
 import { getR2FilePublicUrl } from '@/modules/messaging/services/storage'
@@ -32,7 +33,14 @@ export async function POST(request: NextRequest) {
       return createApiError('File too large. Maximum 5MB', 400, 'VALIDATION_ERROR')
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    // Validate magic bytes for non-SVG files (SVG is text-based, no magic bytes)
+    if (file.type !== 'image/svg+xml' && !validateMagicBytes(arrayBuffer, file.type)) {
+      return createApiError('File content does not match declared type', 400, 'VALIDATION_ERROR')
+    }
+
     const ext = file.name.split('.').pop() || 'png'
     const key = `facility/logo-${Date.now()}.${ext}`
 

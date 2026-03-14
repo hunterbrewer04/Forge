@@ -157,6 +157,7 @@ export default function AdminTiersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingTier, setEditingTier] = useState<TierListItem | null>(null)
   const [archivingTier, setArchivingTier] = useState<TierListItem | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const fetchTiers = useCallback(async () => {
@@ -232,6 +233,7 @@ export default function AdminTiersPage() {
   }
 
   const handleToggleVisibility = async (tier: TierListItem) => {
+    setTogglingId(tier.id)
     try {
       const res = await fetch(`/api/admin/tiers/${tier.id}`, {
         method: 'PATCH',
@@ -242,6 +244,8 @@ export default function AdminTiersPage() {
       fetchTiers()
     } catch {
       toast.error('Failed to toggle tier visibility')
+    } finally {
+      setTogglingId(null)
     }
   }
 

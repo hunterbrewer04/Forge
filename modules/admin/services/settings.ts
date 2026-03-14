@@ -2,34 +2,39 @@ import { eq } from 'drizzle-orm'
 import { facilitySettings } from '@/lib/db/schema'
 import { uploadToR2 } from '@/modules/messaging/services/storage'
 import type { DrizzleInstance } from '../config'
+import type { SettingsUpdate } from '../types'
+
+type SettingsRow = typeof facilitySettings.$inferSelect
+
+function serializeSettings(s: SettingsRow) {
+  return {
+    id: s.id,
+    name: s.name,
+    logo_url: s.logoUrl,
+    primary_color: s.primaryColor,
+    business_hours: s.businessHours,
+    booking_advance_notice: s.bookingAdvanceNotice,
+    cancellation_window: s.cancellationWindow,
+    notification_preferences: s.notificationPreferences,
+    created_at: s.createdAt.toISOString(),
+    updated_at: s.updatedAt.toISOString(),
+  }
+}
 
 export async function getSettings(db: DrizzleInstance) {
   const settings = await db.query.facilitySettings.findFirst()
-
   if (!settings) return null
-
-  return {
-    id: settings.id,
-    name: settings.name,
-    logo_url: settings.logoUrl,
-    primary_color: settings.primaryColor,
-    business_hours: settings.businessHours,
-    booking_advance_notice: settings.bookingAdvanceNotice,
-    cancellation_window: settings.cancellationWindow,
-    notification_preferences: settings.notificationPreferences,
-    created_at: settings.createdAt.toISOString(),
-    updated_at: settings.updatedAt.toISOString(),
-  }
+  return serializeSettings(settings)
 }
 
 export async function updateSettings(
   db: DrizzleInstance,
-  updates: Record<string, unknown>
+  updates: SettingsUpdate & { logo_url?: string }
 ) {
   const existing = await db.query.facilitySettings.findFirst()
 
   // Map snake_case API fields to camelCase Drizzle fields
-  const dbUpdates: Record<string, unknown> = { updatedAt: new Date() }
+  const dbUpdates: Partial<typeof facilitySettings.$inferInsert> = { updatedAt: new Date() }
   if (updates.name !== undefined) dbUpdates.name = updates.name
   if (updates.primary_color !== undefined) dbUpdates.primaryColor = updates.primary_color
   if (updates.business_hours !== undefined) dbUpdates.businessHours = updates.business_hours
@@ -45,41 +50,18 @@ export async function updateSettings(
       .where(eq(facilitySettings.id, existing.id))
       .returning()
 
-    return {
-      id: updated.id,
-      name: updated.name,
-      logo_url: updated.logoUrl,
-      primary_color: updated.primaryColor,
-      business_hours: updated.businessHours,
-      booking_advance_notice: updated.bookingAdvanceNotice,
-      cancellation_window: updated.cancellationWindow,
-      notification_preferences: updated.notificationPreferences,
-      created_at: updated.createdAt.toISOString(),
-      updated_at: updated.updatedAt.toISOString(),
-    }
+    return serializeSettings(updated)
   } else {
-    // Create initial settings row
     const [created] = await db
       .insert(facilitySettings)
       .values({
-        name: (updates.name as string) || 'Forge',
-        primaryColor: (updates.primary_color as string) || '#1973f0',
+        name: updates.name || 'Forge',
+        primaryColor: updates.primary_color || '#1973f0',
         ...dbUpdates,
       })
       .returning()
 
-    return {
-      id: created.id,
-      name: created.name,
-      logo_url: created.logoUrl,
-      primary_color: created.primaryColor,
-      business_hours: created.businessHours,
-      booking_advance_notice: created.bookingAdvanceNotice,
-      cancellation_window: created.cancellationWindow,
-      notification_preferences: created.notificationPreferences,
-      created_at: created.createdAt.toISOString(),
-      updated_at: created.updatedAt.toISOString(),
-    }
+    return serializeSettings(created)
   }
 }
 
