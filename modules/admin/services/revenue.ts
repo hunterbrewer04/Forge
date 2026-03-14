@@ -1,4 +1,4 @@
-import { eq, count, and, gte } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { profiles } from '@/lib/db/schema'
 import type { DrizzleInstance } from '../config'
 
@@ -6,30 +6,27 @@ export async function getRevenueStats(db: DrizzleInstance) {
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const [
-    [{ value: totalMembers }],
-    [{ value: totalTrainers }],
-    [{ value: activeSubscriptions }],
-    [{ value: newThisMonth }],
-  ] = await Promise.all([
-    db.select({ value: count() }).from(profiles).where(eq(profiles.isMember, true)),
-    db.select({ value: count() }).from(profiles).where(eq(profiles.isTrainer, true)),
-    db.select({ value: count() }).from(profiles).where(eq(profiles.membershipStatus, 'active')),
-    db.select({ value: count() }).from(profiles).where(
-      and(eq(profiles.isMember, true), gte(profiles.createdAt, startOfMonth))
-    ),
+  // Single pass over profiles for all four counts, plus MRR join — both run in parallel
+  const [statsRows, activeWithTiers] = await Promise.all([
+    db.select({
+      totalMembers: sql<number>`count(*) filter (where ${profiles.isMember} = true)`.mapWith(Number),
+      totalTrainers: sql<number>`count(*) filter (where ${profiles.isTrainer} = true)`.mapWith(Number),
+      activeSubscriptions: sql<number>`count(*) filter (where ${profiles.membershipStatus} = 'active')`.mapWith(Number),
+      newThisMonth: sql<number>`count(*) filter (where ${profiles.isMember} = true and ${profiles.createdAt} >= ${startOfMonth})`.mapWith(Number),
+    }).from(profiles),
+
+    db.query.profiles.findMany({
+      where: eq(profiles.membershipStatus, 'active'),
+      columns: { membershipTierId: true },
+      with: {
+        membershipTier: {
+          columns: { priceMonthly: true },
+        },
+      },
+    }),
   ])
 
-  // Calculate MRR from active subscriptions joined with tier prices
-  const activeWithTiers = await db.query.profiles.findMany({
-    where: eq(profiles.membershipStatus, 'active'),
-    columns: { membershipTierId: true },
-    with: {
-      membershipTier: {
-        columns: { priceMonthly: true },
-      },
-    },
-  })
+  const { totalMembers, totalTrainers, activeSubscriptions, newThisMonth } = statsRows[0]
 
   const mrr = activeWithTiers.reduce((sum, p) => {
     return sum + (p.membershipTier ? parseFloat(p.membershipTier.priceMonthly) : 0)

@@ -6,6 +6,10 @@ import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import EmptyState from '@/components/ui/EmptyState'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
+import FormModal from '@/components/admin/FormModal'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import {
@@ -13,11 +17,9 @@ import {
   User,
   Users,
   Plus,
-  X,
   ChevronLeft,
   ChevronRight,
   Filter,
-  AlertCircle,
   Loader2,
   BadgeCheck,
   Mail,
@@ -167,21 +169,11 @@ function UserDetailPanel({
               {roles.map(({ key, label, value }) => (
                 <GlassCard key={key} variant="subtle" className="px-4 py-3 flex items-center justify-between">
                   <span className="text-sm text-text-primary font-medium">{label}</span>
-                  <button
-                    onClick={() => handleToggle(key, value)}
+                  <ToggleSwitch
+                    checked={value}
+                    onChange={() => handleToggle(key, value)}
                     disabled={saving}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      value ? 'bg-primary' : 'bg-bg-secondary border border-border'
-                    }`}
-                    role="switch"
-                    aria-checked={value}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform ${
-                        value ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
+                  />
                 </GlassCard>
               ))}
             </div>
@@ -252,86 +244,45 @@ function InviteModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 8 }}
-        transition={{ duration: 0.2 }}
-        className="relative glass border border-border rounded-2xl shadow-2xl max-w-md w-full p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-text-primary">Invite User</h3>
-          <button
-            onClick={onClose}
-            className="size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
-          >
-            <X size={18} />
-          </button>
-        </div>
+    <FormModal
+      title="Invite User"
+      submitLabel="Send Invite"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      isSubmitting={sending}
+      disabled={!email.trim()}
+      error={error}
+    >
+      <div>
+        <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          Email Address
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="user@example.com"
+          required
+          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
+        />
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@example.com"
-              required
-              className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              Pre-assign Role (optional)
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-            >
-              <option value="">No role (default)</option>
-              {INVITE_ROLES.map((r) => (
-                <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 text-red-500 text-sm">
-              <AlertCircle size={14} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 px-4 bg-bg-secondary text-text-secondary rounded-xl font-semibold text-sm transition-all hover:bg-bg-secondary/80"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={sending || !email.trim()}
-              className="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {sending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-              {sending ? 'Sending...' : 'Send Invite'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+      <div>
+        <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          Pre-assign Role (optional)
+        </label>
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+        >
+          <option value="">No role (default)</option>
+          {INVITE_ROLES.map((r) => (
+            <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+          ))}
+        </select>
+      </div>
+    </FormModal>
   )
 }
 
@@ -341,7 +292,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [offset, setOffset] = useState(0)
+  const [page, setPage] = useState(1)
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [searchDebounce, setSearchDebounce] = useState('')
@@ -350,7 +301,7 @@ export default function AdminUsersPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchDebounce(search)
-      setOffset(0)
+      setPage(1)
     }, 300)
     return () => clearTimeout(timer)
   }, [search])
@@ -367,6 +318,7 @@ export default function AdminUsersPage() {
       const params = new URLSearchParams()
       if (searchDebounce) params.set('search', searchDebounce)
       if (roleFilter !== 'all') params.set('role', roleFilter)
+      const offset = (page - 1) * PAGE_SIZE
       params.set('limit', String(PAGE_SIZE))
       params.set('offset', String(offset))
 
@@ -382,7 +334,7 @@ export default function AdminUsersPage() {
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
-  }, [searchDebounce, roleFilter, offset])
+  }, [searchDebounce, roleFilter, page])
 
   useEffect(() => {
     fetchUsers()
@@ -450,7 +402,6 @@ export default function AdminUsersPage() {
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1
 
   return (
     <GlassAppLayout
@@ -493,7 +444,7 @@ export default function AdminUsersPage() {
             value={roleFilter}
             onChange={(e) => {
               setRoleFilter(e.target.value as RoleFilter)
-              setOffset(0)
+              setPage(1)
             }}
             className="bg-bg-secondary text-text-primary rounded-xl pl-9 pr-8 py-2.5 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer"
           >
@@ -522,18 +473,12 @@ export default function AdminUsersPage() {
 
         {/* Rows */}
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 size={24} className="text-primary animate-spin" />
-          </div>
+          <LoadingSpinner />
         ) : users.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="bg-bg-secondary p-3 rounded-full mb-3">
-              <Users size={24} className="text-text-muted" />
-            </div>
-            <p className="text-text-secondary text-sm">
-              {searchDebounce || roleFilter !== 'all' ? 'No users match your filters' : 'No users found'}
-            </p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title={searchDebounce || roleFilter !== 'all' ? 'No users match your filters' : 'No users found'}
+          />
         ) : (
           <motion.div variants={staggerContainer} initial="hidden" animate="show">
             {users.map((user) => (
@@ -607,19 +552,19 @@ export default function AdminUsersPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
           <span className="text-text-muted text-sm">
-            Page {currentPage} of {totalPages}
+            Page {page} of {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-              disabled={offset === 0}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
               className="size-9 flex items-center justify-center rounded-lg bg-bg-secondary border border-border text-text-secondary hover:text-text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={16} />
             </button>
             <button
-              onClick={() => setOffset(offset + PAGE_SIZE)}
-              disabled={offset + PAGE_SIZE >= total}
+              onClick={() => setPage(p => p + 1)}
+              disabled={page >= totalPages}
               className="size-9 flex items-center justify-center rounded-lg bg-bg-secondary border border-border text-text-secondary hover:text-text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight size={16} />

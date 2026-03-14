@@ -13,6 +13,7 @@ import { handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody } from '@/lib/api/validation'
 import { sendInvitation, listInvitations } from '@/modules/admin/services/invitations'
 import { INVITE_ROLES } from '@/modules/admin/types'
+import { logAuditEvent } from '@/lib/services/audit'
 
 const inviteSchema = z.object({
   emailAddress: z.string().email(),
@@ -46,6 +47,17 @@ export async function POST(request: NextRequest) {
     if (body instanceof NextResponse) return body
 
     const invitation = await sendInvitation(body)
+
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.invitation.send',
+      resource: 'invitation',
+      resourceId: invitation.id,
+      metadata: { emailAddress: body.emailAddress, role: body.role },
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
+
     return NextResponse.json({ success: true, data: invitation }, { status: 201 })
   } catch (error) {
     return handleUnexpectedError(error, 'admin-invitation-create')

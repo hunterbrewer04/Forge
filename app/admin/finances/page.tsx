@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
+import EmptyState from '@/components/ui/EmptyState'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import {
@@ -101,9 +103,7 @@ export default function AdminFinancesPage() {
     <GlassAppLayout title="Finances" desktopTitle="Financial Overview">
       {/* Revenue Stats */}
       {loadingStats ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="text-primary animate-spin" />
-        </div>
+        <LoadingSpinner />
       ) : stats ? (
         <motion.div
           variants={staggerContainer}
@@ -162,16 +162,12 @@ export default function AdminFinancesPage() {
           </div>
 
           {loadingInvoices ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 size={24} className="text-primary animate-spin" />
-            </div>
+            <LoadingSpinner />
           ) : invoices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="bg-bg-secondary p-3 rounded-full mb-3">
-                <CreditCard size={24} className="text-text-muted" />
-              </div>
-              <p className="text-text-secondary text-sm">No invoices found</p>
-            </div>
+            <EmptyState
+              icon={CreditCard}
+              title="No invoices found"
+            />
           ) : (
             <>
               {invoices.map((invoice) => (

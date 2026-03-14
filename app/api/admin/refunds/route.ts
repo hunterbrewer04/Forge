@@ -16,9 +16,10 @@ import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody } from '@/lib/api/validation'
 import { issueRefund } from '@/modules/admin/services/subscriptions'
+import { logAuditEvent } from '@/lib/services/audit'
 
 const refundSchema = z.object({
-  chargeId: z.string().min(1),
+  chargeId: z.string().startsWith('ch_', { message: 'Invalid charge ID format — must start with ch_' }),
   amount: z.number().int().positive().optional(),
 })
 
@@ -34,6 +35,17 @@ export async function POST(request: NextRequest) {
     if (body instanceof NextResponse) return body
 
     const refund = await issueRefund(body.chargeId, body.amount)
+
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.refund.create',
+      resource: 'refund',
+      resourceId: refund.id,
+      metadata: { chargeId: body.chargeId, amount: body.amount ?? null },
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
+
     return NextResponse.json({ success: true, data: refund })
   } catch (error) {
     return handleUnexpectedError(error, 'admin-refund-create')

@@ -9,16 +9,14 @@ import { z } from 'zod'
 import { validateRole } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { handleUnexpectedError } from '@/lib/api/errors'
-import { validateQueryParams } from '@/lib/api/validation'
+import { validateQueryParams, CommonSchemas } from '@/lib/api/validation'
 import { db } from '@/lib/db'
 import { listUsers } from '@/modules/admin/services/users'
 import { FILTER_ROLES } from '@/modules/admin/types'
 
-const querySchema = z.object({
+const querySchema = CommonSchemas.paginationQuery.extend({
   search: z.string().optional(),
   role: z.enum(FILTER_ROLES).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
 })
 
 export async function GET(request: NextRequest) {

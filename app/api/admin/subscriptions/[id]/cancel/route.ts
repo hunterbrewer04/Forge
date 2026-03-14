@@ -15,7 +15,8 @@ import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody, isValidUUID } from '@/lib/api/validation'
 import { db } from '@/lib/db'
-import { cancelSubscription } from '@/modules/admin/services/subscriptions'
+import { cancelSubscription, SubscriptionNotFoundError } from '@/modules/admin/services/subscriptions'
+import { logAuditEvent } from '@/lib/services/audit'
 
 const cancelSchema = z.object({
   immediate: z.boolean().optional(),
@@ -41,9 +42,20 @@ export async function POST(
     if (body instanceof NextResponse) return body
 
     const result = await cancelSubscription(db, id, body)
+
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.subscription.cancel',
+      resource: 'subscription',
+      resourceId: id,
+      metadata: { immediate: body.immediate ?? false },
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
+
     return NextResponse.json({ success: true, data: result })
   } catch (error) {
-    if (error instanceof Error && error.message.includes('No active subscription')) {
+    if (error instanceof SubscriptionNotFoundError) {
       return createApiError(error.message, 404, 'RESOURCE_NOT_FOUND')
     }
     return handleUnexpectedError(error, 'admin-subscription-cancel')

@@ -3,20 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  Home,
-  Calendar,
-  User,
-  Users,
-  MessageCircle,
-  LogOut,
-  Settings,
-  CreditCard,
-  TrendingUp,
-  Settings2,
-} from "@/components/ui/icons";
-
-type IconKey = "home" | "messages" | "calendar" | "profile" | "clients" | "admin-users" | "admin-tiers" | "admin-finances" | "admin-settings";
+import { LogOut } from "@/components/ui/icons";
+import { SidebarIcon, type IconKey } from "@/components/navigation/sidebar-icons";
 
 interface NavItem {
   href: string;
@@ -32,29 +20,6 @@ const mainNavItems: NavItem[] = [
 const bottomNavItems: NavItem[] = [
   { href: "/profile", iconKey: "profile", label: "Profile" },
 ];
-
-function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: number; strokeWidth: number }) {
-  switch (iconKey) {
-    case "home":
-      return <Home size={size} strokeWidth={strokeWidth} />;
-    case "messages":
-      return <MessageCircle size={size} strokeWidth={strokeWidth} />;
-    case "calendar":
-      return <Calendar size={size} strokeWidth={strokeWidth} />;
-    case "clients":
-      return <Users size={size} strokeWidth={strokeWidth} />;
-    case "profile":
-      return <User size={size} strokeWidth={strokeWidth} />;
-    case "admin-users":
-      return <Settings size={size} strokeWidth={strokeWidth} />;
-    case "admin-tiers":
-      return <CreditCard size={size} strokeWidth={strokeWidth} />;
-    case "admin-finances":
-      return <TrendingUp size={size} strokeWidth={strokeWidth} />;
-    case "admin-settings":
-      return <Settings2 size={size} strokeWidth={strokeWidth} />;
-  }
-}
 
 interface SidebarProps {
   onSignOut?: () => void;

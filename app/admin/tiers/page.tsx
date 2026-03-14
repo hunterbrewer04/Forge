@@ -5,15 +5,15 @@ import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import EmptyState from '@/components/ui/EmptyState'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import FormModal from '@/components/admin/FormModal'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import {
   Plus,
-  X,
   Users,
   CreditCard,
-  AlertCircle,
-  Loader2,
   Pencil,
 } from '@/components/ui/icons'
 import type { TierListItem } from '@/modules/admin/types'
@@ -53,101 +53,61 @@ function TierFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 8 }}
-        transition={{ duration: 0.2 }}
-        className="relative glass border border-border rounded-2xl shadow-2xl max-w-md w-full p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-text-primary">
-            {tier ? 'Edit Tier' : 'Create Tier'}
-          </h3>
-          <button
-            onClick={onClose}
-            className="size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
-          >
-            <X size={18} />
-          </button>
-        </div>
+    <FormModal
+      title={tier ? 'Edit Tier' : 'Create Tier'}
+      submitLabel={tier ? 'Update Tier' : 'Create Tier'}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      isSubmitting={saving}
+      disabled={!name.trim() || !price || !quota}
+      error={error}
+    >
+      <div>
+        <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          Tier Name
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Premium"
+          required
+          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
+        />
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              Tier Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Premium"
-              required
-              className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-            />
-          </div>
+      <div>
+        <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          Monthly Price ($)
+        </label>
+        <input
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="49.99"
+          required
+          min="0.01"
+          step="0.01"
+          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
+        />
+      </div>
 
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              Monthly Price ($)
-            </label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="49.99"
-              required
-              min="0.01"
-              step="0.01"
-              className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              Monthly Booking Quota
-            </label>
-            <input
-              type="number"
-              value={quota}
-              onChange={(e) => setQuota(e.target.value)}
-              placeholder="8"
-              required
-              min="1"
-              step="1"
-              className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
-            />
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 text-red-500 text-sm">
-              <AlertCircle size={14} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 px-4 bg-bg-secondary text-text-secondary rounded-xl font-semibold text-sm transition-all hover:bg-bg-secondary/80"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !name.trim() || !price || !quota}
-              className="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {saving && <Loader2 size={16} className="animate-spin" />}
-              {saving ? 'Saving...' : tier ? 'Update Tier' : 'Create Tier'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+      <div>
+        <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          Monthly Booking Quota
+        </label>
+        <input
+          type="number"
+          value={quota}
+          onChange={(e) => setQuota(e.target.value)}
+          placeholder="8"
+          required
+          min="1"
+          step="1"
+          className="w-full bg-bg-secondary text-text-primary rounded-xl px-4 py-3 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none placeholder:text-text-muted"
+        />
+      </div>
+    </FormModal>
   )
 }
 
@@ -267,17 +227,13 @@ export default function AdminTiersPage() {
       }
     >
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={24} className="text-primary animate-spin" />
-        </div>
+        <LoadingSpinner />
       ) : tiers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="bg-bg-secondary p-4 rounded-full mb-3">
-            <CreditCard size={32} className="text-text-muted" />
-          </div>
-          <h3 className="text-text-primary font-medium mb-1">No Tiers Yet</h3>
-          <p className="text-text-secondary text-sm">Create your first membership tier to get started.</p>
-        </div>
+        <EmptyState
+          icon={CreditCard}
+          title="No Tiers Yet"
+          description="Create your first membership tier to get started."
+        />
       ) : (
         <div className="space-y-8">
           {/* Active Tiers */}

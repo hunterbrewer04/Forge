@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ToggleSwitch from '@/components/ui/ToggleSwitch'
 import {
   Loader2,
   Upload,
@@ -69,12 +71,22 @@ export default function AdminSettingsPage() {
     setSaving(true)
     try {
       const body: Record<string, unknown> = {}
-      if (name !== settings?.name) body.name = name
-      if (primaryColor !== settings?.primary_color) body.primary_color = primaryColor
-      if (advanceNotice !== '') body.booking_advance_notice = parseInt(advanceNotice, 10)
-      if (cancellationWindow !== '') body.cancellation_window = parseInt(cancellationWindow, 10)
-      if (Object.keys(businessHours).length > 0) body.business_hours = businessHours
-      body.notification_preferences = notifications
+      if (name !== (settings?.name || '')) body.name = name
+      if (primaryColor !== (settings?.primary_color || '#1973f0')) body.primary_color = primaryColor
+      if (advanceNotice !== (settings?.booking_advance_notice?.toString() || '')) {
+        body.booking_advance_notice = advanceNotice !== '' ? parseInt(advanceNotice, 10) : 0
+      }
+      if (cancellationWindow !== (settings?.cancellation_window?.toString() || '')) {
+        body.cancellation_window = cancellationWindow !== '' ? parseInt(cancellationWindow, 10) : 0
+      }
+      if (JSON.stringify(businessHours) !== JSON.stringify(settings?.business_hours || {})) {
+        body.business_hours = businessHours
+      }
+      if (JSON.stringify(notifications) !== JSON.stringify(settings?.notification_preferences || {})) {
+        body.notification_preferences = notifications
+      }
+
+      if (Object.keys(body).length === 0) return
 
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
@@ -83,7 +95,15 @@ export default function AdminSettingsPage() {
       })
       if (!res.ok) throw new Error('Failed to save')
       const json = await res.json()
-      setSettings(json.data)
+      const data = json.data as FacilitySettings
+      setSettings(data)
+      // Re-sync form state with server response
+      setName(data.name)
+      setPrimaryColor(data.primary_color)
+      setAdvanceNotice(data.booking_advance_notice?.toString() || '')
+      setCancellationWindow(data.cancellation_window?.toString() || '')
+      if (data.business_hours) setBusinessHours(data.business_hours)
+      if (data.notification_preferences) setNotifications(data.notification_preferences)
       toast.success('Settings saved')
     } catch {
       toast.error('Failed to save settings')
@@ -126,12 +146,18 @@ export default function AdminSettingsPage() {
     }))
   }
 
+  const isDirty =
+    name !== (settings?.name || '') ||
+    primaryColor !== (settings?.primary_color || '#1973f0') ||
+    advanceNotice !== (settings?.booking_advance_notice?.toString() || '') ||
+    cancellationWindow !== (settings?.cancellation_window?.toString() || '') ||
+    JSON.stringify(businessHours) !== JSON.stringify(settings?.business_hours || {}) ||
+    JSON.stringify(notifications) !== JSON.stringify(settings?.notification_preferences || {})
+
   if (loading) {
     return (
       <GlassAppLayout title="Settings" desktopTitle="Facility Settings">
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={24} className="text-primary animate-spin" />
-        </div>
+        <LoadingSpinner />
       </GlassAppLayout>
     )
   }
@@ -143,7 +169,7 @@ export default function AdminSettingsPage() {
       desktopHeaderRight={
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !isDirty}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
         >
           {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -308,20 +334,10 @@ export default function AdminSettingsPage() {
                   <span className="text-sm text-text-primary font-medium">
                     {key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </span>
-                  <button
-                    onClick={() => setNotifications(prev => ({ ...prev, [key]: !value }))}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      value ? 'bg-primary' : 'bg-bg-secondary border border-border'
-                    }`}
-                    role="switch"
-                    aria-checked={value}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform ${
-                        value ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
+                  <ToggleSwitch
+                    checked={value}
+                    onChange={(checked) => setNotifications(prev => ({ ...prev, [key]: checked }))}
+                  />
                 </div>
               ))}
             </div>

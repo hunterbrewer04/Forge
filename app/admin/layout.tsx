@@ -1,28 +1,11 @@
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
-import { db } from '@/lib/db'
-import { profiles } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { requireRole } from '@/lib/api/require-role'
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    redirect('/member/login')
-  }
-
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.clerkUserId, userId),
-    columns: { isAdmin: true },
-  })
-
-  if (!profile?.isAdmin) {
-    redirect('/home')
-  }
+  await requireRole('isAdmin')
 
   return (
     <>

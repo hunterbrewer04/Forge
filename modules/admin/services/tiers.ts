@@ -1,11 +1,28 @@
-import { eq, count } from 'drizzle-orm'
+import { eq, count, and, not } from 'drizzle-orm'
 import { membershipTiers, profiles } from '@/lib/db/schema'
 import { stripe } from '@/lib/stripe'
 import type { DrizzleInstance } from '../config'
 import type { TierInput, TierUpdate } from '../types'
+import { slugify } from '@/lib/utils/string'
 
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+async function uniqueSlug(db: DrizzleInstance, base: string, excludeId?: string): Promise<string> {
+  const existing = await db.query.membershipTiers.findFirst({
+    where: excludeId
+      ? and(eq(membershipTiers.slug, base), not(eq(membershipTiers.id, excludeId)))
+      : eq(membershipTiers.slug, base),
+    columns: { id: true },
+  })
+  if (!existing) return base
+
+  for (let i = 2; i < 100; i++) {
+    const candidate = `${base}-${i}`
+    const found = await db.query.membershipTiers.findFirst({
+      where: eq(membershipTiers.slug, candidate),
+      columns: { id: true },
+    })
+    if (!found) return candidate
+  }
+  return `${base}-${Date.now()}`
 }
 
 type TierRow = typeof membershipTiers.$inferSelect
@@ -54,19 +71,26 @@ export async function createTier(db: DrizzleInstance, input: TierInput) {
     recurring: { interval: 'month' },
   })
 
-  // 3. Insert into DB
-  const slug = slugify(input.name)
-  const [tier] = await db
-    .insert(membershipTiers)
-    .values({
-      name: input.name,
-      slug,
-      stripePriceId: price.id,
-      monthlyBookingQuota: input.monthlyBookingQuota,
-      priceMonthly: String(input.priceMonthly),
-      isActive: true,
-    })
-    .returning()
+  // 3. Insert into DB — on failure, clean up the orphaned Stripe objects
+  const slug = await uniqueSlug(db, slugify(input.name))
+  let tier: TierRow
+  try {
+    ;[tier] = await db
+      .insert(membershipTiers)
+      .values({
+        name: input.name,
+        slug,
+        stripePriceId: price.id,
+        monthlyBookingQuota: input.monthlyBookingQuota,
+        priceMonthly: String(input.priceMonthly),
+        isActive: true,
+      })
+      .returning()
+  } catch (err) {
+    // Deleting the product also archives all of its prices
+    await stripe.products.del(product.id)
+    throw err
+  }
 
   return serializeTier(tier)
 }
@@ -94,23 +118,53 @@ export async function updateTier(
 
     if (nameChanged) {
       dbUpdates.name = updates.name
-      dbUpdates.slug = slugify(updates.name!)
+      dbUpdates.slug = await uniqueSlug(db, slugify(updates.name!), tierId)
       await stripe.products.update(productId, { name: updates.name! })
     }
 
+    let newStripePrice: { id: string } | null = null
     if (priceChanged) {
-      const newPrice = await stripe.prices.create({
+      newStripePrice = await stripe.prices.create({
         product: productId,
         unit_amount: Math.round(updates.priceMonthly! * 100),
         currency: 'usd',
         recurring: { interval: 'month' },
       })
       await stripe.prices.update(current.stripePriceId, { active: false })
-      dbUpdates.stripePriceId = newPrice.id
+      dbUpdates.stripePriceId = newStripePrice.id
       dbUpdates.priceMonthly = String(updates.priceMonthly)
     }
+
+    if (updates.monthlyBookingQuota !== undefined) {
+      dbUpdates.monthlyBookingQuota = updates.monthlyBookingQuota
+    }
+
+    if (updates.isActive !== undefined) {
+      dbUpdates.isActive = updates.isActive
+    }
+
+    let updated: TierRow
+    try {
+      ;[updated] = await db
+        .update(membershipTiers)
+        .set(dbUpdates)
+        .where(eq(membershipTiers.id, tierId))
+        .returning()
+    } catch (err) {
+      // Roll back the price swap: re-activate old price, archive the newly created one
+      if (newStripePrice) {
+        await Promise.all([
+          stripe.prices.update(current.stripePriceId, { active: true }),
+          stripe.prices.update(newStripePrice.id, { active: false }),
+        ])
+      }
+      throw err
+    }
+
+    return serializeTier(updated)
   }
 
+  // No Stripe-related changes — just update quota / isActive
   if (updates.monthlyBookingQuota !== undefined) {
     dbUpdates.monthlyBookingQuota = updates.monthlyBookingQuota
   }

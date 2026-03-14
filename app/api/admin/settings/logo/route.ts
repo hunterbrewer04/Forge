@@ -6,6 +6,7 @@ import { validateMagicBytes } from '@/lib/api/file-validation'
 import { db } from '@/lib/db'
 import { uploadLogo, updateSettings } from '@/modules/admin/services/settings'
 import { getR2FilePublicUrl } from '@/modules/messaging/services/storage'
+import { logAuditEvent } from '@/lib/services/audit'
 
 const MAX_LOGO_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
@@ -49,6 +50,15 @@ export async function POST(request: NextRequest) {
 
     // Update settings with the new logo URL
     await updateSettings(db, { logo_url: logoUrl })
+
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.settings.logo_upload',
+      resource: 'settings',
+      metadata: { logoUrl, fileType: file.type, fileSize: file.size },
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
 
     return NextResponse.json({ success: true, data: { logo_url: logoUrl } })
   } catch (error) {

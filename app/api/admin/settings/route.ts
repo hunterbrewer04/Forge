@@ -6,6 +6,7 @@ import { handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody } from '@/lib/api/validation'
 import { db } from '@/lib/db'
 import { getSettings, updateSettings } from '@/modules/admin/services/settings'
+import { logAuditEvent } from '@/lib/services/audit'
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -46,6 +47,16 @@ export async function PATCH(request: NextRequest) {
     if (body instanceof NextResponse) return body
 
     const updated = await updateSettings(db, body)
+
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.settings.update',
+      resource: 'settings',
+      metadata: body,
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
+
     return NextResponse.json({ success: true, data: updated })
   } catch (error) {
     return handleUnexpectedError(error, 'admin-settings-update')

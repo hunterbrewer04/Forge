@@ -13,6 +13,7 @@ import { handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody } from '@/lib/api/validation'
 import { db } from '@/lib/db'
 import { listTiers, createTier } from '@/modules/admin/services/tiers'
+import { logAuditEvent } from '@/lib/services/audit'
 
 const createTierSchema = z.object({
   name: z.string().min(1).max(100),
@@ -47,6 +48,17 @@ export async function POST(request: NextRequest) {
     if (body instanceof NextResponse) return body
 
     const tier = await createTier(db, body)
+
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.tier.create',
+      resource: 'tier',
+      resourceId: tier.id,
+      metadata: body,
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
+
     return NextResponse.json({ success: true, data: tier }, { status: 201 })
   } catch (error) {
     return handleUnexpectedError(error, 'admin-tier-create')

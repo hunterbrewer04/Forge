@@ -14,6 +14,7 @@ import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody, isValidUUID } from '@/lib/api/validation'
 import { db } from '@/lib/db'
 import { getUser, updateUserRoles, deactivateUser } from '@/modules/admin/services/users'
+import { logAuditEvent } from '@/lib/services/audit'
 
 const roleUpdateSchema = z.object({
   isTrainer: z.boolean().optional(),
@@ -73,6 +74,16 @@ export async function PATCH(
       return createApiError('User not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.user.role_update',
+      resource: 'profile',
+      resourceId: id,
+      metadata: body,
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
+
     return NextResponse.json({ success: true, data: updated })
   } catch (error) {
     return handleUnexpectedError(error, 'admin-user-update')
@@ -99,6 +110,15 @@ export async function DELETE(
     if (!deactivated) {
       return createApiError('User not found', 404, 'RESOURCE_NOT_FOUND')
     }
+
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.user.deactivate',
+      resource: 'profile',
+      resourceId: id,
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
 
     return NextResponse.json({ success: true, data: deactivated })
   } catch (error) {

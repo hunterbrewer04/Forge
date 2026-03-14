@@ -3,13 +3,20 @@ import { profiles } from '@/lib/db/schema'
 import { stripe } from '@/lib/stripe'
 import type { DrizzleInstance } from '../config'
 
+export class SubscriptionNotFoundError extends Error {
+  constructor() {
+    super('No active subscription found')
+    this.name = 'SubscriptionNotFoundError'
+  }
+}
+
 async function getSubscriptionId(db: DrizzleInstance, profileId: string): Promise<string> {
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.id, profileId),
     columns: { stripeSubscriptionId: true },
   })
   if (!profile?.stripeSubscriptionId) {
-    throw new Error('No active subscription found')
+    throw new SubscriptionNotFoundError()
   }
   return profile.stripeSubscriptionId
 }

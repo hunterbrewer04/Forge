@@ -13,6 +13,7 @@ import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody, isValidUUID } from '@/lib/api/validation'
 import { db } from '@/lib/db'
 import { updateTier, archiveTier } from '@/modules/admin/services/tiers'
+import { logAuditEvent } from '@/lib/services/audit'
 
 const updateTierSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -45,6 +46,16 @@ export async function PATCH(
       return createApiError('Tier not found', 404, 'RESOURCE_NOT_FOUND')
     }
 
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.tier.update',
+      resource: 'tier',
+      resourceId: id,
+      metadata: body,
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
+
     return NextResponse.json({ success: true, data: updated })
   } catch (error) {
     return handleUnexpectedError(error, 'admin-tier-update')
@@ -71,6 +82,15 @@ export async function DELETE(
     if (!archived) {
       return createApiError('Tier not found', 404, 'RESOURCE_NOT_FOUND')
     }
+
+    logAuditEvent({
+      userId: authResult.profileId,
+      action: 'admin.tier.archive',
+      resource: 'tier',
+      resourceId: id,
+      ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || undefined,
+      userAgent: request.headers.get('user-agent') || undefined,
+    }).catch(console.error)
 
     return NextResponse.json({ success: true, data: archived })
   } catch (error) {

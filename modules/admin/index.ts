@@ -7,7 +7,7 @@ export { cancelSubscription, pauseSubscription, resumeSubscription, issueRefund,
 export { getSettings, updateSettings, uploadLogo } from './services/settings'
 
 // Config
-export type { AdminAuthContext, DrizzleInstance } from './config'
+export type { DrizzleInstance } from './config'
 
 // Types
 export type {
