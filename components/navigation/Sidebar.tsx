@@ -13,9 +13,10 @@ import {
   Settings,
   CreditCard,
   TrendingUp,
+  Settings2,
 } from "@/components/ui/icons";
 
-type IconKey = "home" | "messages" | "calendar" | "profile" | "clients" | "admin-users" | "admin-tiers" | "admin-finances";
+type IconKey = "home" | "messages" | "calendar" | "profile" | "clients" | "admin-users" | "admin-tiers" | "admin-finances" | "admin-settings";
 
 interface NavItem {
   href: string;
@@ -50,6 +51,8 @@ function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: n
       return <CreditCard size={size} strokeWidth={strokeWidth} />;
     case "admin-finances":
       return <TrendingUp size={size} strokeWidth={strokeWidth} />;
+    case "admin-settings":
+      return <Settings2 size={size} strokeWidth={strokeWidth} />;
   }
 }
 
@@ -82,6 +85,7 @@ export default function Sidebar({ onSignOut }: SidebarProps) {
         { href: "/admin/users", iconKey: "admin-users", label: "Admin" },
         { href: "/admin/tiers", iconKey: "admin-tiers", label: "Tiers" },
         { href: "/admin/finances", iconKey: "admin-finances", label: "Finances" },
+        { href: "/admin/settings", iconKey: "admin-settings", label: "Settings" },
       ]
     : [];
 

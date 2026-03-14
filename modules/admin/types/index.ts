@@ -119,3 +119,27 @@ export interface RefundInput {
   chargeId: string
   amount?: number
 }
+
+// Phase 4: Facility settings types
+
+export interface FacilitySettings {
+  id: string
+  name: string
+  logo_url: string | null
+  primary_color: string
+  business_hours: Record<string, { open: string; close: string }> | null
+  booking_advance_notice: number | null
+  cancellation_window: number | null
+  notification_preferences: Record<string, boolean> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SettingsUpdate {
+  name?: string
+  primary_color?: string
+  business_hours?: Record<string, { open: string; close: string }>
+  booking_advance_notice?: number
+  cancellation_window?: number
+  notification_preferences?: Record<string, boolean>
+}

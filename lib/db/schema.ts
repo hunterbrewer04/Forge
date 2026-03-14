@@ -160,6 +160,19 @@ export const auditLogs = pgTable('audit_logs', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const facilitySettings = pgTable('facility_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().default('Forge'),
+  logoUrl: text('logo_url'),
+  primaryColor: text('primary_color').notNull().default('#1973f0'),
+  businessHours: jsonb('business_hours'),
+  bookingAdvanceNotice: integer('booking_advance_notice'),
+  cancellationWindow: integer('cancellation_window'),
+  notificationPreferences: jsonb('notification_preferences'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ============================================================================
 // Relations
 // ============================================================================
