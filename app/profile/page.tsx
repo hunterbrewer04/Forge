@@ -176,13 +176,13 @@ export default function ProfilePage() {
               >
                 {/* Gradient ring wrapper */}
                 <div className="relative size-[104px] rounded-full p-1 bg-gradient-to-br from-primary to-orange-500">
-                  <div className="size-full rounded-full overflow-hidden bg-bg-card">
+                  <div className="relative size-full rounded-full overflow-hidden bg-bg-card">
                     {profile?.avatar_url ? (
                       <Image
                         src={profile.avatar_url}
                         alt={displayName}
                         fill
-                        className="object-cover"
+                        className="object-cover rounded-full"
                       />
                     ) : (
                       <div className="size-full flex items-center justify-center">
