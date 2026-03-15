@@ -35,6 +35,9 @@ export default function SchedulePage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showDetailsSheet, setShowDetailsSheet] = useState(false)
 
+  // Memoize statusFilter to prevent new array reference each render
+  const statusFilter = useMemo(() => ['scheduled'] as const, [])
+
   // Data hook
   const {
     sessions,
@@ -45,7 +48,7 @@ export default function SchedulePage() {
     filters,
   } = useScheduleData({
     userId: profile?.id,
-    statusFilter: ['scheduled'],
+    statusFilter,
   })
 
   // Compute booked dates for calendar

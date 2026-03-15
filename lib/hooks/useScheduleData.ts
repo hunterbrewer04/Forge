@@ -43,6 +43,9 @@ export function useScheduleData({
   const isMountedRef = useRef(true)
   const hasLoadedRef = useRef(false)
 
+  // Stabilize statusFilter as a primitive string for dependency arrays
+  const statusKey = statusFilter ? statusFilter.join(',') : 'scheduled'
+
   // Compute datesWithSessions from sessions array
   const datesWithSessions = useMemo(() => {
     const dates = new Set<string>()
@@ -96,7 +99,7 @@ export function useScheduleData({
       const endRange = new Date()
       endRange.setDate(endRange.getDate() + 60)
       const endDate = toDate || endRange.toISOString().split('T')[0]
-      const status = statusFilter?.join(',') || 'scheduled'
+      const status = statusKey
 
       const response = await fetch(
         `/api/sessions?from=${todayLocal}&to=${endDate}&status=${status}`,
@@ -138,7 +141,7 @@ export function useScheduleData({
         setRefreshing(false)
       }
     }
-  }, [userId, fromDate, toDate, statusFilter])
+  }, [userId, fromDate, toDate, statusKey])
 
   // Handle date range changes with debouncing
   useEffect(() => {
@@ -165,14 +168,18 @@ export function useScheduleData({
     }
   // fetchSessions and sessions.length intentionally excluded — including them causes an infinite refetch loop.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromDate, toDate, statusFilter, userId])
+  }, [fromDate, toDate, statusKey, userId])
+
+  // Keep a stable ref to the latest fetchSessions so the interval never restarts
+  const fetchSessionsRef = useRef(fetchSessions)
+  fetchSessionsRef.current = fetchSessions
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
     if (!userId) return
 
     autoRefreshIntervalRef.current = setInterval(() => {
-      fetchSessions()
+      fetchSessionsRef.current()
     }, 30000)
 
     return () => {
@@ -180,7 +187,7 @@ export function useScheduleData({
         clearInterval(autoRefreshIntervalRef.current)
       }
     }
-  }, [fetchSessions, userId])
+  }, [userId])
 
   // Clean up on unmount
   useEffect(() => {
