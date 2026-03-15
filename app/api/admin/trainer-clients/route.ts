@@ -21,6 +21,33 @@ const assignSchema = z.object({
   clientId: z.string().uuid(),
 })
 
+export async function GET(request: NextRequest) {
+  try {
+    const authResult = await validateRole('admin')
+    if (authResult instanceof NextResponse) return authResult
+
+    const rateLimitResult = await checkRateLimit(request, RateLimitPresets.GENERAL, authResult.profileId)
+    if (rateLimitResult) return rateLimitResult
+
+    const clientId = request.nextUrl.searchParams.get('clientId')
+    if (!clientId) {
+      return NextResponse.json({ success: true, data: null })
+    }
+
+    const row = await db.query.trainerClients.findFirst({
+      where: eq(trainerClients.clientId, clientId),
+      columns: { trainerId: true },
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: row ? { trainer_id: row.trainerId } : null,
+    })
+  } catch (error) {
+    return handleUnexpectedError(error, 'admin-trainer-client-get')
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authResult = await validateRole('admin')

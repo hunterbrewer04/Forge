@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
@@ -22,6 +22,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Filter,
   BadgeCheck,
 } from '@/components/ui/icons'
@@ -64,6 +65,59 @@ function UserDetailPanel({
 }) {
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [trainers, setTrainers] = useState<{ id: string; full_name: string | null }[]>([])
+  const [assignedTrainerId, setAssignedTrainerId] = useState<string | null>(null)
+  const [loadingTrainers, setLoadingTrainers] = useState(true)
+  const [assigning, setAssigning] = useState(false)
+
+  useEffect(() => {
+    async function loadTrainers() {
+      try {
+        const [trainersRes, assignmentRes] = await Promise.all([
+          fetch('/api/admin/users?role=trainer&limit=50'),
+          fetch(`/api/admin/trainer-clients?clientId=${user.id}`),
+        ])
+        if (trainersRes.ok) {
+          const data = await trainersRes.json()
+          setTrainers(data.data.map((t: { id: string; full_name: string | null }) => ({ id: t.id, full_name: t.full_name })))
+        }
+        if (assignmentRes.ok) {
+          const data = await assignmentRes.json()
+          setAssignedTrainerId(data.data?.trainer_id ?? null)
+        }
+      } finally {
+        setLoadingTrainers(false)
+      }
+    }
+    if (user.is_member || user.has_full_access) loadTrainers()
+    else setLoadingTrainers(false)
+  }, [user.id, user.is_member, user.has_full_access])
+
+  const handleAssignTrainer = async (trainerId: string | null) => {
+    setAssigning(true)
+    try {
+      if (assignedTrainerId) {
+        await fetch('/api/admin/trainer-clients', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trainerId: assignedTrainerId, clientId: user.id }),
+        })
+      }
+      if (trainerId) {
+        await fetch('/api/admin/trainer-clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trainerId, clientId: user.id }),
+        })
+      }
+      setAssignedTrainerId(trainerId)
+      toast.success(trainerId ? 'Trainer assigned' : 'Trainer removed')
+    } catch {
+      toast.error('Failed to update trainer assignment')
+    } finally {
+      setAssigning(false)
+    }
+  }
 
   const roles = [
     { key: 'isTrainer', label: 'Trainer', value: user.is_trainer },
@@ -175,6 +229,37 @@ function UserDetailPanel({
               ))}
             </div>
           </div>
+
+          {/* Assigned Trainer */}
+          {(user.is_member || user.has_full_access) && (
+            <div>
+              <h4 className="text-sm font-semibold text-text-primary mb-3 uppercase tracking-wider">
+                Assigned Trainer
+              </h4>
+              <GlassCard variant="subtle" className="px-4 py-3">
+                {loadingTrainers ? (
+                  <div className="h-10 bg-bg-secondary rounded animate-pulse" />
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={assignedTrainerId || ''}
+                      onChange={(e) => handleAssignTrainer(e.target.value || null)}
+                      disabled={assigning}
+                      className="w-full bg-transparent text-text-primary text-sm font-medium appearance-none cursor-pointer disabled:opacity-50 outline-none pr-6"
+                    >
+                      <option value="">No trainer assigned</option>
+                      {trainers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.full_name || 'Unnamed Trainer'}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-0 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  </div>
+                )}
+              </GlassCard>
+            </div>
+          )}
 
           {/* Deactivate */}
           <div className="pt-4 border-t border-border">
