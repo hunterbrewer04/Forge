@@ -16,6 +16,8 @@ import { createApiError, handleUnexpectedError } from '@/lib/api/errors'
 import { validateRequestBody, SessionSchemas } from '@/lib/api/validation'
 import { logAuditEventFromRequest } from '@/lib/services/audit'
 import { getSessionAvailability } from '@/modules/calendar-booking/services/availability'
+import { cancelSessionBookings } from '@/modules/calendar-booking/services/bookings'
+import { sendPushToUser } from '@/lib/services/push-send'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -375,6 +377,44 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // 8. Perform update
     await db.update(sessions).set(updateData).where(eq(sessions.id, id))
+
+    // 8a. Cascade cancellation to confirmed bookings when session is cancelled
+    if (body.status === 'cancelled') {
+      const cancellationReason = body.cancellation_reason ?? 'Session cancelled by trainer'
+
+      const affectedClientIds = await cancelSessionBookings(db, id, cancellationReason)
+
+      if (affectedClientIds.length > 0) {
+        // Send push notifications and audit log entries for each affected booking
+        // Fire-and-forget — failures must not block the response
+        await Promise.allSettled([
+          ...affectedClientIds.map((clientId) =>
+            sendPushToUser(clientId, {
+              title: 'Session Cancelled',
+              body: `"${existingSession.title}" has been cancelled. ${cancellationReason}`,
+              url: '/schedule',
+              tag: `session-cancelled-${id}`,
+              type: 'session_cancelled',
+            })
+          ),
+          ...affectedClientIds.map((clientId) =>
+            logAuditEventFromRequest({
+              userId: profileId,
+              action: 'BOOKING_CANCEL',
+              resource: 'booking',
+              resourceId: id,
+              metadata: {
+                clientId,
+                sessionId: id,
+                sessionTitle: existingSession.title,
+                reason: cancellationReason,
+                triggeredBy: 'session_cancellation',
+              },
+            })
+          ),
+        ])
+      }
+    }
 
     // 9. Fetch updated session with relations
     const updated = await db.query.sessions.findFirst({

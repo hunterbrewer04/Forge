@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { toast } from 'sonner'
+import { useRef } from 'react'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
@@ -11,10 +10,9 @@ import {
   Loader2,
   Upload,
   Save,
-  Settings2,
 } from '@/components/ui/icons'
-import type { FacilitySettings } from '@/modules/admin/types'
-import { getErrorMessage } from '@/lib/utils/errors'
+import { useAdminSettings } from '@/lib/hooks/admin/useAdminSettings'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 const DAY_LABELS: Record<string, string> = {
@@ -23,138 +21,39 @@ const DAY_LABELS: Record<string, string> = {
 }
 
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState<FacilitySettings | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
-
-  // Form state
-  const [name, setName] = useState('')
-  const [primaryColor, setPrimaryColor] = useState('#1973f0')
-  const [advanceNotice, setAdvanceNotice] = useState('')
-  const [cancellationWindow, setCancellationWindow] = useState('')
-  const [businessHours, setBusinessHours] = useState<Record<string, { open: string; close: string }>>({})
-  const [notifications, setNotifications] = useState<Record<string, boolean>>({
-    email_on_booking: true,
-    email_on_cancellation: true,
-    push_on_booking: true,
-    push_on_cancellation: true,
-  })
+  const isDesktop = useIsDesktop()
+  const {
+    settings,
+    isLoading,
+    name,
+    setName,
+    primaryColor,
+    setPrimaryColor,
+    advanceNotice,
+    setAdvanceNotice,
+    cancellationWindow,
+    setCancellationWindow,
+    businessHours,
+    updateHours,
+    notifications,
+    setNotifications,
+    isDirty,
+    save,
+    uploadLogo,
+    isSaving,
+    isUploading,
+  } = useAdminSettings(isDesktop)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const fetchSettings = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/settings')
-      if (!res.ok) throw new Error('Failed to load settings')
-      const json = await res.json()
-      const data = json.data as FacilitySettings | null
-      setSettings(data)
-      setName(data?.name || '')
-      setPrimaryColor(data?.primary_color || '#1973f0')
-      setAdvanceNotice(data?.booking_advance_notice?.toString() || '')
-      setCancellationWindow(data?.cancellation_window?.toString() || '')
-      if (data?.business_hours) setBusinessHours(data.business_hours)
-      if (data?.notification_preferences) setNotifications(data.notification_preferences)
-    } catch (err) {
-      console.error('Failed to load settings:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchSettings()
-  }, [fetchSettings])
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const body: Record<string, unknown> = {}
-      if (name !== (settings?.name || '')) body.name = name
-      if (primaryColor !== (settings?.primary_color || '#1973f0')) body.primary_color = primaryColor
-      if (advanceNotice !== (settings?.booking_advance_notice?.toString() || '')) {
-        body.booking_advance_notice = advanceNotice !== '' ? parseInt(advanceNotice, 10) : 0
-      }
-      if (cancellationWindow !== (settings?.cancellation_window?.toString() || '')) {
-        body.cancellation_window = cancellationWindow !== '' ? parseInt(cancellationWindow, 10) : 0
-      }
-      if (JSON.stringify(businessHours) !== JSON.stringify(settings?.business_hours || {})) {
-        body.business_hours = businessHours
-      }
-      if (JSON.stringify(notifications) !== JSON.stringify(settings?.notification_preferences || {})) {
-        body.notification_preferences = notifications
-      }
-
-      if (Object.keys(body).length === 0) return
-
-      const res = await fetch('/api/admin/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) throw new Error('Failed to save')
-      const json = await res.json()
-      const data = json.data as FacilitySettings
-      setSettings(data)
-      // Re-sync form state with server response
-      setName(data.name)
-      setPrimaryColor(data.primary_color)
-      setAdvanceNotice(data.booking_advance_notice?.toString() || '')
-      setCancellationWindow(data.cancellation_window?.toString() || '')
-      if (data.business_hours) setBusinessHours(data.business_hours)
-      if (data.notification_preferences) setNotifications(data.notification_preferences)
-      toast.success('Settings saved')
-    } catch {
-      toast.error('Failed to save settings')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const res = await fetch('/api/admin/settings/logo', {
-        method: 'POST',
-        body: formData,
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error(json.error || 'Failed to upload')
-      }
-      toast.success('Logo uploaded')
-      fetchSettings()
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to upload logo'))
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
+    await uploadLogo(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const updateHours = (day: string, field: 'open' | 'close', value: string) => {
-    setBusinessHours(prev => ({
-      ...prev,
-      [day]: { ...prev[day], [field]: value },
-    }))
-  }
-
-  const isDirty =
-    name !== (settings?.name || '') ||
-    primaryColor !== (settings?.primary_color || '#1973f0') ||
-    advanceNotice !== (settings?.booking_advance_notice?.toString() || '') ||
-    cancellationWindow !== (settings?.cancellation_window?.toString() || '') ||
-    JSON.stringify(businessHours) !== JSON.stringify(settings?.business_hours || {}) ||
-    JSON.stringify(notifications) !== JSON.stringify(settings?.notification_preferences || {})
-
-  if (loading) {
+  if (isLoading) {
     return (
       <GlassAppLayout title="Settings" desktopTitle="Facility Settings">
         <LoadingSpinner />
@@ -168,12 +67,12 @@ export default function AdminSettingsPage() {
       desktopTitle="Facility Settings"
       desktopHeaderRight={
         <button
-          onClick={handleSave}
-          disabled={saving || !isDirty}
+          onClick={save}
+          disabled={isSaving || !isDirty}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
         >
-          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {saving ? 'Saving...' : 'Save Changes'}
+          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       }
     >
@@ -207,11 +106,11 @@ export default function AdminSettingsPage() {
                 )}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
+                  disabled={isUploading}
                   className="flex items-center gap-2 px-4 py-2.5 bg-bg-secondary rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary border border-border transition-all disabled:opacity-50"
                 >
-                  {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                  {uploading ? 'Uploading...' : 'Upload Logo'}
+                  {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                  {isUploading ? 'Uploading...' : 'Upload Logo'}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -321,7 +220,7 @@ export default function AdminSettingsPage() {
                   </span>
                   <ToggleSwitch
                     checked={value}
-                    onChange={(checked) => setNotifications(prev => ({ ...prev, [key]: checked }))}
+                    onChange={(checked) => setNotifications({ ...notifications, [key]: checked })}
                   />
                 </div>
               ))}

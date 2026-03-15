@@ -71,23 +71,23 @@ export default function ClientConversationList({
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-background-dark">
-        <div className="text-stone-500 text-sm">Loading...</div>
+      <div className="h-full flex items-center justify-center bg-bg-primary">
+        <div className="text-text-secondary text-sm">Loading...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center bg-background-dark p-4">
+      <div className="h-full flex items-center justify-center bg-bg-primary p-4">
         <button
           onClick={loadConversation}
-          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-white/5 rounded-2xl transition-colors group"
+          className="flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-bg-card rounded-2xl transition-colors group"
         >
-          <div className="size-14 rounded-full bg-red-500/10 flex items-center justify-center mb-3 group-hover:bg-red-500/20 transition-colors">
-            <AlertCircle size={28} strokeWidth={2} className="text-red-400" />
+          <div className="size-14 rounded-full bg-error/10 flex items-center justify-center mb-3 group-hover:bg-error/20 transition-colors">
+            <AlertCircle size={28} strokeWidth={2} className="text-error" />
           </div>
-          <div className="text-stone-300 mb-2 text-sm font-medium">{error}</div>
+          <div className="text-text-primary mb-2 text-sm font-medium">{error}</div>
           <div className="flex items-center gap-2 text-primary text-xs font-medium">
             <RefreshCw size={14} strokeWidth={2} />
             Tap to retry
@@ -99,13 +99,13 @@ export default function ClientConversationList({
 
   if (!conversation) {
     return (
-      <div className="h-full flex items-center justify-center bg-background-dark p-4">
+      <div className="h-full flex items-center justify-center bg-bg-primary p-4">
         <div className="flex flex-col items-center text-center">
-          <div className="size-14 rounded-full bg-white/5 flex items-center justify-center mb-3">
-            <MessageSquare size={28} className="text-stone-500" />
+          <div className="size-14 rounded-full bg-bg-card flex items-center justify-center mb-3">
+            <MessageSquare size={28} className="text-text-secondary" />
           </div>
-          <div className="text-stone-400 text-sm font-medium">No conversations yet</div>
-          <div className="text-stone-500 text-xs mt-1">Your trainer will appear here</div>
+          <div className="text-text-muted text-sm font-medium">No conversations yet</div>
+          <div className="text-text-secondary text-xs mt-1">Your trainer will appear here</div>
         </div>
       </div>
     )
@@ -117,18 +117,18 @@ export default function ClientConversationList({
     .includes(searchQuery.toLowerCase()) ?? true
 
   return (
-    <div className="h-full bg-background-dark overflow-y-auto">
-      <div className="p-4 border-b border-white/10">
-        <h2 className="text-lg font-bold text-white">Messages</h2>
+    <div className="h-full bg-bg-primary overflow-y-auto">
+      <div className="p-4 border-b border-border">
+        <h2 className="text-lg font-bold text-text-primary">Messages</h2>
       </div>
       {matchesSearch ? (
         <div className="mx-4 mt-4">
           <button
             onClick={() => onSelectConversation(conversation.id)}
-            className={`w-full rounded-2xl bg-surface-mid border p-4 text-left hover:bg-white/5 transition-colors ${
+            className={`w-full rounded-2xl bg-bg-card border p-4 text-left hover:bg-bg-secondary transition-colors ${
               selectedConversationId === conversation.id
                 ? 'border-primary/30 bg-primary/5'
-                : 'border-white/5'
+                : 'border-border'
             }`}
           >
             <div className="flex items-center gap-3">
@@ -141,14 +141,14 @@ export default function ClientConversationList({
                   className="rounded-xl object-cover shrink-0"
                 />
               ) : (
-                <div className="size-12 rounded-xl bg-stone-700 flex items-center justify-center shrink-0">
-                  <span className="text-white text-lg font-bold">
+                <div className="size-12 rounded-xl bg-bg-secondary flex items-center justify-center shrink-0">
+                  <span className="text-text-primary text-lg font-bold">
                     {conversation.trainer_name?.[0]?.toUpperCase() || 'T'}
                   </span>
                 </div>
               )}
               <div>
-                <div className="text-base font-bold text-white">
+                <div className="text-base font-bold text-text-primary">
                   {conversation.trainer_name}
                 </div>
                 <div className="text-xs text-primary font-medium mt-0.5">
@@ -160,7 +160,7 @@ export default function ClientConversationList({
         </div>
       ) : (
         <div className="px-4 py-8 text-center">
-          <p className="text-stone-500 text-sm">No conversations matching &quot;{searchQuery}&quot;</p>
+          <p className="text-text-secondary text-sm">No conversations matching &quot;{searchQuery}&quot;</p>
         </div>
       )}
     </div>

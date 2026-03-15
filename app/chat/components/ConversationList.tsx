@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { fetchTrainerConversations, getLastMessagesForConversations, getUnreadCountsForConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
-import { AlertCircle, RefreshCw, User, SquarePen } from '@/components/ui/icons'
+import { AlertCircle, RefreshCw, User } from '@/components/ui/icons'
 
 interface Conversation {
   id: string
@@ -200,13 +200,6 @@ export default function ConversationList({
         )}
       </div>
 
-      {/* FAB for new message */}
-      <button
-        className="fixed bottom-24 right-4 size-14 bg-primary text-white rounded-full shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all lg:hidden"
-        aria-label="New message"
-      >
-        <SquarePen size={24} />
-      </button>
     </div>
   )
 }

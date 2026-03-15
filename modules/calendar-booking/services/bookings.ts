@@ -2,10 +2,11 @@
  * Booking service
  *
  * bookSession — atomic transaction that enforces capacity and duplicate checks
+ * cancelSessionBookings — bulk-cancel all confirmed bookings for a session
  */
 
 import { sessions, bookings } from '@/lib/db/schema'
-import { eq, and, count } from 'drizzle-orm'
+import { eq, and, count, inArray } from 'drizzle-orm'
 import type { DrizzleInstance } from '../config'
 
 export async function bookSession(db: DrizzleInstance, sessionId: string, clientId: string) {
@@ -62,4 +63,48 @@ export async function bookSession(db: DrizzleInstance, sessionId: string, client
 
     return booking
   })
+}
+
+/**
+ * Bulk-cancel all confirmed bookings for a session.
+ *
+ * Intended to be called after a session is cancelled so that every
+ * booked client's record is updated atomically.
+ *
+ * @returns Array of client IDs whose bookings were cancelled
+ */
+export async function cancelSessionBookings(
+  db: DrizzleInstance,
+  sessionId: string,
+  reason: string
+): Promise<string[]> {
+  // 1. Find all confirmed bookings for the session
+  const confirmedBookings = await db.query.bookings.findMany({
+    where: and(
+      eq(bookings.sessionId, sessionId),
+      eq(bookings.status, 'confirmed')
+    ),
+    columns: { id: true, clientId: true },
+  })
+
+  if (confirmedBookings.length === 0) {
+    return []
+  }
+
+  const now = new Date()
+  const bookingIds = confirmedBookings.map((b) => b.id)
+
+  // 2. Batch-update all confirmed bookings to cancelled in a single query
+  await db
+    .update(bookings)
+    .set({
+      status: 'cancelled',
+      cancelledAt: now,
+      cancellationReason: reason,
+      updatedAt: now,
+    })
+    .where(inArray(bookings.id, bookingIds))
+
+  // 3. Return affected client IDs
+  return confirmedBookings.map((b) => b.clientId)
 }

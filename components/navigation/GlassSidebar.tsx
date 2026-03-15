@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import GlassCard from '@/components/ui/GlassCard'
-import { LogOut, ChevronDown, ChevronLeft } from '@/components/ui/icons'
+import { LogOut, ChevronDown, ChevronLeft, User } from '@/components/ui/icons'
 import { SidebarIcon, type IconKey } from '@/components/navigation/sidebar-icons'
 
 interface NavItem {
@@ -86,19 +86,37 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
       className="hidden lg:flex flex-col w-64 xl:w-72 h-full rounded-none border-r border-border"
       initial={false}
     >
-      {/* Facility Branding */}
-      <div className="relative flex items-center justify-center px-6 py-6 border-b border-border">
-        <Image
-          src="/Forge-Full-Logo.PNG"
-          alt="Forge Sports Performance"
-          width={240}
-          height={160}
-          className="h-36 w-auto object-contain"
-        />
+      {/* User Identity Header */}
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-border">
+        <div className="relative">
+          <div className="size-10 rounded-full overflow-hidden bg-bg-secondary border-2 border-border">
+            {profile?.avatar_url ? (
+              <Image
+                src={profile.avatar_url}
+                alt={profile.full_name || 'User'}
+                width={40}
+                height={40}
+                className="object-cover size-full"
+              />
+            ) : (
+              <div className="size-full flex items-center justify-center text-text-muted">
+                <User size={18} />
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm text-text-primary truncate">
+            {profile?.full_name || 'User'}
+          </div>
+          <div className="text-[11px] text-text-muted">
+            {profile?.is_trainer ? 'Trainer' : profile?.is_admin ? 'Admin' : 'Athlete'}
+          </div>
+        </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute right-4 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-all"
+            className="size-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-all"
             aria-label="Collapse sidebar"
           >
             <ChevronLeft size={18} />
@@ -170,7 +188,7 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
                   size={22}
                   strokeWidth={isAdminActive ? 2.5 : 2}
                 />
-                <span className="font-medium flex-1 text-left">Admin Panel</span>
+                <span className="font-medium flex-1 text-left">Admin Dashboard</span>
                 <motion.span
                   animate={{ rotate: adminOpen ? 180 : 0 }}
                   transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
@@ -245,6 +263,12 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
             <span className="font-medium">{item.label}</span>
           </Link>
         ))}
+
+        {/* Forge Branding */}
+        <div className="flex items-center gap-2 px-4 py-2 mb-1">
+          <span className="text-primary font-bold text-sm tracking-wide" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>FORGE</span>
+          <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">Performance</span>
+        </div>
 
         {onSignOut && (
           <button

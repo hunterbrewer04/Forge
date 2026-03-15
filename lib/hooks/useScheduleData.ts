@@ -5,10 +5,13 @@ import type { SessionWithDetails, SessionType } from '@/modules/calendar-booking
 import { getLocalDateString } from '@/lib/utils/date'
 import { getErrorMessage } from '@/lib/utils/errors'
 
+type SessionStatus = 'scheduled' | 'completed' | 'cancelled'
+
 interface UseScheduleDataParams {
   userId: string | undefined
   fromDate?: string
   toDate?: string
+  statusFilter?: readonly SessionStatus[]
 }
 
 interface UseScheduleDataReturn {
@@ -26,6 +29,7 @@ export function useScheduleData({
   userId,
   fromDate,
   toDate,
+  statusFilter,
 }: UseScheduleDataParams): UseScheduleDataReturn {
   const [sessions, setSessions] = useState<SessionWithDetails[]>([])
   const [sessionTypes, setSessionTypes] = useState<SessionType[]>([])
@@ -37,6 +41,7 @@ export function useScheduleData({
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const isMountedRef = useRef(true)
+  const hasLoadedRef = useRef(false)
 
   // Compute datesWithSessions from sessions array
   const datesWithSessions = useMemo(() => {
@@ -77,7 +82,7 @@ export function useScheduleData({
 
     try {
       // Determine if this is a refresh or initial load
-      const isRefresh = sessions.length > 0
+      const isRefresh = hasLoadedRef.current
       if (isRefresh) {
         setRefreshing(true)
       } else {
@@ -88,12 +93,13 @@ export function useScheduleData({
 
       // Build query parameters
       const todayLocal = fromDate || getLocalDateString()
-      const twoWeeksOut = new Date()
-      twoWeeksOut.setDate(twoWeeksOut.getDate() + 14)
-      const endDate = toDate || twoWeeksOut.toISOString().split('T')[0]
+      const endRange = new Date()
+      endRange.setDate(endRange.getDate() + 60)
+      const endDate = toDate || endRange.toISOString().split('T')[0]
+      const status = statusFilter?.join(',') || 'scheduled'
 
       const response = await fetch(
-        `/api/sessions?from=${todayLocal}&to=${endDate}&status=scheduled`,
+        `/api/sessions?from=${todayLocal}&to=${endDate}&status=${status}`,
         { signal: abortControllerRef.current.signal }
       )
 
@@ -106,6 +112,7 @@ export function useScheduleData({
       if (!isMountedRef.current) return
 
       setSessions(data.sessions || [])
+      hasLoadedRef.current = true
 
       // Extract unique session types from sessions
       const typesMap = new Map<string, SessionType>()
@@ -131,7 +138,7 @@ export function useScheduleData({
         setRefreshing(false)
       }
     }
-  }, [userId, fromDate, toDate, sessions.length])
+  }, [userId, fromDate, toDate, statusFilter])
 
   // Handle date range changes with debouncing
   useEffect(() => {
@@ -141,7 +148,7 @@ export function useScheduleData({
     }
 
     // On initial mount, fetch immediately
-    if (sessions.length === 0) {
+    if (!hasLoadedRef.current) {
       fetchSessions()
       return
     }
@@ -158,7 +165,7 @@ export function useScheduleData({
     }
   // fetchSessions and sessions.length intentionally excluded — including them causes an infinite refetch loop.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromDate, toDate, userId])
+  }, [fromDate, toDate, statusFilter, userId])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {

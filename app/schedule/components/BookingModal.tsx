@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Clock, MapPin, User, Calendar, AlertCircle, Loader2 } from '@/components/ui/icons'
+import { X, AlertCircle, Loader2 } from '@/components/ui/icons'
+import SessionInfoBlock from './SessionInfoBlock'
 import { toast } from 'sonner'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import type { SessionWithDetails } from '@/modules/calendar-booking/types'
@@ -46,23 +47,6 @@ export default function BookingModal({
 
   if (!isOpen) return null
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
 
   const handleBook = async () => {
     setModalState('loading')
@@ -148,8 +132,8 @@ export default function BookingModal({
       <div
         className={`relative w-full max-h-[85dvh] flex flex-col ${
           isDesktop
-            ? 'max-w-xl bg-surface-dark rounded-2xl animate-scale-up'
-            : 'max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom'
+            ? 'max-w-xl bg-bg-card rounded-2xl animate-scale-up'
+            : 'max-w-md bg-bg-card rounded-t-2xl animate-slide-up safe-area-bottom'
         }`}
         style={!isDesktop ? {
           transform: `translateY(${translateY}px)`,
@@ -171,17 +155,17 @@ export default function BookingModal({
         {!isDesktop && (
           <div className="px-6 pt-2 shrink-0">
             <div className="flex justify-center pb-3">
-              <div className="w-10 h-1 bg-gray-600 rounded-full" />
+              <div className="w-10 h-1 bg-text-muted/50 rounded-full" />
             </div>
           </div>
         )}
 
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors z-10"
+          className="absolute top-4 right-4 size-8 flex items-center justify-center bg-bg-secondary border border-border rounded-full text-text-muted hover:text-text-primary hover:bg-bg-primary transition-colors z-10"
           disabled={modalState === 'loading'}
         >
-          <X size={24} />
+          <X size={16} />
         </button>
 
         {/* Confirm State */}
@@ -189,107 +173,7 @@ export default function BookingModal({
           <>
             {/* Scrollable Body */}
             <div ref={scrollRef} className={`flex-1 overflow-y-auto px-6 min-h-0 ${isDesktop ? 'pt-6' : ''}`}>
-              {/* Session Info */}
-              <div className="mb-6">
-                <h2 className="text-xl font-bold text-white mb-2">
-                  {session.title}
-                </h2>
-
-                {session.session_type && (
-                  <span
-                    className="inline-block px-2 py-1 text-xs font-medium rounded-full mb-4"
-                    style={{
-                      backgroundColor: `${session.session_type.color}20`,
-                      color: session.session_type.color,
-                    }}
-                  >
-                    {session.session_type.name}
-                  </span>
-                )}
-
-                <div className="space-y-3 text-gray-300">
-                  <div className="flex items-center gap-3">
-                    <Calendar size={18} className="text-primary" />
-                    <span>{formatDate(session.starts_at)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Clock size={18} className="text-primary" />
-                    <span>
-                      {formatTime(session.starts_at)} - {formatTime(session.ends_at)}
-                      <span className="text-gray-500 ml-2">
-                        ({session.duration_minutes} min)
-                      </span>
-                    </span>
-                  </div>
-
-                  {session.location && (
-                    <div className="flex items-center gap-3">
-                      <MapPin size={18} className="text-primary" />
-                      <span>{session.location}</span>
-                    </div>
-                  )}
-
-                  {session.trainer && (
-                    <div className="flex items-center gap-3">
-                      <User size={18} className="text-primary" />
-                      <span>{session.trainer.full_name || 'Trainer'}</span>
-                    </div>
-                  )}
-                </div>
-
-                {session.description && (
-                  <p className="mt-4 text-sm text-gray-400">{session.description}</p>
-                )}
-              </div>
-
-              {/* Availability */}
-              <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-gray-400">Availability</span>
-                  <span
-                    className={`font-bold ${
-                      session.availability.spots_left <= 2
-                        ? 'text-yellow-500'
-                        : 'text-green-500'
-                    }`}
-                  >
-                    {session.availability.spots_left} of{' '}
-                    {session.availability.capacity} {session.availability.spots_left === 1 ? 'spot' : 'spots'} left
-                  </span>
-                </div>
-
-                {/* Capacity Visual */}
-                {session.availability.capacity <= 10 ? (
-                  <div className="flex gap-1.5 justify-center">
-                    {Array.from({ length: session.availability.capacity }).map((_, i) => {
-                      const bookedCount = session.availability.capacity - session.availability.spots_left
-                      const isFilled = i < bookedCount
-                      return (
-                        <div
-                          key={i}
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            isFilled ? 'bg-primary' : 'bg-gray-700'
-                          }`}
-                        />
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{
-                        width: `${
-                          ((session.availability.capacity - session.availability.spots_left) /
-                            session.availability.capacity) *
-                          100
-                        }%`,
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
+              <SessionInfoBlock session={session} />
             </div>
 
             {/* Pinned Footer: Actions */}
@@ -297,14 +181,14 @@ export default function BookingModal({
               <div className="flex gap-3">
                 <button
                   onClick={handleClose}
-                  className="flex-1 py-3 px-4 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors"
+                  className="flex-1 py-3 px-4 bg-bg-secondary text-text-primary font-bold rounded-lg hover:bg-bg-secondary/80 transition-colors"
                 >
                   Cancel
                 </button>
                 {session.availability.is_full ? (
                   <button
                     disabled
-                    className="flex-1 py-3 px-4 bg-gray-800 text-gray-500 font-bold rounded-lg cursor-not-allowed"
+                    className="flex-1 py-3 px-4 bg-bg-secondary text-text-muted font-bold rounded-lg cursor-not-allowed"
                   >
                     Session Full
                   </button>
@@ -325,7 +209,7 @@ export default function BookingModal({
         {modalState === 'loading' && (
           <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 pb-6">
             <Loader2 size={48} className="text-primary animate-spin mb-4" />
-            <p className="text-white font-medium">Booking your session...</p>
+            <p className="text-text-primary font-medium">Booking your session...</p>
           </div>
         )}
 
@@ -336,8 +220,8 @@ export default function BookingModal({
               <circle className="animate-checkmark-circle" cx="26" cy="26" r="25" fill="none" stroke="#22c55e" strokeWidth="2" />
               <path className="animate-checkmark" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
             </svg>
-            <h3 className="text-xl font-bold text-white mb-2">Booking Confirmed!</h3>
-            <p className="text-gray-400 text-center">
+            <h3 className="text-xl font-bold text-text-primary mb-2">Booking Confirmed!</h3>
+            <p className="text-text-secondary text-center">
               You&apos;re booked for {session.title}
             </p>
           </div>
@@ -346,15 +230,15 @@ export default function BookingModal({
         {/* Error State */}
         {modalState === 'error' && (
           <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 pb-6">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle size={40} className="text-red-500" />
+            <div className="w-16 h-16 bg-error/15 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle size={40} className="text-error" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Booking Failed</h3>
-            <p className="text-gray-400 text-center mb-6">{errorMessage}</p>
+            <h3 className="text-xl font-bold text-text-primary mb-2">Booking Failed</h3>
+            <p className="text-text-secondary text-center mb-6">{errorMessage}</p>
             <div className="flex gap-3 w-full">
               <button
                 onClick={handleClose}
-                className="flex-1 py-3 px-4 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors"
+                className="flex-1 py-3 px-4 bg-bg-secondary text-text-primary font-bold rounded-lg hover:bg-bg-secondary/80 transition-colors"
               >
                 Close
               </button>

@@ -14,6 +14,7 @@ import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
 import { User, Bell, Calendar, MessageCircle, Wallet, Dumbbell, CalendarOff } from '@/components/ui/icons'
+import HomeNextUpCard from './components/HomeNextUpCard'
 import { fetchRecentInvoices } from '@/lib/services/payments'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
@@ -180,14 +181,13 @@ export default function HomePage() {
         </div>
 
         {/* Facility Branding */}
-        <div className="flex flex-col items-center">
-          <span className="text-primary font-bold text-base tracking-tight uppercase">
-            {theme.name.split(' ')[0] || 'FORGE'}
-          </span>
-          <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">
-            {theme.tagline}
-          </span>
-        </div>
+        <Image
+          src="/Forge-Full-Logo.PNG"
+          alt="Forge Sports Performance"
+          width={120}
+          height={60}
+          className="h-10 w-auto object-contain"
+        />
 
         {/* Notifications */}
         <button
@@ -334,14 +334,13 @@ export default function HomePage() {
               </div>
               {/* Facility branding + notifications */}
               <div className="flex items-center gap-4">
-                <div className="flex flex-col items-end">
-                  <span className="text-primary font-bold text-base tracking-tight uppercase">
-                    {theme.name.split(' ')[0] || 'FORGE'}
-                  </span>
-                  <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">
-                    {theme.tagline}
-                  </span>
-                </div>
+                <Image
+                  src="/Forge-Full-Logo.PNG"
+                  alt="Forge Sports Performance"
+                  width={160}
+                  height={80}
+                  className="h-16 w-auto object-contain"
+                />
                 <button
                   onClick={() => router.push('/profile/notifications')}
                   className="relative flex items-center justify-center size-10 text-text-secondary hover:text-text-primary transition-colors"
@@ -356,6 +355,13 @@ export default function HomePage() {
             </div>
           </GlassCard>
           </motion.div>
+
+          {/* Next Up Card */}
+          {nextSession && !loadingHomeData && (
+            <motion.div variants={fadeUpItem}>
+              <HomeNextUpCard session={nextSession} />
+            </motion.div>
+          )}
 
           {/* Main grid: balanced 2-column layout */}
           <motion.div variants={fadeUpItem}>
@@ -409,10 +415,10 @@ export default function HomePage() {
               {hasMessaging && (
                 <GlassCard
                   variant="subtle"
-                  className="p-6"
+                  className="p-6 flex-1"
                   interactive
                 >
-                  <Link href="/chat" className="block">
+                  <Link href="/chat" className="flex flex-col h-full">
                     <div className="flex items-start justify-between mb-3">
                       <div className="bg-primary/10 p-2 rounded-lg">
                         <MessageCircle size={24} className="text-primary" />
@@ -431,6 +437,7 @@ export default function HomePage() {
                           ? `Chat with ${messagingStats.trainerName}`
                           : 'View conversations'}
                     </p>
+                    <div className="flex-1" />
                   </Link>
                 </GlassCard>
               )}
@@ -509,6 +516,11 @@ export default function HomePage() {
               )}
             </p>
           </section>
+
+          {/* Next Up Card */}
+          {nextSession && !loadingHomeData && (
+            <HomeNextUpCard session={nextSession} />
+          )}
 
           {/* Sessions CTA Card */}
           <Link

@@ -1,7 +1,5 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import EmptyState from '@/components/ui/EmptyState'
@@ -18,7 +16,9 @@ import {
   ExternalLink,
   Download,
 } from '@/components/ui/icons'
-import type { RevenueStats, InvoiceListItem } from '@/modules/admin/types'
+import { useAdminFinances } from '@/lib/hooks/admin/useAdminFinances'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
+import type { RevenueStats } from '@/modules/admin/types'
 
 function StatCard({
   label,
@@ -46,108 +46,70 @@ function StatCard({
   )
 }
 
+function RevenueStatsGrid({ stats }: { stats: RevenueStats }) {
+  return (
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+      className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8"
+    >
+      <motion.div variants={fadeUpItem}>
+        <StatCard
+          label="Monthly Revenue"
+          value={`$${stats.mrr.toFixed(2)}`}
+          icon={TrendingUp}
+          color="bg-green-500/10 text-green-500"
+        />
+      </motion.div>
+      <motion.div variants={fadeUpItem}>
+        <StatCard
+          label="Active Subscriptions"
+          value={stats.active_subscriptions}
+          icon={CreditCard}
+          color="bg-primary/10 text-primary"
+        />
+      </motion.div>
+      <motion.div variants={fadeUpItem}>
+        <StatCard
+          label="Total Members"
+          value={stats.total_members}
+          icon={Users}
+          color="bg-blue-500/10 text-blue-500"
+        />
+      </motion.div>
+      <motion.div variants={fadeUpItem}>
+        <StatCard
+          label="New This Month"
+          value={stats.new_this_month}
+          icon={Plus}
+          color="bg-amber-500/10 text-amber-500"
+        />
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export default function AdminFinancesPage() {
-  const [stats, setStats] = useState<RevenueStats | null>(null)
-  const [invoices, setInvoices] = useState<InvoiceListItem[]>([])
-  const [invoicesHasMore, setInvoicesHasMore] = useState(false)
-  const [loadingStats, setLoadingStats] = useState(true)
-  const [loadingInvoices, setLoadingInvoices] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/revenue')
-      if (!res.ok) throw new Error('Failed to load stats')
-      const json = await res.json()
-      setStats(json.data)
-    } catch {
-      // Show zeroed stats instead of error toast
-      setStats({ mrr: 0, active_subscriptions: 0, total_members: 0, total_trainers: 0, new_this_month: 0 })
-    } finally {
-      setLoadingStats(false)
-    }
-  }, [])
-
-  const fetchInvoices = useCallback(async (startingAfter?: string) => {
-    if (startingAfter) {
-      setLoadingMore(true)
-    } else {
-      setLoadingInvoices(true)
-    }
-
-    try {
-      const params = new URLSearchParams({ limit: '20' })
-      if (startingAfter) params.set('starting_after', startingAfter)
-
-      const res = await fetch(`/api/admin/invoices?${params}`)
-      if (!res.ok) throw new Error('Failed to load invoices')
-      const json = await res.json()
-
-      if (startingAfter) {
-        setInvoices(prev => [...prev, ...json.data])
-      } else {
-        setInvoices(json.data)
-      }
-      setInvoicesHasMore(json.has_more)
-    } catch {
-      // Show empty state instead of error toast
-      if (!startingAfter) setInvoices([])
-    } finally {
-      setLoadingInvoices(false)
-      setLoadingMore(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchStats()
-    fetchInvoices()
-  }, [fetchStats, fetchInvoices])
+  const isDesktop = useIsDesktop()
+  const {
+    stats,
+    isLoadingStats,
+    invoices,
+    invoicesHasMore,
+    isLoadingInvoices,
+    isLoadingMore,
+    loadMore,
+  } = useAdminFinances(isDesktop)
 
   return (
     <GlassAppLayout title="Finances" desktopTitle="Financial Overview">
       {/* Revenue Stats */}
-      {loadingStats ? (
+      {isLoadingStats ? (
         <LoadingSpinner />
-      ) : stats ? (
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8"
-        >
-          <motion.div variants={fadeUpItem}>
-            <StatCard
-              label="Monthly Revenue"
-              value={`$${stats.mrr.toFixed(2)}`}
-              icon={TrendingUp}
-              color="bg-green-500/10 text-green-500"
-            />
-          </motion.div>
-          <motion.div variants={fadeUpItem}>
-            <StatCard
-              label="Active Subscriptions"
-              value={stats.active_subscriptions}
-              icon={CreditCard}
-              color="bg-primary/10 text-primary"
-            />
-          </motion.div>
-          <motion.div variants={fadeUpItem}>
-            <StatCard
-              label="Total Members"
-              value={stats.total_members}
-              icon={Users}
-              color="bg-blue-500/10 text-blue-500"
-            />
-          </motion.div>
-          <motion.div variants={fadeUpItem}>
-            <StatCard
-              label="New This Month"
-              value={stats.new_this_month}
-              icon={Plus}
-              color="bg-amber-500/10 text-amber-500"
-            />
-          </motion.div>
-        </motion.div>
-      ) : null}
+      ) : (
+        <RevenueStatsGrid stats={stats} />
+      )}
 
       {/* Invoices */}
       <div>
@@ -164,7 +126,7 @@ export default function AdminFinancesPage() {
             <span className="text-right w-16">Link</span>
           </div>
 
-          {loadingInvoices ? (
+          {isLoadingInvoices ? (
             <LoadingSpinner />
           ) : invoices.length === 0 ? (
             <EmptyState
@@ -237,15 +199,12 @@ export default function AdminFinancesPage() {
               {invoicesHasMore && (
                 <div className="px-5 py-3 border-t border-border">
                   <button
-                    onClick={() => {
-                      const lastId = invoices[invoices.length - 1]?.id
-                      if (lastId) fetchInvoices(lastId)
-                    }}
-                    disabled={loadingMore}
+                    onClick={loadMore}
+                    disabled={isLoadingMore}
                     className="text-primary text-sm font-medium hover:underline disabled:opacity-50 flex items-center gap-2"
                   >
-                    {loadingMore && <Loader2 size={14} className="animate-spin" />}
-                    {loadingMore ? 'Loading...' : 'Load more invoices'}
+                    {isLoadingMore && <Loader2 size={14} className="animate-spin" />}
+                    {isLoadingMore ? 'Loading...' : 'Load more invoices'}
                   </button>
                 </div>
               )}

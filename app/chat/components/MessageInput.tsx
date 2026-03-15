@@ -4,6 +4,7 @@ import { useState, FormEvent, useRef, ChangeEvent, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Plus, Send, X } from '@/components/ui/icons'
 import { getErrorMessage } from '@/lib/utils/errors'
+import { useTyping } from '@ably/chat/react'
 
 interface MessageInputProps {
   conversationId: string
@@ -19,6 +20,8 @@ export default function MessageInput({
   onMessageError,
 }: MessageInputProps) {
   const { profile } = useAuth()
+  const { keystroke, stop } = useTyping()
+  const lastKeystrokeRef = useRef(0)
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -184,6 +187,9 @@ export default function MessageInput({
       textareaRef.current.style.height = 'auto'
     }
 
+    // Stop typing indicator now that the message is sent
+    stop().catch(() => {})
+
     // Show optimistic message immediately
     onOptimisticMessage?.(messageContent, tempId)
 
@@ -246,6 +252,12 @@ export default function MessageInput({
     // Auto-resize textarea
     e.target.style.height = 'auto'
     e.target.style.height = Math.min(e.target.scrollHeight, 96) + 'px'
+    // Notify other participants that the user is typing (throttled to 3s)
+    const now = Date.now()
+    if (now - lastKeystrokeRef.current > 3000) {
+      lastKeystrokeRef.current = now
+      keystroke().catch(() => {})
+    }
   }
 
   return (

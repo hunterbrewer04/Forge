@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
@@ -25,11 +25,11 @@ import {
   Filter,
   BadgeCheck,
 } from '@/components/ui/icons'
-import type { UserListItem, UserDetail, FilterRole } from '@/modules/admin/types'
-import { INVITE_ROLES, FILTER_ROLES } from '@/modules/admin/types'
+import type { UserDetail } from '@/modules/admin/types'
+import { INVITE_ROLES } from '@/modules/admin/types'
 import { getErrorMessage } from '@/lib/utils/errors'
-
-type RoleFilter = 'all' | FilterRole
+import { useAdminUsers, isRoleFilter, type RoleFilter } from '@/lib/hooks/admin/useAdminUsers'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 
 const ROLE_OPTIONS: { value: RoleFilter; label: string }[] = [
   { value: 'all', label: 'All Users' },
@@ -38,8 +38,6 @@ const ROLE_OPTIONS: { value: RoleFilter; label: string }[] = [
   { value: 'member', label: 'Members' },
   { value: 'full_access', label: 'Full Access' },
 ]
-
-const PAGE_SIZE = 20
 
 const ROLE_VARIANTS: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'neutral'> = {
   Admin: 'danger',
@@ -281,121 +279,49 @@ function InviteModal({
 }
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<UserListItem[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
-  const [page, setPage] = useState(1)
+  const isDesktop = useIsDesktop()
+  const {
+    users,
+    total,
+    totalPages,
+    isLoading,
+    search,
+    setSearch,
+    roleFilter,
+    setRoleFilter,
+    page,
+    setPage,
+    debouncedSearch,
+    loadUserDetail,
+    updateRoles,
+    deactivate,
+    invite,
+  } = useAdminUsers(isDesktop)
+
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
-  const [searchDebounce, setSearchDebounce] = useState('')
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchDebounce(search)
-      setPage(1)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [search])
-
-  const abortRef = useRef<AbortController | null>(null)
-
-  const fetchUsers = useCallback(async () => {
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (searchDebounce) params.set('search', searchDebounce)
-      if (roleFilter !== 'all') params.set('role', roleFilter)
-      const offset = (page - 1) * PAGE_SIZE
-      params.set('limit', String(PAGE_SIZE))
-      params.set('offset', String(offset))
-
-      const res = await fetch(`/api/admin/users?${params}`, { signal: controller.signal })
-      if (!res.ok) throw new Error('Failed to load users')
-      const json = await res.json()
-      setUsers(json.data)
-      setTotal(json.total)
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return
-      setUsers([])
-      setTotal(0)
-    } finally {
-      if (!controller.signal.aborted) setLoading(false)
-    }
-  }, [searchDebounce, roleFilter, page])
-
-  useEffect(() => {
-    fetchUsers()
-  }, [fetchUsers])
 
   const handleUserClick = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/admin/users/${userId}`)
-      if (!res.ok) throw new Error('Failed to load user')
-      const json = await res.json()
-      setSelectedUser(json.data)
-    } catch {
-      toast.error('Failed to load user details')
-    }
+    const user = await loadUserDetail(userId)
+    if (user) setSelectedUser(user)
   }
 
   const handleRoleChange = async (roles: Record<string, boolean>) => {
     if (!selectedUser) return
-    try {
-      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roles),
-      })
-      if (!res.ok) throw new Error('Failed to update roles')
-      // Refresh detail and list in parallel
-      const [detailRes] = await Promise.all([
-        fetch(`/api/admin/users/${selectedUser.id}`),
-        fetchUsers(),
-      ])
-      if (detailRes.ok) {
-        const json = await detailRes.json()
-        setSelectedUser(json.data)
-      }
-    } catch {
-      toast.error('Failed to update user roles')
-    }
+    const updated = await updateRoles(selectedUser.id, roles)
+    if (updated) setSelectedUser(updated.data)
   }
 
   const handleDeactivate = async () => {
     if (!selectedUser) return
-    try {
-      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) throw new Error('Failed to deactivate')
-      setSelectedUser(null)
-      fetchUsers()
-      toast.success('User deactivated')
-    } catch {
-      toast.error('Failed to deactivate user')
-    }
+    await deactivate(selectedUser.id)
+    setSelectedUser(null)
   }
 
   const handleInvite = async (email: string, role?: string) => {
-    const res = await fetch('/api/admin/invitations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emailAddress: email, role }),
-    })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      throw new Error(json.error || 'Failed to send invitation')
-    }
+    await invite(email, role)
+    toast.success('Invitation sent')
   }
-
-  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
     <GlassAppLayout
@@ -436,10 +362,7 @@ export default function AdminUsersPage() {
           />
           <select
             value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value as RoleFilter)
-              setPage(1)
-            }}
+            onChange={(e) => { if (isRoleFilter(e.target.value)) setRoleFilter(e.target.value) }}
             className="bg-bg-secondary text-text-primary rounded-xl pl-9 pr-8 py-2.5 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer"
           >
             {ROLE_OPTIONS.map((opt) => (
@@ -466,12 +389,12 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Rows */}
-        {loading ? (
+        {isLoading ? (
           <LoadingSpinner />
         ) : users.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={searchDebounce || roleFilter !== 'all' ? 'No users match your filters' : 'No users found'}
+            title={debouncedSearch || roleFilter !== 'all' ? 'No users match your filters' : 'No users found'}
           />
         ) : (
           <motion.div variants={staggerContainer} initial="hidden" animate="show">
@@ -553,14 +476,14 @@ export default function AdminUsersPage() {
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
+              onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
               className="size-9 flex items-center justify-center rounded-lg bg-bg-secondary border border-border text-text-secondary hover:text-text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={16} />
             </button>
             <button
-              onClick={() => setPage(p => p + 1)}
+              onClick={() => setPage(page + 1)}
               disabled={page >= totalPages}
               className="size-9 flex items-center justify-center rounded-lg bg-bg-secondary border border-border text-text-secondary hover:text-text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >

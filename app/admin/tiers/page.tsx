@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
@@ -20,8 +20,10 @@ import {
   Pencil,
   Trash2,
 } from '@/components/ui/icons'
-import type { TierListItem } from '@/modules/admin/types'
+import type { TierListItem, TierInput } from '@/modules/admin/types'
 import { getErrorMessage } from '@/lib/utils/errors'
+import { useAdminTiers } from '@/lib/hooks/admin/useAdminTiers'
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 
 function TierFormModal({
   tier,
@@ -30,7 +32,7 @@ function TierFormModal({
 }: {
   tier?: TierListItem
   onClose: () => void
-  onSubmit: (data: { name: string; priceMonthly: number; monthlyBookingQuota: number }) => Promise<void>
+  onSubmit: (data: TierInput) => Promise<void>
 }) {
   const [name, setName] = useState(tier?.name || '')
   const [price, setPrice] = useState(tier?.price_monthly || '')
@@ -46,7 +48,7 @@ function TierFormModal({
     try {
       await onSubmit({
         name: name.trim(),
-        priceMonthly: parseFloat(price),
+        priceMonthly: parseFloat(String(price)),
         monthlyBookingQuota: parseInt(quota, 10),
       })
       onClose()
@@ -79,7 +81,7 @@ function TierFormModal({
       <FormInput
         label="Monthly Price ($)"
         type="number"
-        value={price}
+        value={String(price)}
         onChange={(e) => setPrice(e.target.value)}
         placeholder="49.99"
         required
@@ -102,100 +104,38 @@ function TierFormModal({
 }
 
 export default function AdminTiersPage() {
-  const [tiers, setTiers] = useState<TierListItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const isDesktop = useIsDesktop()
+  const {
+    tiers,
+    isLoading,
+    createTier,
+    updateTier,
+    deleteTier,
+    toggleVisibility,
+    isTogglingId,
+  } = useAdminTiers(isDesktop)
+
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingTier, setEditingTier] = useState<TierListItem | null>(null)
   const [deletingTier, setDeletingTier] = useState<TierListItem | null>(null)
-  const [togglingId, setTogglingId] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
 
-  const fetchTiers = useCallback(async () => {
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    setLoading(true)
-    try {
-      const res = await fetch('/api/admin/tiers', { signal: controller.signal })
-      if (!res.ok) throw new Error('Failed to load tiers')
-      const json = await res.json()
-      setTiers(json.data)
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return
-      toast.error('Failed to load tiers')
-    } finally {
-      if (!controller.signal.aborted) setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchTiers()
-  }, [fetchTiers])
-
-  const handleCreate = async (data: { name: string; priceMonthly: number; monthlyBookingQuota: number }) => {
-    const res = await fetch('/api/admin/tiers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      throw new Error(json.error || 'Failed to create tier')
-    }
-    toast.success('Tier created')
-    fetchTiers()
-  }
-
-  const handleUpdate = async (data: { name: string; priceMonthly: number; monthlyBookingQuota: number }) => {
+  const handleUpdate = async (data: TierInput) => {
     if (!editingTier) return
-    const res = await fetch(`/api/admin/tiers/${editingTier.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+    await updateTier(editingTier.id, {
+      name: data.name,
+      priceMonthly: data.priceMonthly,
+      monthlyBookingQuota: data.monthlyBookingQuota,
     })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      throw new Error(json.error || 'Failed to update tier')
-    }
     toast.success('Tier updated')
     setEditingTier(null)
-    fetchTiers()
   }
 
   const handleDelete = async () => {
     if (!deletingTier) return
     try {
-      const res = await fetch(`/api/admin/tiers/${deletingTier.id}`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error(json.error || 'Failed to delete tier')
-      }
-      toast.success('Tier deleted')
-      fetchTiers()
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to delete tier'))
+      await deleteTier(deletingTier.id)
     } finally {
       setDeletingTier(null)
-    }
-  }
-
-  const handleToggleVisibility = async (tier: TierListItem) => {
-    setTogglingId(tier.id)
-    try {
-      const res = await fetch(`/api/admin/tiers/${tier.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !tier.is_active }),
-      })
-      if (!res.ok) throw new Error('Failed to toggle visibility')
-      fetchTiers()
-    } catch {
-      toast.error('Failed to toggle tier visibility')
-    } finally {
-      setTogglingId(null)
     }
   }
 
@@ -213,7 +153,7 @@ export default function AdminTiersPage() {
         </button>
       }
     >
-      {loading ? (
+      {isLoading ? (
         <LoadingSpinner />
       ) : tiers.length === 0 ? (
         <EmptyState
@@ -267,8 +207,8 @@ export default function AdminTiersPage() {
                   <span className="text-sm text-text-secondary font-medium">Show on Paywall</span>
                   <ToggleSwitch
                     checked={tier.is_active}
-                    onChange={() => handleToggleVisibility(tier)}
-                    disabled={togglingId === tier.id}
+                    onChange={() => toggleVisibility(tier)}
+                    disabled={isTogglingId === tier.id}
                   />
                 </div>
 
@@ -300,7 +240,7 @@ export default function AdminTiersPage() {
         {showCreateModal && (
           <TierFormModal
             onClose={() => setShowCreateModal(false)}
-            onSubmit={handleCreate}
+            onSubmit={createTier}
           />
         )}
       </AnimatePresence>

@@ -1,18 +1,22 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Ably from 'ably'
 import { getAblyClient } from '@/lib/ably-browser'
 import MessageInput from './MessageInput'
 import { useMediaViewer } from './useMediaViewer'
+import ChatProviders from './ChatProviders'
+import ReactionBar from './ReactionBar'
+import { useTyping, usePresence, usePresenceListener, useRoomReactions } from '@ably/chat/react'
+import type { RoomReactionEvent } from '@ably/chat'
 
 const MediaViewer = dynamic(() => import('./MediaViewer'), { ssr: false })
-import { fetchMessages, fetchSenderProfile, markMessagesAsRead } from '@/lib/services/messages'
+import { fetchMessages, markMessagesAsRead } from '@/lib/services/messages'
 import { processMessageMedia } from '@/lib/services/storage'
 import { logger } from '@/lib/utils/logger'
 import { MessageListSkeleton } from '@/components/skeletons/MessageSkeleton'
-import { ArrowLeft, User, Info, AlertCircle, RefreshCw, CheckCheck, Check, Maximize, X, Mail, Calendar } from '@/components/ui/icons'
+import { ArrowLeft, User, Info, AlertCircle, RefreshCw, CheckCheck, Check, Maximize, X, Mail, Calendar, Smile } from '@/components/ui/icons'
 import Image from 'next/image'
 
 interface Message {
@@ -52,7 +56,21 @@ interface ChatWindowProps {
   onBack?: () => void
 }
 
-export default function ChatWindow({
+interface ReactionFloat {
+  id: string
+  emoji: string
+  clientId: string
+}
+
+export default function ChatWindow(props: ChatWindowProps) {
+  return (
+    <ChatProviders conversationId={props.conversationId}>
+      <ChatWindowInner {...props} />
+    </ChatProviders>
+  )
+}
+
+function ChatWindowInner({
   conversationId,
   currentUserId,
   otherUserId,
@@ -60,6 +78,51 @@ export default function ChatWindow({
   otherUserAvatar,
   onBack,
 }: ChatWindowProps) {
+  // --- Ably Chat SDK hooks (must be inside ChatRoomProvider) ---
+  const { currentlyTyping } = useTyping()
+  usePresence()
+  const { presenceData } = usePresenceListener()
+  const [reactionFloats, setReactionFloats] = useState<ReactionFloat[]>([])
+  const [showReactionBar, setShowReactionBar] = useState(false)
+  const reactionTimersRef = useRef<Set<NodeJS.Timeout>>(new Set())
+  const { sendRoomReaction } = useRoomReactions({
+    listener: useCallback((event: RoomReactionEvent) => {
+      const float: ReactionFloat = {
+        id: `${event.reaction.clientId}-${Date.now()}-${Math.random()}`,
+        emoji: event.reaction.name,
+        clientId: event.reaction.clientId,
+      }
+      setReactionFloats(prev => {
+        const next = [...prev, float]
+        return next.length > 20 ? next.slice(-20) : next
+      })
+      const timer = setTimeout(() => {
+        setReactionFloats(prev => prev.filter(r => r.id !== float.id))
+        reactionTimersRef.current.delete(timer)
+      }, 2500)
+      reactionTimersRef.current.add(timer)
+    }, []),
+  })
+
+  // Clean up reaction timers on unmount
+  useEffect(() => {
+    const timers = reactionTimersRef.current
+    return () => {
+      timers.forEach(clearTimeout)
+      timers.clear()
+    }
+  }, [])
+
+  const handleSendReaction = useCallback((emoji: string) => {
+    sendRoomReaction({ name: emoji }).catch(() => {})
+  }, [sendRoomReaction])
+
+  const isOtherUserOnline = useMemo(
+    () => otherUserId ? presenceData.some(member => member.clientId === otherUserId) : false,
+    [presenceData, otherUserId]
+  )
+
+  // --- existing state ---
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -129,19 +192,18 @@ export default function ChatWindow({
     openSingleVideo
   } = useMediaViewer()
 
+  // Sender profiles are embedded in message API responses for messages loaded via REST.
+  // For real-time Ably events we only receive a bare sender_id. We resolve the name
+  // from props when the sender is the other participant; otherwise fall back to 'Unknown'.
   const getCachedSenderProfile = useCallback(async (senderId: string): Promise<string> => {
     if (senderProfileCache.current.has(senderId)) {
       return senderProfileCache.current.get(senderId)!.full_name || 'Unknown'
     }
 
-    try {
-      const profile = await fetchSenderProfile(senderId)
-      senderProfileCache.current.set(senderId, { full_name: profile?.full_name || null })
-      return profile?.full_name || 'Unknown'
-    } catch {
-      return 'Unknown'
-    }
-  }, [])
+    const name = senderId === otherUserId ? otherUserName : 'Unknown'
+    senderProfileCache.current.set(senderId, { full_name: name })
+    return name
+  }, [otherUserId, otherUserName])
 
   const addOptimisticMessage = useCallback((content: string, tempId: string) => {
     const optimisticMessage: Message = {
@@ -354,7 +416,7 @@ export default function ChatWindow({
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-bg-primary">
+    <div className="flex-1 min-h-0 flex flex-col bg-bg-primary relative">
       {/* Chat Header -- always rendered */}
       <div className="flex-none border-b border-border bg-bg-primary z-10 pt-safe-top">
         <div className="flex items-center justify-between px-4 py-3">
@@ -382,19 +444,32 @@ export default function ChatWindow({
                     <User size={20} className="text-text-muted" />
                   )}
                 </div>
-                <div className="absolute bottom-0 right-0 size-2.5 bg-success rounded-full ring-2 ring-bg-primary" />
+                <div
+                  className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-bg-primary ${
+                    isOtherUserOnline ? 'bg-success' : 'bg-text-muted'
+                  }`}
+                />
               </div>
               <div>
                 <h3 className="font-semibold text-text-primary leading-tight">
                   {otherUserName || 'Chat'}
                 </h3>
-                <span className="text-xs text-success">Online</span>
+                <span className={`text-xs ${isOtherUserOnline ? 'text-success' : 'text-text-muted'}`}>
+                  {isOtherUserOnline ? 'Online' : 'Offline'}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Action buttons */}
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowReactionBar(prev => !prev)}
+              className="size-10 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
+              aria-label="Send a reaction"
+            >
+              <Smile size={22} />
+            </button>
             <button
               onClick={handleOpenUserInfo}
               className="size-10 rounded-full flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
@@ -404,6 +479,16 @@ export default function ChatWindow({
           </div>
         </div>
       </div>
+
+      {/* Reaction bar popover */}
+      {showReactionBar && (
+        <div className="flex-none px-4 py-2 border-b border-border bg-bg-primary flex justify-end">
+          <ReactionBar
+            onReact={handleSendReaction}
+            onClose={() => setShowReactionBar(false)}
+          />
+        </div>
+      )}
 
       {/* Body -- switches on state */}
       {loading ? (
@@ -468,12 +553,12 @@ export default function ChatWindow({
                       )}
 
                       {message.media_type === 'video' && message.signedUrl && (
-                        <div className="mb-2 relative group">
+                        <div className="mb-2 relative aspect-video w-full rounded-lg overflow-hidden bg-black group">
                           <video
                             src={message.signedUrl}
                             controls
                             preload="metadata"
-                            className="max-w-full max-h-48 rounded-lg"
+                            className="w-full h-full object-cover"
                           />
                           <button
                             onClick={() => openSingleVideo(message.signedUrl!)}
@@ -563,6 +648,35 @@ export default function ChatWindow({
         )}
 
       </div>
+
+      {/* Floating room reactions overlay */}
+      {reactionFloats.length > 0 && (
+        <div className="pointer-events-none absolute bottom-32 left-0 right-0 flex items-end justify-center gap-2 px-4 overflow-hidden" aria-hidden="true">
+          {reactionFloats.map(r => (
+            <span
+              key={r.id}
+              className="text-3xl animate-bounce select-none"
+              style={{ animationDuration: '0.6s', animationIterationCount: 3 }}
+            >
+              {r.emoji}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Typing indicator */}
+      {currentlyTyping.size > 0 && (
+        <div className="flex-none px-4 py-2 text-text-muted text-sm">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="flex gap-0.5">
+              <span className="size-1.5 bg-text-muted rounded-full animate-bounce [animation-delay:0ms]" />
+              <span className="size-1.5 bg-text-muted rounded-full animate-bounce [animation-delay:150ms]" />
+              <span className="size-1.5 bg-text-muted rounded-full animate-bounce [animation-delay:300ms]" />
+            </span>
+            <span>{Array.from(currentlyTyping).join(', ')} typing...</span>
+          </span>
+        </div>
+      )}
 
       {/* Message Input */}
       <MessageInput
