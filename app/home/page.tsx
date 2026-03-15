@@ -337,9 +337,9 @@ export default function HomePage() {
                 <Image
                   src="/Forge-Full-Logo.PNG"
                   alt="Forge Sports Performance"
-                  width={160}
-                  height={80}
-                  className="h-16 w-auto object-contain"
+                  width={200}
+                  height={100}
+                  className="h-20 w-auto object-contain"
                 />
                 <button
                   onClick={() => router.push('/profile/notifications')}
@@ -365,18 +365,18 @@ export default function HomePage() {
 
           {/* Main grid: balanced 2-column layout */}
           <motion.div variants={fadeUpItem}>
-          <div className="grid grid-cols-2 gap-6 items-start">
+          <div className="grid grid-cols-2 gap-6">
             {/* Left column */}
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {/* Sessions CTA */}
               <GlassCard
                 variant="subtle"
-                className="p-6 overflow-hidden"
+                className="overflow-hidden"
                 interactive
               >
                 <Link
                   href={'/schedule'}
-                  className="block rounded-2xl p-6"
+                  className="block p-6"
                   style={{
                     background: 'linear-gradient(135deg, var(--facility-primary), color-mix(in srgb, var(--facility-primary) 70%, #000))',
                   }}
@@ -390,7 +390,7 @@ export default function HomePage() {
                       : 'Browse available training slots and reserve your spot.'
                     }
                   </p>
-                  <div className="mt-5 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
+                  <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
                     {profile.is_trainer ? 'View Sessions' : 'Schedule Now'}
                     <Calendar size={18} />
                   </div>
@@ -398,7 +398,7 @@ export default function HomePage() {
               </GlassCard>
 
               {/* Recent Activity */}
-              <GlassCard variant="subtle" className="p-6">
+              <GlassCard variant="subtle" className="p-6 flex-1">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-text-primary font-semibold text-base">Recent Activity</h2>
                   <Link href="/profile/history" className="text-primary text-sm font-medium hover:underline">
@@ -410,15 +410,15 @@ export default function HomePage() {
             </div>
 
             {/* Right column */}
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {/* Messages Card — only for trainers and full-access users */}
               {hasMessaging && (
                 <GlassCard
                   variant="subtle"
-                  className="p-6 flex-1"
+                  className="p-6"
                   interactive
                 >
-                  <Link href="/chat" className="flex flex-col h-full">
+                  <Link href="/chat" className="block">
                     <div className="flex items-start justify-between mb-3">
                       <div className="bg-primary/10 p-2 rounded-lg">
                         <MessageCircle size={24} className="text-primary" />
@@ -437,7 +437,6 @@ export default function HomePage() {
                           ? `Chat with ${messagingStats.trainerName}`
                           : 'View conversations'}
                     </p>
-                    <div className="flex-1" />
                   </Link>
                 </GlassCard>
               )}
