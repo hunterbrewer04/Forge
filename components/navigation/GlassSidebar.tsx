@@ -264,12 +264,6 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
           </Link>
         ))}
 
-        {/* Forge Branding */}
-        <div className="flex items-center gap-2 px-4 py-2 mb-1">
-          <span className="text-primary font-bold text-sm tracking-wide" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>FORGE</span>
-          <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">Performance</span>
-        </div>
-
         {onSignOut && (
           <button
             onClick={onSignOut}
