@@ -44,7 +44,7 @@ export function useScheduleData({
   const hasLoadedRef = useRef(false)
 
   // Stabilize statusFilter as a primitive string for dependency arrays
-  const statusKey = statusFilter ? statusFilter.join(',') : 'scheduled'
+  const statusKey = statusFilter?.length ? statusFilter.join(',') : 'scheduled'
 
   // Compute datesWithSessions from sessions array
   const datesWithSessions = useMemo(() => {
