@@ -1,6 +1,8 @@
 import { eq } from 'drizzle-orm'
 import { trainerClients, profiles, membershipTiers } from '@/lib/db/schema'
-import { stripe } from '@/lib/stripe'
+import { isPayingClient } from '@/lib/db/conditions'
+import { centsToDollars } from '@/lib/utils/currency'
+import type Stripe from 'stripe'
 import type { DrizzleInstance } from '../config'
 import type { TrainerEarningsBase, TrainerClientItem, MonthlyRevenue } from '../types'
 
@@ -26,9 +28,7 @@ export async function getTrainerEarnings(
     .where(eq(trainerClients.trainerId, trainerId))
 
   // Only count revenue from users with actual Stripe subscriptions
-  const payingClients = rows.filter(
-    (r) => r.membershipStatus === 'active' && r.stripeSubscriptionId !== null
-  )
+  const payingClients = rows.filter(isPayingClient)
 
   const monthlyEarnings = payingClients.reduce(
     (sum, r) => sum + (r.priceMonthly ? Number(r.priceMonthly) : 0),
@@ -59,13 +59,37 @@ export async function getTrainerEarnings(
   }
 }
 
-export async function getMonthlyRevenueHistory(): Promise<MonthlyRevenue[]> {
+// Best-effort in-memory cache. On Vercel serverless, this persists only within warm
+// Lambda instances — cold starts reset it. The promise dedup prevents concurrent
+// requests from stampeding the Stripe API on the same instance.
+let revenueCache: { data: MonthlyRevenue[]; ts: number } | null = null
+let revenuePending: Promise<MonthlyRevenue[]> | null = null
+const REVENUE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Fetches facility-wide monthly revenue from Stripe paid invoices for the last 6 months.
+ *
+ * Note: This returns revenue across ALL customers, not scoped to a specific trainer's
+ * clients. This is intentional for single-trainer facilities. For multi-trainer support,
+ * this would need to filter by customer IDs belonging to the trainer's assigned clients.
+ */
+export async function getMonthlyRevenueHistory(stripeClient: Stripe): Promise<MonthlyRevenue[]> {
+  if (revenueCache && Date.now() - revenueCache.ts < REVENUE_CACHE_TTL) {
+    return revenueCache.data
+  }
+  if (revenuePending) return revenuePending
+
+  revenuePending = fetchRevenueHistory(stripeClient).finally(() => { revenuePending = null })
+  return revenuePending
+}
+
+async function fetchRevenueHistory(stripeClient: Stripe): Promise<MonthlyRevenue[]> {
   const now = new Date()
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
   const createdGte = Math.floor(sixMonthsAgo.getTime() / 1000)
 
   // Auto-paginate to handle >100 invoices in the window
-  const invoices = await stripe.invoices
+  const invoices = await stripeClient.invoices
     .list({ status: 'paid', created: { gte: createdGte }, limit: 100 })
     .autoPagingToArray({ limit: 10_000 })
 
@@ -86,7 +110,7 @@ export async function getMonthlyRevenueHistory(): Promise<MonthlyRevenue[]> {
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     const bucket = buckets.get(key)
     if (bucket) {
-      bucket.amount += (inv.amount_paid ?? 0) / 100 // cents to dollars
+      bucket.amount += centsToDollars(inv.amount_paid ?? 0)
     }
   }
 
@@ -95,5 +119,6 @@ export async function getMonthlyRevenueHistory(): Promise<MonthlyRevenue[]> {
     result.push({ month, label: data.label, amount: data.amount })
   }
 
+  revenueCache = { data: result, ts: Date.now() }
   return result
 }

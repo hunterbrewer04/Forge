@@ -1,5 +1,6 @@
-import { and, eq, isNotNull, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { profiles, membershipTiers } from '@/lib/db/schema'
+import { isPayingSubscriber } from '@/lib/db/conditions'
 import type { DrizzleInstance } from '../config'
 
 export async function getRevenueStats(db: DrizzleInstance) {
@@ -7,31 +8,22 @@ export async function getRevenueStats(db: DrizzleInstance) {
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    // Single pass over profiles for all four counts, plus MRR join — both run in parallel
-    const [statsRows, mrrRows] = await Promise.all([
-      db.select({
-        totalMembers: sql<number>`count(*) filter (where ${profiles.isMember} = true)`.mapWith(Number),
-        totalTrainers: sql<number>`count(*) filter (where ${profiles.isTrainer} = true)`.mapWith(Number),
-        activeSubscriptions: sql<number>`count(*) filter (where ${profiles.membershipStatus} = 'active' and ${profiles.stripeSubscriptionId} is not null)`.mapWith(Number),
-        newThisMonth: sql<number>`count(*) filter (where ${profiles.isMember} = true and ${profiles.createdAt} >= ${startOfMonth})`.mapWith(Number),
-      }).from(profiles),
-
-      db.select({
-        mrr: sql<number>`coalesce(sum(${membershipTiers.priceMonthly}::numeric), 0)`.mapWith(Number),
-      })
-        .from(profiles)
-        .innerJoin(membershipTiers, eq(profiles.membershipTierId, membershipTiers.id))
-        .where(and(eq(profiles.membershipStatus, 'active'), isNotNull(profiles.stripeSubscriptionId))),
-    ])
-
-    const { totalMembers, totalTrainers, activeSubscriptions, newThisMonth } = statsRows[0]
+    const [row] = await db.select({
+      totalMembers: sql<number>`count(*) filter (where ${profiles.isMember} = true)`.mapWith(Number),
+      totalTrainers: sql<number>`count(*) filter (where ${profiles.isTrainer} = true)`.mapWith(Number),
+      activeSubscriptions: sql<number>`count(*) filter (where ${isPayingSubscriber})`.mapWith(Number),
+      newThisMonth: sql<number>`count(*) filter (where ${profiles.isMember} = true and ${profiles.createdAt} >= ${startOfMonth})`.mapWith(Number),
+      mrr: sql<number>`coalesce(sum(${membershipTiers.priceMonthly}::numeric) filter (where ${isPayingSubscriber}), 0)`.mapWith(Number),
+    })
+      .from(profiles)
+      .leftJoin(membershipTiers, eq(profiles.membershipTierId, membershipTiers.id))
 
     return {
-      mrr: mrrRows[0].mrr,
-      active_subscriptions: activeSubscriptions,
-      total_members: totalMembers,
-      total_trainers: totalTrainers,
-      new_this_month: newThisMonth,
+      mrr: row.mrr,
+      active_subscriptions: row.activeSubscriptions,
+      total_members: row.totalMembers,
+      total_trainers: row.totalTrainers,
+      new_this_month: row.newThisMonth,
     }
   } catch (err) {
     console.error('Failed to compute revenue stats:', err)

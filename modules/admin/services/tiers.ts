@@ -118,7 +118,8 @@ export async function updateTier(
   const nameChanged = updates.name && updates.name !== current.name
   const priceChanged = updates.priceMonthly !== undefined && String(updates.priceMonthly) !== current.priceMonthly
 
-  // Fetch Stripe price once if either name or price changed
+  // Stripe-side changes (name and/or price)
+  let newStripePrice: { id: string } | null = null
   if (nameChanged || priceChanged) {
     const productId = current.stripeProductId || (await stripe.prices.retrieve(current.stripePriceId)).product as string
 
@@ -128,7 +129,6 @@ export async function updateTier(
       await stripe.products.update(productId, { name: updates.name! })
     }
 
-    let newStripePrice: { id: string } | null = null
     if (priceChanged) {
       newStripePrice = await stripe.prices.create({
         product: productId,
@@ -140,52 +140,33 @@ export async function updateTier(
       dbUpdates.stripePriceId = newStripePrice.id
       dbUpdates.priceMonthly = String(updates.priceMonthly)
     }
-
-    if (updates.monthlyBookingQuota !== undefined) {
-      dbUpdates.monthlyBookingQuota = updates.monthlyBookingQuota
-    }
-
-    if (updates.isActive !== undefined) {
-      dbUpdates.isActive = updates.isActive
-    }
-
-    let updated: TierRow
-    try {
-      ;[updated] = await db
-        .update(membershipTiers)
-        .set(dbUpdates)
-        .where(eq(membershipTiers.id, tierId))
-        .returning()
-    } catch (err) {
-      // Roll back the price swap: re-activate old price, archive the newly created one
-      if (newStripePrice) {
-        await Promise.all([
-          stripe.prices.update(current.stripePriceId, { active: true }),
-          stripe.prices.update(newStripePrice.id, { active: false }),
-        ])
-      }
-      throw err
-    }
-
-    return serializeTier(updated)
   }
 
-  // No Stripe-related changes — just update quota / isActive
+  // Common field updates
   if (updates.monthlyBookingQuota !== undefined) {
     dbUpdates.monthlyBookingQuota = updates.monthlyBookingQuota
   }
-
   if (updates.isActive !== undefined) {
     dbUpdates.isActive = updates.isActive
   }
 
-  const [updated] = await db
-    .update(membershipTiers)
-    .set(dbUpdates)
-    .where(eq(membershipTiers.id, tierId))
-    .returning()
-
-  return serializeTier(updated)
+  try {
+    const [updated] = await db
+      .update(membershipTiers)
+      .set(dbUpdates)
+      .where(eq(membershipTiers.id, tierId))
+      .returning()
+    return serializeTier(updated)
+  } catch (err) {
+    // Roll back the price swap: re-activate old price, archive the newly created one
+    if (newStripePrice) {
+      await Promise.all([
+        stripe.prices.update(current.stripePriceId, { active: true }),
+        stripe.prices.update(newStripePrice.id, { active: false }),
+      ])
+    }
+    throw err
+  }
 }
 
 export async function toggleTierVisibility(

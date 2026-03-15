@@ -7,6 +7,7 @@ import { TrendingUp, Users, BarChart2 } from '@/components/ui/icons'
 import { useTrainerEarnings } from '@/lib/hooks/useTrainerEarnings'
 import type { TrainerClientItem, MonthlyRevenue } from '@/modules/trainer/types'
 import EmptyState from '@/components/ui/EmptyState'
+import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/currency'
 
 const gradients = [
   'linear-gradient(135deg, #E8923A, #c06b1a)',
@@ -52,11 +53,6 @@ function GradientStatCard({
   )
 }
 
-function formatDollar(amount: number): string {
-  if (amount >= 1000) return `$${(amount / 1000).toFixed(1)}k`
-  return `$${amount.toFixed(0)}`
-}
-
 function EarningsChart({ revenueHistory }: { revenueHistory: MonthlyRevenue[] }) {
   if (revenueHistory.length === 0) return null
 
@@ -85,7 +81,7 @@ function EarningsChart({ revenueHistory }: { revenueHistory: MonthlyRevenue[] })
                   className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold whitespace-nowrap"
                   style={{ color: isCurrentMonth ? 'var(--facility-primary, #E8923A)' : 'var(--text-muted)' }}
                 >
-                  {formatDollar(month.amount)}
+                  {formatCurrencyCompact(month.amount)}
                 </span>
               </div>
               <span className="absolute -bottom-5 text-[10px] text-text-muted" style={{ fontWeight: isCurrentMonth ? 700 : 400 }}>
@@ -126,7 +122,7 @@ function ClientRow({ client }: { client: TrainerClientItem }) {
       </div>
       <div className="text-right shrink-0">
         <p className="font-display text-sm font-bold text-text-primary">
-          ${client.price_monthly}/mo
+          {formatCurrency(client.price_monthly)}/mo
         </p>
         {client.is_complimentary ? (
           <p className="text-[10px] font-bold uppercase tracking-wide text-text-muted">Comp</p>
@@ -167,7 +163,7 @@ export default function TrainerEarningsView() {
       >
         <GradientStatCard
           label="Monthly Earnings"
-          value={`$${earnings.monthly_earnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={formatCurrency(earnings.monthly_earnings)}
           sub={earnings.active_clients > 0 ? `From ${earnings.active_clients} active clients` : 'No active clients'}
           icon={TrendingUp}
           gradient="linear-gradient(135deg, #E8923A, #c06b1a)"
@@ -181,7 +177,7 @@ export default function TrainerEarningsView() {
         />
         <GradientStatCard
           label="Avg. Per Client"
-          value={`$${earnings.avg_per_client.toFixed(2)}`}
+          value={formatCurrency(earnings.avg_per_client)}
           sub="Per active client"
           icon={BarChart2}
           gradient="linear-gradient(135deg, #059669, #047857)"

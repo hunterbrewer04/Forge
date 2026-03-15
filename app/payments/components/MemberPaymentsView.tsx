@@ -5,11 +5,12 @@ import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import GlassCard from '@/components/ui/GlassCard'
 import FannedCardStack from './FannedCardStack'
-import { CreditCard, Clipboard, Lock, Dumbbell } from '@/components/ui/icons'
+import { CreditCard, Clipboard, Lock } from '@/components/ui/icons'
 import EmptyState from '@/components/ui/EmptyState'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { fetchPaymentsSummary } from '@/lib/services/payments'
 import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
+import { formatCurrency, centsToDollars } from '@/lib/utils/currency'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import type { DebitCardData } from './DebitCard'
@@ -19,8 +20,6 @@ function MembershipHeroCard({
   tierName,
   currentPeriodEnd,
   monthlyPrice,
-  sessionsUsed,
-  sessionsQuota,
   memberSince,
   isLoading,
 }: {
@@ -28,8 +27,6 @@ function MembershipHeroCard({
   tierName: string | null
   currentPeriodEnd: number | null
   monthlyPrice: number | null
-  sessionsUsed?: number
-  sessionsQuota?: number
   memberSince: string | null
   isLoading: boolean
 }) {
@@ -76,15 +73,7 @@ function MembershipHeroCard({
                   <div>
                     <div className="text-[10px] opacity-50 uppercase tracking-wider">Monthly</div>
                     <div className="font-display text-2xl font-bold">
-                      ${monthlyPrice}
-                    </div>
-                  </div>
-                )}
-                {sessionsQuota !== undefined && (
-                  <div>
-                    <div className="text-[10px] opacity-50 uppercase tracking-wider">Sessions Left</div>
-                    <div className="font-display text-2xl font-bold">
-                      {sessionsQuota - (sessionsUsed ?? 0)} / {sessionsQuota}
+                      {formatCurrency(monthlyPrice)}
                     </div>
                   </div>
                 )}
@@ -152,7 +141,7 @@ export default function MemberPaymentsView() {
         hasActiveSubscription={hasActiveSubscription}
         tierName={invoices[0]?.description?.split(' — ')[0] ?? null}
         currentPeriodEnd={currentPeriodEnd}
-        monthlyPrice={invoices[0] ? invoices[0].amount_paid / 100 : null}
+        monthlyPrice={invoices[0] ? centsToDollars(invoices[0].amount_paid) : null}
         memberSince={profile?.created_at ?? null}
         isLoading={isLoading}
       />
@@ -203,7 +192,7 @@ export default function MemberPaymentsView() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-display text-sm font-bold text-text-primary">
-                      ${(inv.amount_paid / 100).toFixed(2)}
+                      {formatCurrency(centsToDollars(inv.amount_paid))}
                     </p>
                     <StatusBadge
                       label={inv.status === 'paid' ? 'Paid' : inv.status === 'open' ? 'Pending' : 'Failed'}

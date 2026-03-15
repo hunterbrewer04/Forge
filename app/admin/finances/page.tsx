@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/icons'
 import { useAdminFinances } from '@/lib/hooks/admin/useAdminFinances'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
+import { formatCurrency, centsToDollars } from '@/lib/utils/currency'
 import type { RevenueStats } from '@/modules/admin/types'
 
 function StatCard({
@@ -57,7 +58,7 @@ function RevenueStatsGrid({ stats }: { stats: RevenueStats }) {
       <motion.div variants={fadeUpItem}>
         <StatCard
           label="Monthly Revenue"
-          value={`$${stats.mrr.toFixed(2)}`}
+          value={formatCurrency(stats.mrr)}
           icon={TrendingUp}
           color="bg-green-500/10 text-green-500"
         />
@@ -147,7 +148,7 @@ export default function AdminFinancesPage() {
 
                   {/* Amount */}
                   <span className="text-text-primary text-sm font-medium">
-                    ${(invoice.amount_paid / 100).toFixed(2)}
+                    {formatCurrency(centsToDollars(invoice.amount_paid))}
                   </span>
 
                   {/* Status */}

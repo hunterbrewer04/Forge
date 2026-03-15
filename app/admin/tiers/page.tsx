@@ -24,6 +24,7 @@ import type { TierListItem, TierInput } from '@/modules/admin/types'
 import { getErrorMessage } from '@/lib/utils/errors'
 import { useAdminTiers } from '@/lib/hooks/admin/useAdminTiers'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
+import { formatCurrency } from '@/lib/utils/currency'
 
 function TierFormModal({
   tier,
@@ -176,7 +177,7 @@ export default function AdminTiersPage() {
                   <div>
                     <h4 className="text-lg font-bold text-text-primary">{tier.name}</h4>
                     <p className="text-2xl font-bold text-primary mt-1">
-                      ${parseFloat(tier.price_monthly).toFixed(2)}
+                      {formatCurrency(parseFloat(tier.price_monthly))}
                       <span className="text-sm font-normal text-text-muted">/mo</span>
                     </p>
                   </div>

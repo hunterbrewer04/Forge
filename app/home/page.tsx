@@ -18,6 +18,7 @@ import HomeNextUpCard from './components/HomeNextUpCard'
 import { fetchRecentInvoices } from '@/lib/services/payments'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
+import { formatCurrency, centsToDollars } from '@/lib/utils/currency'
 
 interface Stats {
   totalConversations: number
@@ -464,7 +465,7 @@ export default function HomePage() {
                           {new Date(inv.created * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                         <span className="text-text-primary font-medium">
-                          ${(inv.amount_paid / 100).toFixed(2)}
+                          {formatCurrency(centsToDollars(inv.amount_paid))}
                         </span>
                       </div>
                     ))}
