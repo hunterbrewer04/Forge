@@ -83,6 +83,7 @@ import {
   Sun,
   Moon,
   ShieldCheck,
+  Wifi,
 } from "lucide-react";
 
 // Re-export LucideIcon type for external use
@@ -234,4 +235,5 @@ export {
   Sun,
   Moon,
   ShieldCheck,
+  Wifi,
 };
