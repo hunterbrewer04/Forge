@@ -46,3 +46,8 @@ next-env.d.ts
 
 # git worktrees
 .worktrees
+
+# working files
+home.png
+/mockups
+.claude

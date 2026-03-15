@@ -25,30 +25,9 @@ export default function SchedulePage() {
   const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
 
-  const [viewMode, setViewMode] = useState<'upcoming' | 'past'>('upcoming')
-
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString())
 
   const [activeFilter, setActiveFilter] = useState('all')
-
-  // Compute date range based on view mode
-  const { scheduleFromDate, scheduleToDate, scheduleStatus } = useMemo(() => {
-    if (viewMode === 'past') {
-      const from = new Date()
-      from.setDate(from.getDate() - 60)
-      return {
-        scheduleFromDate: getLocalDateString(from),
-        scheduleToDate: getLocalDateString(),
-        scheduleStatus: ['completed', 'cancelled'] as const,
-      }
-    }
-
-    return {
-      scheduleFromDate: undefined,
-      scheduleToDate: undefined,
-      scheduleStatus: ['scheduled'] as const,
-    }
-  }, [viewMode])
 
   // Booking modal state
   const [selectedSession, setSelectedSession] = useState<SessionWithDetails | null>(null)
@@ -66,9 +45,7 @@ export default function SchedulePage() {
     filters,
   } = useScheduleData({
     userId: profile?.id,
-    fromDate: scheduleFromDate,
-    toDate: scheduleToDate,
-    statusFilter: scheduleStatus,
+    statusFilter: ['scheduled'],
   })
 
   // Compute booked dates for calendar
@@ -182,28 +159,6 @@ export default function SchedulePage() {
     <>
       <GlassAppLayout customHeader={customHeader} desktopTitle={profile?.is_trainer ? 'Sessions' : 'Book a Session'}>
         <div className="flex flex-col gap-4 lg:gap-6">
-        {/* Upcoming / Past toggle */}
-        <div className="flex bg-bg-secondary rounded-xl p-1 border border-border">
-          {(['upcoming', 'past'] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => {
-                setViewMode(mode)
-                setActiveFilter('all')
-                setSelectedDate(getLocalDateString())
-              }}
-              className={`
-                flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150 capitalize
-                ${viewMode === mode
-                  ? 'bg-bg-card text-text-primary shadow-sm border border-border'
-                  : 'text-text-secondary hover:text-text-primary'}
-              `}
-            >
-              {mode === 'upcoming' ? 'Upcoming' : 'Past'}
-            </button>
-          ))}
-        </div>
-
         {/* Calendar */}
         <GlassCard variant="subtle" className="p-4 lg:p-3">
           <CalendarStrip
@@ -239,9 +194,7 @@ export default function SchedulePage() {
           <h2 className="text-text-primary font-semibold">{selectedDateLabel}</h2>
           {selectedDateSessions.length > 0 && (
             <span className="bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
-              {viewMode === 'past'
-                ? `${selectedDateSessions.length} Session${selectedDateSessions.length !== 1 ? 's' : ''}`
-                : `${selectedDateSessions.length} Available`}
+              {selectedDateSessions.length} Available
             </span>
           )}
         </div>
@@ -284,7 +237,7 @@ export default function SchedulePage() {
                       <SessionCard
                         session={session}
                         isTrainer={profile?.is_trainer}
-                        isPastView={viewMode === 'past'}
+                        isPastView={false}
                         onBook={() => handleBookSession(session)}
                         onTap={() => handleTapSession(session)}
                         onDetails={() => handleViewDetails(session)}
@@ -298,21 +251,10 @@ export default function SchedulePage() {
                 <div className="bg-bg-secondary p-4 rounded-full mb-4">
                   <CalendarOff size={32} className="text-text-muted" />
                 </div>
-                {viewMode === 'past' ? (
-                  <>
-                    <h3 className="text-text-primary font-semibold mb-1">No past sessions</h3>
-                    <p className="text-text-secondary text-sm">
-                      No completed or cancelled sessions on this date.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-text-primary font-semibold mb-1">No sessions available</h3>
-                    <p className="text-text-secondary text-sm">
-                      There are no sessions scheduled for this date.
-                    </p>
-                  </>
-                )}
+                <h3 className="text-text-primary font-semibold mb-1">No sessions available</h3>
+                <p className="text-text-secondary text-sm">
+                  There are no sessions scheduled for this date.
+                </p>
               </div>
             )}
           </div>

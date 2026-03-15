@@ -21,7 +21,7 @@ import { motion } from 'framer-motion'
 import { staggerContainer } from '@/lib/motion'
 import { getErrorMessage } from '@/lib/utils/errors'
 
-type FilterType = 'all' | 'upcoming' | 'past' | 'cancelled'
+type FilterType = 'all' | 'upcoming' | 'cancelled'
 
 export default function AdminSessionsPage() {
   const router = useRouter()
@@ -40,8 +40,6 @@ export default function AdminSessionsPage() {
 
       if (filter === 'upcoming') {
         url += `&from=${now}`
-      } else if (filter === 'past') {
-        url += `&to=${now}`
       } else if (filter === 'cancelled') {
         url += `&status=cancelled`
       }
@@ -131,7 +129,6 @@ export default function AdminSessionsPage() {
 
   const filterButtons: { key: FilterType; label: string }[] = [
     { key: 'upcoming', label: 'Upcoming' },
-    { key: 'past', label: 'Past' },
     { key: 'cancelled', label: 'Cancelled' },
     { key: 'all', label: 'All' },
   ]
