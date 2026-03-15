@@ -174,6 +174,15 @@ export const facilitySettings = pgTable('facility_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const trainerClients = pgTable('trainer_clients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  trainerId: uuid('trainer_id').notNull().references(() => profiles.id),
+  clientId: uuid('client_id').notNull().references(() => profiles.id),
+  assignedAt: timestamp('assigned_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('trainer_clients_trainer_client_idx').on(table.trainerId, table.clientId),
+])
+
 // ============================================================================
 // Relations
 // ============================================================================
@@ -190,6 +199,8 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   sentMessages: many(messages),
   pushSubscriptions: many(pushSubscriptions),
   auditLogs: many(auditLogs),
+  assignedClients: many(trainerClients, { relationName: 'assignedClients' }),
+  assignedTrainer: many(trainerClients, { relationName: 'assignedTrainer' }),
 }))
 
 export const membershipTiersRelations = relations(membershipTiers, ({ many }) => ({
@@ -259,5 +270,18 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(profiles, {
     fields: [auditLogs.userId],
     references: [profiles.id],
+  }),
+}))
+
+export const trainerClientsRelations = relations(trainerClients, ({ one }) => ({
+  trainer: one(profiles, {
+    fields: [trainerClients.trainerId],
+    references: [profiles.id],
+    relationName: 'assignedClients',
+  }),
+  client: one(profiles, {
+    fields: [trainerClients.clientId],
+    references: [profiles.id],
+    relationName: 'assignedTrainer',
   }),
 }))
