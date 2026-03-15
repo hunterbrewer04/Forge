@@ -3,6 +3,7 @@
 import { useState, FormEvent, useRef, ChangeEvent, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Plus, Send, X } from '@/components/ui/icons'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface MessageInputProps {
   conversationId: string
@@ -162,7 +163,7 @@ export default function MessageInput({
         fileInputRef.current.value = ''
       }
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Failed to upload file')
+      setUploadError(getErrorMessage(err, 'Failed to upload file'))
     } finally {
       setUploading(false)
       setUploadProgress(0)

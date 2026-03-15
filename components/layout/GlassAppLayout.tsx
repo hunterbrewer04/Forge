@@ -6,7 +6,7 @@ import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { useAuth } from '@/contexts/AuthContext'
 import GlassSidebar from '@/components/navigation/GlassSidebar'
 import MobileLayout from '@/components/layout/MobileLayout'
-import { Menu } from '@/components/ui/icons'
+import { ChevronLeft, ChevronRight } from '@/components/ui/icons'
 
 interface GlassAppLayoutProps {
   children: React.ReactNode
@@ -81,16 +81,20 @@ export default function GlassAppLayout({
         {/* Desktop page header */}
         {!hideDesktopHeader && (
           <div className="glass border-b border-border px-8 py-5 sticky top-0 z-20">
-            <div className="max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between">
+            <div className="max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between relative">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setSidebarOpen(prev => !prev)}
                   className="size-9 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
-                  aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                  aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 >
-                  <Menu size={20} />
+                  {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
                 </button>
-                <h1 className="text-2xl font-bold text-text-primary tracking-tight">
+                <h1 className={
+                  sidebarOpen
+                    ? "text-2xl font-bold text-text-primary tracking-tight"
+                    : "absolute left-1/2 -translate-x-1/2 text-2xl font-bold text-text-primary tracking-tight whitespace-nowrap"
+                }>
                   {desktopTitle || mobileProps.title || ''}
                 </h1>
               </div>

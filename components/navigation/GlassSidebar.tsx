@@ -1,49 +1,20 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/lib/hooks/useUnreadCount'
 import GlassCard from '@/components/ui/GlassCard'
-import {
-  Home,
-  Calendar,
-  User,
-  Users,
-  MessageCircle,
-  Dumbbell,
-  Wallet,
-  LogOut,
-  X,
-} from '@/components/ui/icons'
-
-type IconKey = 'home' | 'messages' | 'calendar' | 'profile' | 'clients' | 'sessions' | 'payments'
+import { LogOut, ChevronDown, ChevronLeft } from '@/components/ui/icons'
+import { SidebarIcon, type IconKey } from '@/components/navigation/sidebar-icons'
 
 interface NavItem {
   href: string
   iconKey: IconKey
   label: string
-}
-
-function SidebarIcon({ iconKey, size, strokeWidth }: { iconKey: IconKey; size: number; strokeWidth: number }) {
-  switch (iconKey) {
-    case 'home':
-      return <Home size={size} strokeWidth={strokeWidth} />
-    case 'messages':
-      return <MessageCircle size={size} strokeWidth={strokeWidth} />
-    case 'calendar':
-      return <Calendar size={size} strokeWidth={strokeWidth} />
-    case 'clients':
-      return <Users size={size} strokeWidth={strokeWidth} />
-    case 'sessions':
-      return <Dumbbell size={size} strokeWidth={strokeWidth} />
-    case 'payments':
-      return <Wallet size={size} strokeWidth={strokeWidth} />
-    case 'profile':
-      return <User size={size} strokeWidth={strokeWidth} />
-  }
 }
 
 interface GlassSidebarProps {
@@ -54,6 +25,7 @@ interface GlassSidebarProps {
 export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) {
   const pathname = usePathname()
   const { profile } = useAuth()
+  const [adminOpen, setAdminOpen] = useState(() => pathname.startsWith('/admin'))
 
   const { unreadCount } = useUnreadCount({
     userId: profile?.id,
@@ -68,11 +40,12 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
     return pathname.startsWith(href)
   }
 
+  const isAdminActive = pathname.startsWith('/admin')
+
   const mainNavItems: NavItem[] = [
     { href: '/home', iconKey: 'home', label: 'Home' },
   ]
 
-  // Messages - only for trainers and full-access users
   const messagesNavItem: NavItem[] =
     profile?.is_trainer || profile?.has_full_access
       ? [{ href: '/chat', iconKey: 'messages', label: 'Messages' }]
@@ -94,6 +67,13 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
       ? [{ href: '/payments', iconKey: 'payments', label: 'Payments' }]
       : []
 
+  const adminSubItems: NavItem[] = [
+    { href: '/admin/users', iconKey: 'admin-users', label: 'Users' },
+    { href: '/admin/tiers', iconKey: 'admin-tiers', label: 'Tiers' },
+    { href: '/admin/finances', iconKey: 'admin-finances', label: 'Finances' },
+    { href: '/admin/settings', iconKey: 'admin-settings', label: 'Settings' },
+  ]
+
   const allNavItems = [...mainNavItems, ...messagesNavItem, ...scheduleNavItem, ...trainerNavItems, ...paymentsNavItem]
 
   const bottomNavItems: NavItem[] = [
@@ -113,15 +93,15 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
           alt="Forge Sports Performance"
           width={240}
           height={160}
-          className="h-28 w-auto object-contain"
+          className="h-36 w-auto object-contain"
         />
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute right-4 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-all"
-            aria-label="Close sidebar"
+            className="absolute right-4 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-all"
+            aria-label="Collapse sidebar"
           >
-            <X size={18} />
+            <ChevronLeft size={18} />
           </button>
         )}
       </div>
@@ -162,6 +142,86 @@ export default function GlassSidebar({ onSignOut, onClose }: GlassSidebarProps) 
               </Link>
             </motion.li>
           ))}
+
+          {/* Admin Dropdown */}
+          {profile?.is_admin && (
+            <motion.li
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                duration: 0.3,
+                delay: allNavItems.length * 0.05,
+                ease: [0.25, 0.4, 0.25, 1],
+              }}
+            >
+              <div className="mt-2 mb-1 px-4">
+                <div className="border-t border-border" />
+              </div>
+              <button
+                onClick={() => setAdminOpen((prev) => !prev)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full ${
+                  isAdminActive
+                    ? 'glass-subtle text-primary font-semibold'
+                    : 'text-text-secondary hover:bg-bg-secondary/50 hover:text-text-primary'
+                }`}
+              >
+                <SidebarIcon
+                  iconKey="admin"
+                  size={22}
+                  strokeWidth={isAdminActive ? 2.5 : 2}
+                />
+                <span className="font-medium flex-1 text-left">Admin Panel</span>
+                <motion.span
+                  animate={{ rotate: adminOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
+                >
+                  <ChevronDown size={16} />
+                </motion.span>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {adminOpen && (
+                  <motion.ul
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: [0.25, 0.4, 0.25, 1] }}
+                    className="overflow-hidden"
+                  >
+                    {adminSubItems.map((item, index) => (
+                      <motion.li
+                        key={item.href}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{
+                          duration: 0.2,
+                          delay: index * 0.05,
+                          ease: [0.25, 0.4, 0.25, 1],
+                        }}
+                      >
+                        <Link
+                          href={item.href}
+                          className={`flex items-center gap-3 pl-8 pr-4 py-2.5 rounded-xl transition-all ${
+                            isActive(item.href)
+                              ? 'glass-subtle text-primary font-semibold'
+                              : 'text-text-secondary hover:bg-bg-secondary/50 hover:text-text-primary'
+                          }`}
+                        >
+                          <SidebarIcon
+                            iconKey={item.iconKey}
+                            size={18}
+                            strokeWidth={isActive(item.href) ? 2.5 : 2}
+                          />
+                          <span className="font-medium text-sm">{item.label}</span>
+                        </Link>
+                      </motion.li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </motion.li>
+          )}
         </ul>
       </nav>
 

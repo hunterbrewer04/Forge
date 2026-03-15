@@ -66,6 +66,7 @@ export const membershipTiers = pgTable('membership_tiers', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   stripePriceId: text('stripe_price_id').notNull(),
+  stripeProductId: text('stripe_product_id'),
   monthlyBookingQuota: integer('monthly_booking_quota').notNull(),
   priceMonthly: numeric('price_monthly').notNull(),
   isActive: boolean('is_active').notNull().default(true),
@@ -164,6 +165,19 @@ export const auditLogs = pgTable('audit_logs', {
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const facilitySettings = pgTable('facility_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().default('Forge'),
+  logoUrl: text('logo_url'),
+  primaryColor: text('primary_color').notNull().default('#1973f0'),
+  businessHours: jsonb('business_hours'),
+  bookingAdvanceNotice: integer('booking_advance_notice'),
+  cancellationWindow: integer('cancellation_window'),
+  notificationPreferences: jsonb('notification_preferences'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // ============================================================================

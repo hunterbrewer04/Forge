@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/icons'
 import type { SessionType } from '@/modules/calendar-booking/types'
 import { getLocalDateString, localInputsToUtc } from '@/lib/utils/date'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface FormData {
   title: string
@@ -129,7 +130,7 @@ export default function NewSessionPage() {
         router.push('/trainer/sessions')
       }, 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create session')
+      setError(getErrorMessage(err, 'Failed to create session'))
     } finally {
       setIsLoading(false)
     }

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, AlertTriangle, CheckCircle, Loader2 } from '@/components/ui/icons'
 import type { SessionWithDetails } from '@/modules/calendar-booking/types'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface CancelBookingModalProps {
   session: SessionWithDetails
@@ -85,9 +86,7 @@ export default function CancelBookingModal({
       }, 1500)
     } catch (error) {
       setModalState('error')
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to cancel booking'
-      )
+      setErrorMessage(getErrorMessage(error, 'Failed to cancel booking'))
     }
   }
 

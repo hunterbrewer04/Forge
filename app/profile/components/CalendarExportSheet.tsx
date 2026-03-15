@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Calendar, Copy, RefreshCw, Loader2, ExternalLink } from '@/components/ui/icons'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface CalendarExportSheetProps {
   isOpen: boolean
@@ -61,9 +62,7 @@ export default function CalendarExportSheet({
       if (!mountedRef.current) return
 
       setSheetState('error')
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to load calendar feed'
-      )
+      setErrorMessage(getErrorMessage(error, 'Failed to load calendar feed'))
     }
   }
 
@@ -106,11 +105,7 @@ export default function CalendarExportSheet({
       setFeedUrl(data.feedUrl)
       toast.success('Calendar link regenerated')
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Failed to regenerate calendar link'
-      )
+      toast.error(getErrorMessage(error, 'Failed to regenerate calendar link'))
     } finally {
       if (mountedRef.current) {
         setIsRegenerating(false)

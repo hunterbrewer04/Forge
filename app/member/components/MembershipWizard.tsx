@@ -13,6 +13,7 @@ import { getStripeAppearance } from '@/lib/stripe-appearance'
 import { stripePromise } from '@/lib/stripe-client'
 import type { MembershipTier } from '@/lib/types/database'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
+import { getErrorMessage } from '@/lib/utils/errors'
 import WizardProgressBar from './WizardProgressBar'
 import WizardStepAccount from './WizardStepAccount'
 import WizardStepPlans from './WizardStepPlans'
@@ -106,7 +107,7 @@ export default function MembershipWizard() {
       setSelectedTier(tier)
       goTo('payment')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(getErrorMessage(err, 'Something went wrong'))
     } finally {
       setSubscribing(null)
     }
