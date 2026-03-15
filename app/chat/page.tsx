@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import ConversationList from './components/ConversationList'
 import ClientConversationList from './components/ClientConversationList'
 import ChatWindow from './components/ChatWindow'
+import NewConversationModal from './components/NewConversationModal'
 import ChatLayout from '@/components/layout/ChatLayout'
 import { logger } from '@/lib/utils/logger'
 import { fetchClientConversation, fetchConversationById } from '@/lib/services/conversations'
@@ -33,6 +34,8 @@ export default function ChatPage() {
   const [loadingTimeout, setLoadingTimeout] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showThread, setShowThread] = useState(!!conversationParam)
+  const [showNewConversation, setShowNewConversation] = useState(false)
+  const [conversationListKey, setConversationListKey] = useState(0)
 
   useEffect(() => {
     logger.debug('[ChatPage] Component mounted')
@@ -153,6 +156,13 @@ export default function ChatPage() {
     }
   }
 
+  const handleNewConversationCreated = (conversationId: string) => {
+    setSelectedConversationId(conversationId)
+    setShowThread(true)
+    // Bump key to force conversation list to reload
+    setConversationListKey((k) => k + 1)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -267,9 +277,11 @@ export default function ChatPage() {
   // Get the conversation list based on user type
   const conversationListComponent = isTrainer ? (
     <ConversationList
+      key={conversationListKey}
       currentUserId={profile.id}
       selectedConversationId={selectedConversationId}
       onSelectConversation={handleSelectConversation}
+      onNewConversation={() => setShowNewConversation(true)}
       searchQuery={searchQuery}
     />
   ) : isClient ? (
@@ -371,12 +383,22 @@ export default function ChatPage() {
   }
 
   return (
-    <ChatLayout
-      mobileHeader={mobileHeader}
-      conversationList={conversationListComponent}
-      activeChat={activeChatComponent}
-      showActiveChat={showThread}
-      onSignOut={() => signOut().then(() => router.push('/member/login'))}
-    />
+    <>
+      <ChatLayout
+        mobileHeader={mobileHeader}
+        conversationList={conversationListComponent}
+        activeChat={activeChatComponent}
+        showActiveChat={showThread}
+        onSignOut={() => signOut().then(() => router.push('/member/login'))}
+        onNewConversation={isTrainer ? () => setShowNewConversation(true) : undefined}
+      />
+      {isTrainer && (
+        <NewConversationModal
+          isOpen={showNewConversation}
+          onClose={() => setShowNewConversation(false)}
+          onSelectConversation={handleNewConversationCreated}
+        />
+      )}
+    </>
   )
 }

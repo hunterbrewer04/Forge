@@ -24,3 +24,12 @@ export function closeAblyClient(): void {
     ablyClient = null
   }
 }
+
+/**
+ * Refresh the Ably token to pick up new channel capabilities
+ * (e.g., after creating a new conversation).
+ */
+export async function refreshAblyToken(): Promise<void> {
+  if (!ablyClient) return
+  await ablyClient.auth.authorize()
+}
