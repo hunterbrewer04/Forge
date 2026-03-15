@@ -9,6 +9,8 @@ import type {
   messages,
   pushSubscriptions,
   auditLogs,
+  facilitySettings,
+  trainerClients,
 } from './schema'
 import type * as schema from './schema'
 
@@ -25,6 +27,7 @@ export type Conversation = typeof conversations.$inferSelect
 export type Message = typeof messages.$inferSelect
 export type PushSubscription = typeof pushSubscriptions.$inferSelect
 export type AuditLog = typeof auditLogs.$inferSelect
+export type FacilitySettingsRow = typeof facilitySettings.$inferSelect
 
 // Insert types (write to DB)
 export type NewProfile = typeof profiles.$inferInsert
@@ -36,3 +39,6 @@ export type NewConversation = typeof conversations.$inferInsert
 export type NewMessage = typeof messages.$inferInsert
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert
 export type NewAuditLog = typeof auditLogs.$inferInsert
+export type NewFacilitySettings = typeof facilitySettings.$inferInsert
+export type TrainerClientRow = typeof trainerClients.$inferSelect
+export type NewTrainerClientRow = typeof trainerClients.$inferInsert

@@ -14,9 +14,11 @@ import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
 import { User, Bell, Calendar, MessageCircle, Wallet, Dumbbell, CalendarOff } from '@/components/ui/icons'
+import HomeNextUpCard from './components/HomeNextUpCard'
 import { fetchRecentInvoices } from '@/lib/services/payments'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
+import { formatCurrency, centsToDollars } from '@/lib/utils/currency'
 
 interface Stats {
   totalConversations: number
@@ -180,14 +182,13 @@ export default function HomePage() {
         </div>
 
         {/* Facility Branding */}
-        <div className="flex flex-col items-center">
-          <span className="text-primary font-bold text-base tracking-tight uppercase">
-            {theme.name.split(' ')[0] || 'FORGE'}
-          </span>
-          <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">
-            {theme.tagline}
-          </span>
-        </div>
+        <Image
+          src="/Forge-Full-Logo.PNG"
+          alt="Forge Sports Performance"
+          width={120}
+          height={60}
+          className="h-10 w-auto object-contain"
+        />
 
         {/* Notifications */}
         <button
@@ -334,14 +335,13 @@ export default function HomePage() {
               </div>
               {/* Facility branding + notifications */}
               <div className="flex items-center gap-4">
-                <div className="flex flex-col items-end">
-                  <span className="text-primary font-bold text-base tracking-tight uppercase">
-                    {theme.name.split(' ')[0] || 'FORGE'}
-                  </span>
-                  <span className="text-text-muted text-[10px] font-medium tracking-wider uppercase">
-                    {theme.tagline}
-                  </span>
-                </div>
+                <Image
+                  src="/Forge-Full-Logo.PNG"
+                  alt="Forge Sports Performance"
+                  width={200}
+                  height={100}
+                  className="h-20 w-auto object-contain"
+                />
                 <button
                   onClick={() => router.push('/profile/notifications')}
                   className="relative flex items-center justify-center size-10 text-text-secondary hover:text-text-primary transition-colors"
@@ -357,20 +357,27 @@ export default function HomePage() {
           </GlassCard>
           </motion.div>
 
-          {/* Main grid: 5-col (3+2) when messaging is available, balanced 2-col otherwise */}
+          {/* Next Up Card */}
+          {nextSession && !loadingHomeData && (
+            <motion.div variants={fadeUpItem}>
+              <HomeNextUpCard session={nextSession} />
+            </motion.div>
+          )}
+
+          {/* Main grid: balanced 2-column layout */}
           <motion.div variants={fadeUpItem}>
-          <div className={hasMessaging ? "grid grid-cols-5 gap-6 items-start" : "grid grid-cols-2 gap-6 items-start"}>
+          <div className="grid grid-cols-2 gap-6">
             {/* Left column */}
-            <div className={hasMessaging ? "col-span-3 space-y-4" : "space-y-4"}>
+            <div className="flex flex-col gap-4">
               {/* Sessions CTA */}
               <GlassCard
                 variant="subtle"
-                className="p-6 overflow-hidden"
+                className="overflow-hidden"
                 interactive
               >
                 <Link
                   href={'/schedule'}
-                  className="block rounded-2xl p-6"
+                  className="block p-6"
                   style={{
                     background: 'linear-gradient(135deg, var(--facility-primary), color-mix(in srgb, var(--facility-primary) 70%, #000))',
                   }}
@@ -384,7 +391,7 @@ export default function HomePage() {
                       : 'Browse available training slots and reserve your spot.'
                     }
                   </p>
-                  <div className="mt-5 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
+                  <div className="mt-4 inline-flex items-center gap-2 bg-white text-text-primary px-4 py-2.5 rounded-full font-semibold text-sm">
                     {profile.is_trainer ? 'View Sessions' : 'Schedule Now'}
                     <Calendar size={18} />
                   </div>
@@ -392,7 +399,7 @@ export default function HomePage() {
               </GlassCard>
 
               {/* Recent Activity */}
-              <GlassCard variant="subtle" className="p-6">
+              <GlassCard variant="subtle" className="p-6 flex-1">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-text-primary font-semibold text-base">Recent Activity</h2>
                   <Link href="/profile/history" className="text-primary text-sm font-medium hover:underline">
@@ -404,7 +411,7 @@ export default function HomePage() {
             </div>
 
             {/* Right column */}
-            <div className={hasMessaging ? "col-span-2 space-y-4" : "space-y-4"}>
+            <div className="flex flex-col gap-4">
               {/* Messages Card — only for trainers and full-access users */}
               {hasMessaging && (
                 <GlassCard
@@ -458,7 +465,7 @@ export default function HomePage() {
                           {new Date(inv.created * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                         <span className="text-text-primary font-medium">
-                          ${(inv.amount_paid / 100).toFixed(2)}
+                          {formatCurrency(centsToDollars(inv.amount_paid))}
                         </span>
                       </div>
                     ))}
@@ -509,6 +516,11 @@ export default function HomePage() {
               )}
             </p>
           </section>
+
+          {/* Next Up Card */}
+          {nextSession && !loadingHomeData && (
+            <HomeNextUpCard session={nextSession} />
+          )}
 
           {/* Sessions CTA Card */}
           <Link

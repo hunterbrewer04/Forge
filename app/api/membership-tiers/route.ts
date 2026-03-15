@@ -4,6 +4,7 @@ import { membershipTiers } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
 import { stripe } from '@/lib/stripe'
 import { handleUnexpectedError } from '@/lib/api/errors'
+import { centsToDollars } from '@/lib/utils/currency'
 
 export async function GET() {
   try {
@@ -29,8 +30,8 @@ export async function GET() {
         }
         try {
           const price = await stripe.prices.retrieve(stripePriceId)
-          if (price.unit_amount != null) {
-            return { ...rest, priceMonthly: String(price.unit_amount / 100) }
+          if (price.unit_amount !== null) {
+            return { ...rest, priceMonthly: String(centsToDollars(price.unit_amount)) }
           }
         } catch (err) {
           console.error(`Failed to fetch Stripe price ${stripePriceId}:`, err)

@@ -6,15 +6,14 @@ import Image from 'next/image'
 
 interface SessionCardProps {
   session: SessionWithDetails
-  userId?: string
   isTrainer?: boolean
+  isPastView?: boolean
   onBook: () => void
-  onCancel: () => void
   onTap: () => void
   onDetails?: () => void
 }
 
-export default function SessionCard({ session, isTrainer, onBook, onTap, onDetails }: SessionCardProps) {
+export default function SessionCard({ session, isTrainer, isPastView, onBook, onTap, onDetails }: SessionCardProps) {
   const { trainer, availability, user_booking } = session
 
   // Determine card state
@@ -37,6 +36,9 @@ export default function SessionCard({ session, isTrainer, onBook, onTap, onDetai
 
   // Get session icon based on type - all session types use Dumbbell
   const SessionIcon: LucideIcon = Dumbbell
+
+  // Session type color
+  const typeColor = session.session_type?.color
 
   // Spots display
   const spotsText = isFull
@@ -61,8 +63,15 @@ export default function SessionCard({ session, isTrainer, onBook, onTap, onDetai
     >
       <div className="flex items-start gap-3">
         {/* Session Type Icon */}
-        <div className="bg-bg-secondary p-3 rounded-xl shrink-0">
-          <SessionIcon size={24} className="text-primary" />
+        <div
+          className={`p-3 rounded-xl shrink-0 ${typeColor ? '' : 'bg-bg-secondary'}`}
+          style={typeColor ? { backgroundColor: `${typeColor}20` } : undefined}
+        >
+          <SessionIcon
+            size={24}
+            className={typeColor ? undefined : 'text-primary'}
+            style={typeColor ? { color: typeColor } : undefined}
+          />
         </div>
 
         {/* Content */}
@@ -106,9 +115,23 @@ export default function SessionCard({ session, isTrainer, onBook, onTap, onDetai
           </div>
         </div>
 
-        {/* Action Button */}
+        {/* Action Button / Status Badge */}
         <div className="shrink-0">
-          {isTrainer ? (
+          {isPastView ? (
+            session.status === 'completed' ? (
+              <span className="px-3 py-1.5 bg-success/10 border border-success/30 text-success rounded-full text-xs font-semibold">
+                Completed
+              </span>
+            ) : session.status === 'cancelled' ? (
+              <span className="px-3 py-1.5 bg-error/10 border border-error/30 text-error rounded-full text-xs font-semibold">
+                Cancelled
+              </span>
+            ) : (
+              <span className="px-3 py-1.5 bg-bg-secondary border border-border text-text-muted rounded-full text-xs font-semibold">
+                {session.status}
+              </span>
+            )
+          ) : isTrainer ? (
             <button
               onClick={(e) => {
                 e.stopPropagation()

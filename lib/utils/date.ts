@@ -58,11 +58,11 @@ export function localInputsToUtc(date: string, time: string): string {
  *
  * @returns Local date string (YYYY-MM-DD)
  */
-export function getLocalDateString(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
+export function getLocalDateString(date?: Date): string {
+  const d = date ?? new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
 
@@ -71,6 +71,30 @@ export function getLocalDateString(): string {
  *
  * @returns Local time string (HH:MM)
  */
+/**
+ * Format a date string as display time (e.g., "2:00 PM")
+ */
+export function formatSessionTime(dateString: string): string {
+  return new Date(dateString).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+}
+
+/**
+ * Format a date string as display date (e.g., "Monday, March 17")
+ */
+export function formatSessionDate(dateString: string, includeYear = false): string {
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    ...(includeYear && { year: 'numeric' }),
+  }
+  return new Date(dateString).toLocaleDateString('en-US', options)
+}
+
 export function getLocalTimeString(): string {
   const now = new Date()
   const hours = String(now.getHours()).padStart(2, '0')

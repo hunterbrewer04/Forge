@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from '@/components/ui/icons'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface CalendarTokenData {
   token: string
@@ -43,7 +44,7 @@ export default function CalendarSettingsPage() {
       const data = await response.json()
       setTokenData(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load calendar settings')
+      setError(getErrorMessage(err, 'Failed to load calendar settings'))
     } finally {
       setIsLoading(false)
     }
@@ -78,7 +79,7 @@ export default function CalendarSettingsPage() {
       setTokenData(data)
       setShowRegenerateConfirm(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to regenerate token')
+      setError(getErrorMessage(err, 'Failed to regenerate token'))
     } finally {
       setIsRegenerating(false)
     }

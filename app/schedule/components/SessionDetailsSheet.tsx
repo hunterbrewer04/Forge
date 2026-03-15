@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Clock, MapPin, User, Calendar, Users } from '@/components/ui/icons'
+import { X, User, Users } from '@/components/ui/icons'
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop'
 import type { SessionWithDetails } from '@/modules/calendar-booking/types'
+import SessionInfoBlock from './SessionInfoBlock'
 import Image from 'next/image'
 
 interface SessionDetailsSheetProps {
@@ -75,23 +76,6 @@ export default function SessionDetailsSheet({
 
   if (!isOpen) return null
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
 
   const handleClose = () => {
     onClose()
@@ -133,8 +117,8 @@ export default function SessionDetailsSheet({
       <div
         className={`relative w-full max-h-[85dvh] flex flex-col ${
           isDesktop
-            ? 'max-w-xl bg-surface-dark rounded-2xl animate-scale-up'
-            : 'max-w-md bg-surface-dark rounded-t-2xl animate-slide-up safe-area-bottom'
+            ? 'max-w-xl bg-bg-card rounded-2xl animate-scale-up'
+            : 'max-w-md bg-bg-card rounded-t-2xl animate-slide-up safe-area-bottom'
         }`}
         style={!isDesktop ? {
           transform: `translateY(${translateY}px)`,
@@ -156,7 +140,7 @@ export default function SessionDetailsSheet({
         {!isDesktop && (
           <div className="px-6 pt-2 shrink-0">
             <div className="flex justify-center pb-3">
-              <div className="w-10 h-1 bg-gray-600 rounded-full" />
+              <div className="w-10 h-1 bg-text-muted/50 rounded-full" />
             </div>
           </div>
         )}
@@ -164,121 +148,21 @@ export default function SessionDetailsSheet({
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors z-10"
+          className="absolute top-4 right-4 size-8 flex items-center justify-center bg-bg-secondary border border-border rounded-full text-text-muted hover:text-text-primary hover:bg-bg-primary transition-colors z-10"
         >
-          <X size={24} />
+          <X size={16} />
         </button>
 
         {/* Scrollable Body */}
         <div ref={scrollRef} className={`flex-1 overflow-y-auto px-6 min-h-0 ${isDesktop ? 'pt-6' : ''}`}>
-          {/* Session Info */}
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-white mb-2">
-              {session.title}
-            </h2>
-
-            {session.session_type && (
-              <span
-                className="inline-block px-2 py-1 text-xs font-medium rounded-full mb-4"
-                style={{
-                  backgroundColor: `${session.session_type.color}20`,
-                  color: session.session_type.color,
-                }}
-              >
-                {session.session_type.name}
-              </span>
-            )}
-
-            <div className="space-y-3 text-gray-300">
-              <div className="flex items-center gap-3">
-                <Calendar size={18} className="text-primary" />
-                <span>{formatDate(session.starts_at)}</span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Clock size={18} className="text-primary" />
-                <span>
-                  {formatTime(session.starts_at)} - {formatTime(session.ends_at)}
-                  <span className="text-gray-500 ml-2">
-                    ({session.duration_minutes} min)
-                  </span>
-                </span>
-              </div>
-
-              {session.location && (
-                <div className="flex items-center gap-3">
-                  <MapPin size={18} className="text-primary" />
-                  <span>{session.location}</span>
-                </div>
-              )}
-
-              {session.trainer && (
-                <div className="flex items-center gap-3">
-                  <User size={18} className="text-primary" />
-                  <span>{session.trainer.full_name || 'Trainer'}</span>
-                </div>
-              )}
-            </div>
-
-            {session.description && (
-              <p className="mt-4 text-sm text-gray-400">{session.description}</p>
-            )}
-          </div>
-
-          {/* Availability */}
-          <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-gray-400">Availability</span>
-              <span
-                className={`font-bold ${
-                  session.availability.spots_left <= 2
-                    ? 'text-yellow-500'
-                    : 'text-green-500'
-                }`}
-              >
-                {session.availability.spots_left} of{' '}
-                {session.availability.capacity} {session.availability.spots_left === 1 ? 'spot' : 'spots'} left
-              </span>
-            </div>
-
-            {/* Capacity Visual */}
-            {session.availability.capacity <= 10 ? (
-              <div className="flex gap-1.5 justify-center">
-                {Array.from({ length: session.availability.capacity }).map((_, i) => {
-                  const bookedCount = session.availability.capacity - session.availability.spots_left
-                  const isFilled = i < bookedCount
-                  return (
-                    <div
-                      key={i}
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        isFilled ? 'bg-primary' : 'bg-gray-700'
-                      }`}
-                    />
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all"
-                  style={{
-                    width: `${
-                      ((session.availability.capacity - session.availability.spots_left) /
-                        session.availability.capacity) *
-                      100
-                    }%`,
-                  }}
-                />
-              </div>
-            )}
-          </div>
+          <SessionInfoBlock session={session} />
 
           {/* Trainer View: Booked Members */}
           {isTrainerView && (
-            <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
+            <div className="bg-bg-secondary border border-border rounded-xl p-4 mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <Users size={18} className="text-primary" />
-                <span className="text-white font-semibold">Booked Members</span>
+                <span className="text-text-primary font-semibold">Booked Members</span>
                 {!loadingBookings && (
                   <span className="bg-primary/20 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
                     {bookings.length}
@@ -303,18 +187,18 @@ export default function SessionDetailsSheet({
                           className="rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-                          <User size={16} className="text-gray-400" />
+                        <div className="w-8 h-8 rounded-full bg-bg-secondary flex items-center justify-center">
+                          <User size={16} className="text-text-muted" />
                         </div>
                       )}
-                      <span className="text-gray-300">
+                      <span className="text-text-secondary">
                         {booking.client.full_name || 'Member'}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-4 text-gray-500 text-sm">
+                <div className="text-center py-4 text-text-muted text-sm">
                   No bookings yet
                 </div>
               )}
@@ -327,7 +211,7 @@ export default function SessionDetailsSheet({
           {isTrainerView ? (
             <button
               onClick={handleClose}
-              className="w-full py-3 px-4 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors"
+              className="w-full py-3 px-4 bg-bg-secondary text-text-primary font-bold rounded-lg hover:bg-bg-secondary/80 transition-colors"
             >
               Close
             </button>
@@ -335,7 +219,7 @@ export default function SessionDetailsSheet({
             <div className="flex gap-3">
               <button
                 onClick={handleClose}
-                className="flex-1 py-3 px-4 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors"
+                className="flex-1 py-3 px-4 bg-bg-secondary text-text-primary font-bold rounded-lg hover:bg-bg-secondary/80 transition-colors"
               >
                 Close
               </button>
@@ -344,14 +228,14 @@ export default function SessionDetailsSheet({
                   onClick={() => {
                     onCancelBooking?.()
                   }}
-                  className="flex-1 py-3 px-4 bg-red-500/20 border border-red-500/50 text-red-500 font-bold rounded-lg hover:bg-red-500/30 transition-colors"
+                  className="flex-1 py-3 px-4 bg-error/10 border border-error/30 text-error font-bold rounded-lg hover:bg-error/20 transition-colors"
                 >
                   Cancel Booking
                 </button>
               ) : isFull ? (
                 <button
                   disabled
-                  className="flex-1 py-3 px-4 bg-gray-800 text-gray-500 font-bold rounded-lg cursor-not-allowed"
+                  className="flex-1 py-3 px-4 bg-bg-secondary text-text-muted font-bold rounded-lg cursor-not-allowed"
                 >
                   Session Full
                 </button>

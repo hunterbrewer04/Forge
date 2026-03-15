@@ -10,8 +10,10 @@ import GlassAppLayout from '@/components/layout/GlassAppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import { ArrowLeft, CalendarOff, Plus } from '@/components/ui/icons'
 import { useScheduleData } from '@/lib/hooks/useScheduleData'
+import { getLocalDateString } from '@/lib/utils/date'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import CalendarStrip from './components/CalendarStrip'
+import SessionFilters from './components/SessionFilters'
 import SessionCard from './components/SessionCard'
 
 const BookingModal = dynamic(() => import('./components/BookingModal'), { ssr: false })
@@ -23,10 +25,9 @@ export default function SchedulePage() {
   const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
 
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  })
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString())
+
+  const [activeFilter, setActiveFilter] = useState('all')
 
   // Booking modal state
   const [selectedSession, setSelectedSession] = useState<SessionWithDetails | null>(null)
@@ -41,7 +42,11 @@ export default function SchedulePage() {
     error,
     fetchSessions,
     datesWithSessions,
-  } = useScheduleData({ userId: profile?.id })
+    filters,
+  } = useScheduleData({
+    userId: profile?.id,
+    statusFilter: ['scheduled'],
+  })
 
   // Compute booked dates for calendar
   const bookedDates = useMemo(() => {
@@ -54,12 +59,13 @@ export default function SchedulePage() {
     return dates
   }, [sessions])
 
-  // Get sessions for selected date
+  // Get sessions for selected date, filtered by active filter
   const selectedDateSessions = useMemo(() => {
     return sessions
       .filter((s) => s.starts_at.startsWith(selectedDate))
+      .filter((s) => activeFilter === 'all' || s.session_type?.slug === activeFilter)
       .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-  }, [sessions, selectedDate])
+  }, [sessions, selectedDate, activeFilter])
 
   // Handlers
   const handleBookSession = useCallback((session: SessionWithDetails) => {
@@ -163,6 +169,15 @@ export default function SchedulePage() {
           />
         </GlassCard>
 
+        {/* Session Type Filters */}
+        {filters.length > 1 && (
+          <SessionFilters
+            filters={filters}
+            activeFilter={activeFilter}
+            onFilterChange={setActiveFilter}
+          />
+        )}
+
         {/* Trainer: Create Session Link */}
         {profile?.is_trainer && (
           <Link
@@ -221,10 +236,9 @@ export default function SchedulePage() {
                     >
                       <SessionCard
                         session={session}
-                        userId={profile?.id}
                         isTrainer={profile?.is_trainer}
+                        isPastView={false}
                         onBook={() => handleBookSession(session)}
-                        onCancel={() => handleCancelBooking(session)}
                         onTap={() => handleTapSession(session)}
                         onDetails={() => handleViewDetails(session)}
                       />

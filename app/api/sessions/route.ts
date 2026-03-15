@@ -17,7 +17,7 @@ import { logAuditEventFromRequest } from '@/lib/services/audit'
 import {
   getSessionsAvailabilityBatch,
 } from '@/modules/calendar-booking/services/availability'
-import type { SessionFilters } from '@/modules/calendar-booking/types'
+import type { SessionFilters, SessionStatus } from '@/modules/calendar-booking/types'
 
 /**
  * GET /api/sessions
@@ -92,7 +92,15 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Build where conditions
-    const conditions = [eq(sessions.status, filters.status ?? 'scheduled')]
+    // Support comma-separated statuses (e.g. "completed,cancelled")
+    const rawStatus = searchParams.get('status') || 'scheduled'
+    const statusList = rawStatus.split(',').map((s) => s.trim()).filter(Boolean) as SessionStatus[]
+    const statusCondition =
+      statusList.length === 1
+        ? eq(sessions.status, statusList[0])
+        : inArray(sessions.status, statusList)
+
+    const conditions = [statusCondition]
 
     if (filters.date) {
       const startOfDay = new Date(`${filters.date}T00:00:00.000Z`)

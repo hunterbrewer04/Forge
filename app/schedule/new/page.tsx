@@ -16,6 +16,7 @@ import {
 import type { SessionType } from '@/modules/calendar-booking/types'
 import { getLocalDateString, localInputsToUtc } from '@/lib/utils/date'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface FormData {
   title: string
@@ -139,8 +140,8 @@ export default function NewSessionPage() {
         router.push('/schedule')
       }, 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create session')
-      toast.error(err instanceof Error ? err.message : 'Failed to create session')
+      setError(getErrorMessage(err, 'Failed to create session'))
+      toast.error(getErrorMessage(err, 'Failed to create session'))
     } finally {
       setIsLoading(false)
     }

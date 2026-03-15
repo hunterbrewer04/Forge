@@ -42,6 +42,22 @@ export type AuditAction =
   | 'ADMIN_ACTION'
   | 'RATE_LIMIT_EXCEEDED'
   | 'SECURITY_ALERT'
+  // Admin mutation actions
+  | 'admin.user.role_update'
+  | 'admin.user.deactivate'
+  | 'admin.invitation.send'
+  | 'admin.invitation.revoke'
+  | 'admin.tier.create'
+  | 'admin.tier.update'
+  | 'admin.tier.delete'
+  | 'admin.subscription.cancel'
+  | 'admin.subscription.pause'
+  | 'admin.subscription.resume'
+  | 'admin.refund.create'
+  | 'admin.settings.update'
+  | 'admin.settings.logo_upload'
+  | 'admin.trainer_client.assign'
+  | 'admin.trainer_client.unassign'
 
 export type AuditResource =
   | 'auth'
@@ -52,6 +68,12 @@ export type AuditResource =
   | 'session'
   | 'booking'
   | 'system'
+  | 'invitation'
+  | 'tier'
+  | 'subscription'
+  | 'refund'
+  | 'settings'
+  | 'trainer_clients'
 
 export interface AuditLogEntry {
   userId: string

@@ -152,6 +152,9 @@
   --font-display: "Lexend", "Manrope", sans-serif;
 }
 
+/* ── Font Utilities ── */
+.font-display { font-family: var(--font-display, Lexend, sans-serif); }
+
 /* ── Glassmorphism Utilities ── */
 .glass {
   background: rgba(255, 255, 255, 0.85);

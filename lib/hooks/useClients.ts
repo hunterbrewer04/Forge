@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { fetchTrainerClientList, fetchClientDetail } from '@/lib/services/clients'
 import type { ClientProfileJoin } from '@/lib/types/database'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 interface UseClientListResult {
   clients: ClientProfileJoin[]
@@ -29,7 +30,7 @@ export function useClientList(trainerId: string | undefined): UseClientListResul
         if (!cancelled) setClients(data)
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load clients')
+          setError(getErrorMessage(err, 'Failed to load clients'))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -73,7 +74,7 @@ export function useClientDetail(
         if (!cancelled) setClient(data)
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Client not found')
+          setError(getErrorMessage(err, 'Client not found'))
         }
       } finally {
         if (!cancelled) setLoading(false)

@@ -5,6 +5,7 @@ import { profiles, membershipTiers } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { handleUnexpectedError } from '@/lib/api/errors'
 import { env } from '@/lib/env-validation'
+import { centsToDollars } from '@/lib/utils/currency'
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,11 +63,11 @@ export async function POST(request: NextRequest) {
 
       case 'price.updated': {
         const price = event.data.object
-        if (price.unit_amount != null) {
+        if (price.unit_amount !== null) {
           await db
             .update(membershipTiers)
             .set({
-              priceMonthly: String(price.unit_amount / 100),
+              priceMonthly: String(centsToDollars(price.unit_amount)),
             })
             .where(eq(membershipTiers.stripePriceId, price.id))
         }
