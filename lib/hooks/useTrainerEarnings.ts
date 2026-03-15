@@ -18,6 +18,7 @@ export function useTrainerEarnings(enabled = true) {
     active_clients: 0,
     avg_per_client: 0,
     clients: [],
+    revenue_history: [],
   }
 
   return { earnings, isLoading }

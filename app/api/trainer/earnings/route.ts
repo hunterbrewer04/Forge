@@ -9,7 +9,7 @@ import { validateRole } from '@/lib/api/auth'
 import { checkRateLimit, RateLimitPresets } from '@/lib/api/rate-limit'
 import { handleUnexpectedError } from '@/lib/api/errors'
 import { db } from '@/lib/db'
-import { getTrainerEarnings } from '@/modules/trainer'
+import { getTrainerEarnings, getMonthlyRevenueHistory } from '@/modules/trainer'
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,8 +19,12 @@ export async function GET(request: NextRequest) {
     const rateLimitResult = await checkRateLimit(request, RateLimitPresets.GENERAL, authResult.profileId)
     if (rateLimitResult) return rateLimitResult
 
-    const earnings = await getTrainerEarnings(db, authResult.profileId)
-    return NextResponse.json({ success: true, data: earnings })
+    const [earnings, revenue_history] = await Promise.all([
+      getTrainerEarnings(db, authResult.profileId),
+      getMonthlyRevenueHistory(),
+    ])
+
+    return NextResponse.json({ success: true, data: { ...earnings, revenue_history } })
   } catch (error) {
     return handleUnexpectedError(error, 'trainer-earnings')
   }

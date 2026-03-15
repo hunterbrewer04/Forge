@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import { TrendingUp, Users, BarChart2 } from '@/components/ui/icons'
 import { useTrainerEarnings } from '@/lib/hooks/useTrainerEarnings'
-import type { TrainerClientItem } from '@/modules/trainer/types'
+import type { TrainerClientItem, MonthlyRevenue } from '@/modules/trainer/types'
 import EmptyState from '@/components/ui/EmptyState'
 
 const gradients = [
@@ -52,28 +52,32 @@ function GradientStatCard({
   )
 }
 
-function EarningsChart({ monthlyEarnings }: { monthlyEarnings: number }) {
-  // Placeholder: all bars show current MRR with progressive opacity
-  const months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
-  const opacities = [0.2, 0.3, 0.4, 0.3, 0.5, 1]
-  const label = `$${monthlyEarnings >= 1000 ? `${(monthlyEarnings / 1000).toFixed(1)}k` : monthlyEarnings.toFixed(0)}`
+function formatDollar(amount: number): string {
+  if (amount >= 1000) return `$${(amount / 1000).toFixed(1)}k`
+  return `$${amount.toFixed(0)}`
+}
+
+function EarningsChart({ revenueHistory }: { revenueHistory: MonthlyRevenue[] }) {
+  if (revenueHistory.length === 0) return null
+
+  const maxAmount = Math.max(...revenueHistory.map((m) => m.amount), 1)
 
   return (
     <GlassCard variant="subtle" className="p-5 mb-4">
       <h3 className="text-sm font-bold text-text-primary mb-4">Earnings Over Time</h3>
       <div className="flex items-end justify-center gap-1.5 h-[120px] pb-6">
-        {months.map((month, i) => {
-          const isCurrentMonth = i === months.length - 1
-          const height = `${40 + opacities[i] * 60}%`
+        {revenueHistory.map((month, i) => {
+          const isCurrentMonth = i === revenueHistory.length - 1
+          const heightPct = Math.max(5, (month.amount / maxAmount) * 100)
           return (
-            <div key={month} className="relative flex flex-col items-center" style={{ height: '100%' }}>
+            <div key={month.month} className="relative flex flex-col items-center" style={{ height: '100%' }}>
               <div
                 className="w-8 rounded-t-md relative"
                 style={{
-                  height,
+                  height: `${heightPct}%`,
                   background: isCurrentMonth
                     ? 'linear-gradient(180deg, var(--facility-primary, #E8923A), #c06b1a)'
-                    : `rgba(232, 146, 58, ${opacities[i]})`,
+                    : `rgba(232, 146, 58, ${0.3 + (i / revenueHistory.length) * 0.4})`,
                   marginTop: 'auto',
                 }}
               >
@@ -81,11 +85,11 @@ function EarningsChart({ monthlyEarnings }: { monthlyEarnings: number }) {
                   className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold whitespace-nowrap"
                   style={{ color: isCurrentMonth ? 'var(--facility-primary, #E8923A)' : 'var(--text-muted)' }}
                 >
-                  {label}
+                  {formatDollar(month.amount)}
                 </span>
               </div>
               <span className="absolute -bottom-5 text-[10px] text-text-muted" style={{ fontWeight: isCurrentMonth ? 700 : 400 }}>
-                {month}
+                {month.label}
               </span>
             </div>
           )
@@ -124,9 +128,13 @@ function ClientRow({ client }: { client: TrainerClientItem }) {
         <p className="font-display text-sm font-bold text-text-primary">
           ${client.price_monthly}/mo
         </p>
-        <p className={`text-[10px] font-bold uppercase tracking-wide ${isActive ? 'text-success' : 'text-text-muted'}`}>
-          {isActive ? 'Active' : client.membership_status || 'Inactive'}
-        </p>
+        {client.is_complimentary ? (
+          <p className="text-[10px] font-bold uppercase tracking-wide text-text-muted">Comp</p>
+        ) : (
+          <p className={`text-[10px] font-bold uppercase tracking-wide ${isActive ? 'text-success' : 'text-text-muted'}`}>
+            {isActive ? 'Active' : client.membership_status || 'Inactive'}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -181,7 +189,7 @@ export default function TrainerEarningsView() {
       </motion.div>
 
       {/* Earnings Chart */}
-      <EarningsChart monthlyEarnings={earnings.monthly_earnings} />
+      <EarningsChart revenueHistory={earnings.revenue_history} />
 
       {/* Client Revenue Breakdown */}
       <GlassCard variant="subtle" className="p-5">

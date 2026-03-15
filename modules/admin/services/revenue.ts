@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { profiles, membershipTiers } from '@/lib/db/schema'
 import type { DrizzleInstance } from '../config'
 
@@ -12,7 +12,7 @@ export async function getRevenueStats(db: DrizzleInstance) {
       db.select({
         totalMembers: sql<number>`count(*) filter (where ${profiles.isMember} = true)`.mapWith(Number),
         totalTrainers: sql<number>`count(*) filter (where ${profiles.isTrainer} = true)`.mapWith(Number),
-        activeSubscriptions: sql<number>`count(*) filter (where ${profiles.membershipStatus} = 'active')`.mapWith(Number),
+        activeSubscriptions: sql<number>`count(*) filter (where ${profiles.membershipStatus} = 'active' and ${profiles.stripeSubscriptionId} is not null)`.mapWith(Number),
         newThisMonth: sql<number>`count(*) filter (where ${profiles.isMember} = true and ${profiles.createdAt} >= ${startOfMonth})`.mapWith(Number),
       }).from(profiles),
 
@@ -21,7 +21,7 @@ export async function getRevenueStats(db: DrizzleInstance) {
       })
         .from(profiles)
         .innerJoin(membershipTiers, eq(profiles.membershipTierId, membershipTiers.id))
-        .where(eq(profiles.membershipStatus, 'active')),
+        .where(and(eq(profiles.membershipStatus, 'active'), isNotNull(profiles.stripeSubscriptionId))),
     ])
 
     const { totalMembers, totalTrainers, activeSubscriptions, newThisMonth } = statsRows[0]
