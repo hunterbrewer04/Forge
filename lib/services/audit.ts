@@ -56,6 +56,8 @@ export type AuditAction =
   | 'admin.refund.create'
   | 'admin.settings.update'
   | 'admin.settings.logo_upload'
+  | 'admin.trainer_client.assign'
+  | 'admin.trainer_client.unassign'
 
 export type AuditResource =
   | 'auth'
@@ -71,6 +73,7 @@ export type AuditResource =
   | 'subscription'
   | 'refund'
   | 'settings'
+  | 'trainer_clients'
 
 export interface AuditLogEntry {
   userId: string
