@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { fetchTrainerConversations, getLastMessagesForConversations, getUnreadCountsForConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
-import { AlertCircle, RefreshCw, User } from '@/components/ui/icons'
+import { AlertCircle, RefreshCw, User, SquarePen } from '@/components/ui/icons'
 
 interface Conversation {
   id: string
