@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       userId: authResult.profileId,
       action: 'admin.trainer_client.assign',
       resource: 'trainer_clients',
-      resourceId: row?.id ?? null,
+      resourceId: row?.id,
       metadata: { trainerId: body.trainerId, clientId: body.clientId },
     }).catch(console.error)
 
@@ -103,7 +103,7 @@ export async function DELETE(request: NextRequest) {
       userId: authResult.profileId,
       action: 'admin.trainer_client.unassign',
       resource: 'trainer_clients',
-      resourceId: null,
+      resourceId: undefined,
       metadata: { trainerId: body.trainerId, clientId: body.clientId },
     }).catch(console.error)
 
