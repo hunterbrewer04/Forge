@@ -6,6 +6,8 @@ import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import GlassCard from '@/components/ui/GlassCard'
 import FannedCardStack from './FannedCardStack'
 import { CreditCard, Clipboard, Lock, Dumbbell } from '@/components/ui/icons'
+import EmptyState from '@/components/ui/EmptyState'
+import StatusBadge from '@/components/ui/StatusBadge'
 import { fetchPaymentsSummary } from '@/lib/services/payments'
 import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useAuth } from '@/contexts/AuthContext'
@@ -51,7 +53,7 @@ function MembershipHeroCard({
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-xs opacity-60 uppercase tracking-wider mb-2">Your Membership</div>
-                <div className="text-[26px] font-extrabold leading-none" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>
+                <div className="font-display text-[26px] font-extrabold leading-none">
                   {hasActiveSubscription ? (tierName || 'Active Plan') : 'No Active Membership'}
                 </div>
                 {hasActiveSubscription && (
@@ -73,7 +75,7 @@ function MembershipHeroCard({
                 {monthlyPrice !== null && (
                   <div>
                     <div className="text-[10px] opacity-50 uppercase tracking-wider">Monthly</div>
-                    <div className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>
+                    <div className="font-display text-2xl font-bold">
                       ${monthlyPrice}
                     </div>
                   </div>
@@ -81,7 +83,7 @@ function MembershipHeroCard({
                 {sessionsQuota !== undefined && (
                   <div>
                     <div className="text-[10px] opacity-50 uppercase tracking-wider">Sessions Left</div>
-                    <div className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>
+                    <div className="font-display text-2xl font-bold">
                       {sessionsQuota - (sessionsUsed ?? 0)} / {sessionsQuota}
                     </div>
                   </div>
@@ -89,7 +91,7 @@ function MembershipHeroCard({
                 {memberSince && (
                   <div>
                     <div className="text-[10px] opacity-50 uppercase tracking-wider">Member Since</div>
-                    <div className="text-2xl font-bold" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>
+                    <div className="font-display text-2xl font-bold">
                       {new Date(memberSince).getFullYear()}
                     </div>
                   </div>
@@ -140,18 +142,6 @@ export default function MemberPaymentsView() {
       is_default: pm.is_default,
     }))
 
-  const getStatusStyle = (status: string | null) => {
-    if (status === 'paid') return 'text-success'
-    if (status === 'open') return 'text-warning'
-    return 'text-error'
-  }
-
-  const getStatusLabel = (status: string | null) => {
-    if (status === 'paid') return 'PAID'
-    if (status === 'open') return 'PENDING'
-    return 'FAILED'
-  }
-
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
       {/* Membership Hero Card */}
@@ -193,10 +183,7 @@ export default function MemberPaymentsView() {
                 ))}
               </div>
             ) : invoices.length === 0 ? (
-              <div className="text-center py-8 text-text-muted">
-                <Clipboard size={40} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No transactions yet</p>
-              </div>
+              <EmptyState icon={Clipboard} title="No transactions yet" />
             ) : (
               invoices.map((inv) => (
                 <div
@@ -215,12 +202,13 @@ export default function MemberPaymentsView() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-text-primary" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>
+                    <p className="font-display text-sm font-bold text-text-primary">
                       ${(inv.amount_paid / 100).toFixed(2)}
                     </p>
-                    <p className={`text-[10px] font-bold ${getStatusStyle(inv.status)}`}>
-                      {getStatusLabel(inv.status)}
-                    </p>
+                    <StatusBadge
+                      label={inv.status === 'paid' ? 'Paid' : inv.status === 'open' ? 'Pending' : 'Failed'}
+                      variant={inv.status === 'paid' ? 'success' : inv.status === 'open' ? 'warning' : 'danger'}
+                    />
                   </div>
                 </div>
               ))

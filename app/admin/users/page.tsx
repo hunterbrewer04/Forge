@@ -97,18 +97,20 @@ function UserDetailPanel({
     setAssigning(true)
     try {
       if (assignedTrainerId) {
-        await fetch('/api/admin/trainer-clients', {
+        const delRes = await fetch('/api/admin/trainer-clients', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ trainerId: assignedTrainerId, clientId: user.id }),
         })
+        if (!delRes.ok) throw new Error('Failed to remove previous trainer')
       }
       if (trainerId) {
-        await fetch('/api/admin/trainer-clients', {
+        const postRes = await fetch('/api/admin/trainer-clients', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ trainerId, clientId: user.id }),
         })
+        if (!postRes.ok) throw new Error('Failed to assign trainer')
       }
       setAssignedTrainerId(trainerId)
       toast.success(trainerId ? 'Trainer assigned' : 'Trainer removed')

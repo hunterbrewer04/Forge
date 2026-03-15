@@ -6,6 +6,15 @@ import { staggerContainer, fadeUpItem } from '@/lib/motion'
 import { TrendingUp, Users, BarChart2 } from '@/components/ui/icons'
 import { useTrainerEarnings } from '@/lib/hooks/useTrainerEarnings'
 import type { TrainerClientItem } from '@/modules/trainer/types'
+import EmptyState from '@/components/ui/EmptyState'
+
+const gradients = [
+  'linear-gradient(135deg, #E8923A, #c06b1a)',
+  'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+  'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+  'linear-gradient(135deg, #059669, #047857)',
+  'linear-gradient(135deg, #ef4444, #dc2626)',
+]
 
 function GradientStatCard({
   label,
@@ -34,7 +43,7 @@ function GradientStatCard({
             <Icon size={16} className="text-white" />
           </div>
         </div>
-        <div className="text-[28px] font-extrabold leading-none" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>
+        <div className="font-display text-[28px] font-extrabold leading-none">
           {value}
         </div>
         <div className="text-xs opacity-70 mt-1">{sub}</div>
@@ -47,6 +56,7 @@ function EarningsChart({ monthlyEarnings }: { monthlyEarnings: number }) {
   // Placeholder: all bars show current MRR with progressive opacity
   const months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar']
   const opacities = [0.2, 0.3, 0.4, 0.3, 0.5, 1]
+  const label = `$${monthlyEarnings >= 1000 ? `${(monthlyEarnings / 1000).toFixed(1)}k` : monthlyEarnings.toFixed(0)}`
 
   return (
     <GlassCard variant="subtle" className="p-5 mb-4">
@@ -71,7 +81,7 @@ function EarningsChart({ monthlyEarnings }: { monthlyEarnings: number }) {
                   className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold whitespace-nowrap"
                   style={{ color: isCurrentMonth ? 'var(--facility-primary, #E8923A)' : 'var(--text-muted)' }}
                 >
-                  ${monthlyEarnings >= 1000 ? `${(monthlyEarnings / 1000).toFixed(1)}k` : monthlyEarnings.toFixed(0)}
+                  {label}
                 </span>
               </div>
               <span className="absolute -bottom-5 text-[10px] text-text-muted" style={{ fontWeight: isCurrentMonth ? 700 : 400 }}>
@@ -93,13 +103,6 @@ function ClientRow({ client }: { client: TrainerClientItem }) {
     .toUpperCase()
     .slice(0, 2)
 
-  const gradients = [
-    'linear-gradient(135deg, #E8923A, #c06b1a)',
-    'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-    'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-    'linear-gradient(135deg, #059669, #047857)',
-    'linear-gradient(135deg, #ef4444, #dc2626)',
-  ]
   const gradient = gradients[client.id.charCodeAt(0) % gradients.length]
   const isActive = client.membership_status === 'active'
 
@@ -118,7 +121,7 @@ function ClientRow({ client }: { client: TrainerClientItem }) {
         </p>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-sm font-bold text-text-primary" style={{ fontFamily: 'var(--font-display, Lexend, sans-serif)' }}>
+        <p className="font-display text-sm font-bold text-text-primary">
           ${client.price_monthly}/mo
         </p>
         <p className={`text-[10px] font-bold uppercase tracking-wide ${isActive ? 'text-success' : 'text-text-muted'}`}>
@@ -189,10 +192,7 @@ export default function TrainerEarningsView() {
           </span>
         </div>
         {earnings.clients.length === 0 ? (
-          <div className="text-center py-8 text-text-muted">
-            <Users size={40} className="mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No clients assigned yet</p>
-          </div>
+          <EmptyState icon={Users} title="No clients assigned yet" />
         ) : (
           earnings.clients.map((client) => (
             <ClientRow key={client.id} client={client} />

@@ -45,11 +45,8 @@ function BrandLogo({ brand }: { brand: string }) {
 
   return (
     <span
-      className="text-white font-extrabold tracking-wide"
-      style={{
-        fontFamily: 'var(--font-display, Lexend, sans-serif)',
-        fontSize: brand === 'discover' ? '14px' : '18px',
-      }}
+      className="font-display text-white font-extrabold tracking-wide"
+      style={{ fontSize: brand === 'discover' ? '14px' : '18px' }}
     >
       {labels[brand] || brand.toUpperCase()}
     </span>

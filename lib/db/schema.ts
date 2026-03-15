@@ -199,8 +199,8 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   sentMessages: many(messages),
   pushSubscriptions: many(pushSubscriptions),
   auditLogs: many(auditLogs),
-  assignedClients: many(trainerClients, { relationName: 'assignedClients' }),
-  assignedTrainer: many(trainerClients, { relationName: 'assignedTrainer' }),
+  clientAssignments: many(trainerClients, { relationName: 'clientAssignments' }),
+  trainerAssignments: many(trainerClients, { relationName: 'trainerAssignments' }),
 }))
 
 export const membershipTiersRelations = relations(membershipTiers, ({ many }) => ({
@@ -277,11 +277,11 @@ export const trainerClientsRelations = relations(trainerClients, ({ one }) => ({
   trainer: one(profiles, {
     fields: [trainerClients.trainerId],
     references: [profiles.id],
-    relationName: 'assignedClients',
+    relationName: 'clientAssignments',
   }),
   client: one(profiles, {
     fields: [trainerClients.clientId],
     references: [profiles.id],
-    relationName: 'assignedTrainer',
+    relationName: 'trainerAssignments',
   }),
 }))

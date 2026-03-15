@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import DebitCard, { type DebitCardData } from './DebitCard'
 import { CreditCard } from '@/components/ui/icons'
+import EmptyState from '@/components/ui/EmptyState'
 
 // Position styles for fanned stack
 const POSITIONS = [
@@ -30,18 +31,9 @@ export default function FannedCardStack({ cards }: FannedCardStackProps) {
     setCurrentFront((prev) => (prev + 1) % cards.length)
   }, [cards.length])
 
-  const goToCard = useCallback((index: number) => {
-    setCurrentFront(index)
-  }, [])
-
   // Empty state
   if (cards.length === 0) {
-    return (
-      <div className="text-center py-10 text-text-muted">
-        <CreditCard size={48} className="mx-auto mb-2 opacity-50" />
-        <p className="text-sm">No payment methods on file</p>
-      </div>
-    )
+    return <EmptyState icon={CreditCard} title="No payment methods on file" />
   }
 
   return (
@@ -97,7 +89,7 @@ export default function FannedCardStack({ cards }: FannedCardStackProps) {
           {cards.map((_, i) => (
             <button
               key={i}
-              onClick={(e) => { e.stopPropagation(); goToCard(i) }}
+              onClick={(e) => { e.stopPropagation(); setCurrentFront(i) }}
               className="transition-all duration-300"
               style={{
                 width: i === currentFront ? 20 : 8,
