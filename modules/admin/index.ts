@@ -1,7 +1,7 @@
 // Services
 export { listUsers, getUser, updateUserRoles, deactivateUser } from './services/users'
 export { sendInvitation, listInvitations, revokeInvitation } from './services/invitations'
-export { listTiers, createTier, updateTier, toggleTierVisibility, archiveTier } from './services/tiers'
+export { listTiers, createTier, updateTier, toggleTierVisibility, deleteTier } from './services/tiers'
 export { getRevenueStats } from './services/revenue'
 export { cancelSubscription, pauseSubscription, resumeSubscription, issueRefund, listInvoices } from './services/subscriptions'
 export { getSettings, updateSettings, uploadLogo } from './services/settings'
