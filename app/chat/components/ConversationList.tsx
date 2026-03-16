@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Image from 'next/image'
-import { fetchTrainerConversations, getLastMessagesForConversations, getUnreadCountsForConversations } from '@/lib/services/conversations'
+import { fetchTrainerConversations } from '@/lib/services/conversations'
 import { logger } from '@/lib/utils/logger'
 import { ConversationListSkeleton } from '@/components/skeletons/ConversationSkeleton'
 import { AlertCircle, RefreshCw, User, SquarePen } from '@/components/ui/icons'
@@ -61,31 +61,19 @@ export default function ConversationList({
 
     try {
       const data = await fetchTrainerConversations(currentUserId)
-      const conversationIds = data.map(c => c.id)
 
-      // Batch fetch last messages and unread counts (2 queries instead of 2N)
-      const [lastMessages, unreadCounts] = await Promise.all([
-        getLastMessagesForConversations(conversationIds),
-        getUnreadCountsForConversations(conversationIds, currentUserId),
-      ])
-
-      const enhancedConversations = data.map((conv) => {
-        const lastMessage = lastMessages.get(conv.id)
-        const unreadCount = unreadCounts.get(conv.id) || 0
-
-        return {
-          id: conv.id,
-          client_id: conv.client_id,
-          trainer_id: conv.trainer_id,
-          client_name: conv.profiles?.full_name || 'Unknown Client',
-          avatar_url: conv.profiles?.avatar_url,
-          last_message: lastMessage?.content || 'No messages yet',
-          last_message_time: lastMessage?.created_at
-            ? formatRelativeTime(lastMessage.created_at)
-            : null,
-          unread: unreadCount > 0,
-        }
-      })
+      const enhancedConversations = data.map((conv) => ({
+        id: conv.id,
+        client_id: conv.client_id,
+        trainer_id: conv.trainer_id,
+        client_name: conv.profiles?.full_name || 'Unknown Client',
+        avatar_url: conv.profiles?.avatar_url,
+        last_message: conv.last_message?.content || 'No messages yet',
+        last_message_time: conv.last_message?.created_at
+          ? formatRelativeTime(conv.last_message.created_at)
+          : null,
+        unread: (conv.unread_count || 0) > 0,
+      }))
 
       setConversations(enhancedConversations)
     } catch (err) {

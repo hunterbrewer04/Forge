@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useFacilityTheme } from '@/contexts/FacilityThemeContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import GlassAppLayout from '@/components/layout/GlassAppLayout'
@@ -15,6 +15,10 @@ import { HomePageSkeleton } from '@/components/skeletons/StatsCardSkeleton'
 import Image from 'next/image'
 import { User, Bell, Calendar, MessageCircle, Wallet, Dumbbell, CalendarOff } from '@/components/ui/icons'
 import HomeNextUpCard from './components/HomeNextUpCard'
+import SessionDetailsSheet from '@/app/schedule/components/SessionDetailsSheet'
+import CancelBookingModal from '@/app/schedule/components/CancelBookingModal'
+import type { SessionWithDetails } from '@/modules/calendar-booking/types'
+import { fetchSessionById } from '@/lib/services/sessions'
 import { fetchRecentInvoices } from '@/lib/services/payments'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
@@ -35,7 +39,7 @@ export default function HomePage() {
   const [loadingMessagingStats, setLoadingMessagingStats] = useState(true)
 
   // Fetch real home data — pass userId to avoid redundant getUser() call
-  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData(profile?.id)
+  const { nextSession, recentActivity, loading: loadingHomeData, refetch: refetchHomeData } = useHomeData(profile?.id)
 
   // Use shared unread count hook for real-time message count
   const { unreadCount } = useUnreadCount({
@@ -50,6 +54,21 @@ export default function HomePage() {
     queryFn: () => fetchRecentInvoices(3),
     enabled: !!user,
   })
+
+  // Session details popup state
+  const [selectedSession, setSelectedSession] = useState<SessionWithDetails | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+
+  const handleViewDetails = useCallback(async () => {
+    if (!nextSession) return
+    try {
+      const session = await fetchSessionById(nextSession.session_id)
+      if (!session) return
+      setSelectedSession(session)
+    } catch (err) {
+      console.error('Error fetching session details:', err)
+    }
+  }, [nextSession])
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -291,6 +310,7 @@ export default function HomePage() {
   }
 
   return (
+    <>
     <GlassAppLayout customHeader={customHeader} hideDesktopHeader>
       {isDesktop ? (
         /* ── Desktop layout ── */
@@ -360,7 +380,7 @@ export default function HomePage() {
           {/* Next Up Card */}
           {nextSession && !loadingHomeData && (
             <motion.div variants={fadeUpItem}>
-              <HomeNextUpCard session={nextSession} />
+              <HomeNextUpCard session={nextSession} onViewDetails={handleViewDetails} />
             </motion.div>
           )}
 
@@ -519,7 +539,7 @@ export default function HomePage() {
 
           {/* Next Up Card */}
           {nextSession && !loadingHomeData && (
-            <HomeNextUpCard session={nextSession} />
+            <HomeNextUpCard session={nextSession} onViewDetails={handleViewDetails} />
           )}
 
           {/* Sessions CTA Card */}
@@ -619,5 +639,33 @@ export default function HomePage() {
         </>
       )}
     </GlassAppLayout>
+
+      {/* Session details popup — rendered outside GlassAppLayout for proper iOS fixed positioning */}
+      {selectedSession && (
+        <>
+          <SessionDetailsSheet
+            session={selectedSession}
+            isOpen={!showCancelModal}
+            onClose={() => setSelectedSession(null)}
+            isTrainerView={false}
+            onCancelBooking={() => setShowCancelModal(true)}
+          />
+          <CancelBookingModal
+            session={selectedSession}
+            bookingId={nextSession?.id || ''}
+            isOpen={showCancelModal}
+            onClose={() => {
+              setShowCancelModal(false)
+              setSelectedSession(null)
+            }}
+            onCancelSuccess={() => {
+              setShowCancelModal(false)
+              setSelectedSession(null)
+              refetchHomeData()
+            }}
+          />
+        </>
+      )}
+    </>
   )
 }

@@ -72,6 +72,12 @@ export interface ConversationWithClientProfile {
   profiles: ProfileJoin | null
 }
 
+// Enriched conversation returned by fetchTrainerConversations (includes last message + unread)
+export interface ConversationWithClientProfileEnriched extends ConversationWithClientProfile {
+  last_message: { content: string | null; created_at: string; sender_id: string } | null
+  unread_count: number
+}
+
 // Conversation with trainer profile via foreign key
 export interface ConversationWithTrainerProfile {
   id: string

@@ -18,7 +18,8 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://vercel.live https://js.stripe.com https://challenges.cloudflare.com https://*.clerk.accounts.dev https://clerk.forge-sp.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  img-src 'self' https://img.clerk.com https://media.brewmintdigital.com data: blob:;
+  img-src 'self' https://img.clerk.com https://media.brewmintdigital.com https://*.r2.cloudflarestorage.com data: blob:;
+  media-src 'self' https://*.r2.cloudflarestorage.com blob:;
   font-src 'self' https://fonts.gstatic.com data:;
   object-src 'none';
   base-uri 'self';
@@ -36,6 +37,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'media.brewmintdigital.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.r2.cloudflarestorage.com',
       },
     ],
   },
