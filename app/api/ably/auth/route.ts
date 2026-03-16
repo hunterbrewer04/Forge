@@ -5,7 +5,7 @@ import { createApiError } from '@/lib/api/errors'
 import { db } from '@/lib/db'
 import { conversations } from '@/lib/db/schema'
 import { eq, or } from 'drizzle-orm'
-import Ably from 'ably'
+import Ably, { type capabilityOp } from 'ably'
 
 let ablyRest: Ably.Rest | null = null
 
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       )
 
     // Build per-conversation capability map
-    const capability: Record<string, string[]> = {
+    const capability: Record<string, capabilityOp[]> = {
       'unread-messages': ['subscribe'],
     }
     for (const conv of userConvs) {
