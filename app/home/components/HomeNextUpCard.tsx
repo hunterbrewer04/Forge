@@ -6,7 +6,7 @@ import { useCountdown } from '@/lib/hooks/useCountdown'
 import { formatSessionTime } from '@/lib/utils/date'
 
 interface NextSession {
-  id: string
+  booking_id: string
   session_id: string
   title: string
   start_time: string
@@ -71,6 +71,7 @@ export default function HomeNextUpCard({ session, onViewDetails }: HomeNextUpCar
 
         {/* Action */}
         <button
+          type="button"
           onClick={onViewDetails}
           className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-bg-secondary border border-border text-text-primary rounded-lg font-medium text-sm hover:bg-bg-secondary/80 transition-colors"
         >
