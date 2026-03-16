@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getErrorMessage } from '@/lib/utils/errors'
 
 interface NextSession {
@@ -25,6 +25,7 @@ interface HomeData {
   recentActivity: RecentActivity[]
   loading: boolean
   error: string | null
+  refetch: () => void
 }
 
 // API response shapes
@@ -43,12 +44,17 @@ interface ApiBooking {
 }
 
 export function useHomeData(userId: string | undefined): HomeData {
-  const [data, setData] = useState<HomeData>({
+  const [refetchKey, setRefetchKey] = useState(0)
+  const [data, setData] = useState<Omit<HomeData, 'refetch'>>({
     nextSession: null,
     recentActivity: [],
     loading: true,
-    error: null
+    error: null,
   })
+
+  const refetch = useCallback(() => {
+    setRefetchKey(k => k + 1)
+  }, [])
 
   useEffect(() => {
     if (!userId) {
@@ -122,7 +128,7 @@ export function useHomeData(userId: string | undefined): HomeData {
           nextSession: nextSessionData,
           recentActivity: recentActivityData,
           loading: false,
-          error: null
+          error: null,
         })
       } catch (err) {
         if (!isCurrent) return
@@ -130,7 +136,7 @@ export function useHomeData(userId: string | undefined): HomeData {
         setData(prev => ({
           ...prev,
           loading: false,
-          error: getErrorMessage(err, 'Failed to load data')
+          error: getErrorMessage(err, 'Failed to load data'),
         }))
       }
     }
@@ -138,7 +144,7 @@ export function useHomeData(userId: string | undefined): HomeData {
     fetchHomeData()
 
     return () => { isCurrent = false }
-  }, [userId])
+  }, [userId, refetchKey])
 
-  return data
+  return { ...data, refetch }
 }

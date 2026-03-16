@@ -18,6 +18,7 @@ import HomeNextUpCard from './components/HomeNextUpCard'
 import SessionDetailsSheet from '@/app/schedule/components/SessionDetailsSheet'
 import CancelBookingModal from '@/app/schedule/components/CancelBookingModal'
 import type { SessionWithDetails } from '@/modules/calendar-booking/types'
+import { fetchSessionById } from '@/lib/services/sessions'
 import { fetchRecentInvoices } from '@/lib/services/payments'
 import { motion } from 'framer-motion'
 import { staggerContainer, fadeUpItem } from '@/lib/motion'
@@ -38,7 +39,7 @@ export default function HomePage() {
   const [loadingMessagingStats, setLoadingMessagingStats] = useState(true)
 
   // Fetch real home data — pass userId to avoid redundant getUser() call
-  const { nextSession, recentActivity, loading: loadingHomeData } = useHomeData(profile?.id)
+  const { nextSession, recentActivity, loading: loadingHomeData, refetch: refetchHomeData } = useHomeData(profile?.id)
 
   // Use shared unread count hook for real-time message count
   const { unreadCount } = useUnreadCount({
@@ -56,17 +57,14 @@ export default function HomePage() {
 
   // Session details popup state
   const [selectedSession, setSelectedSession] = useState<SessionWithDetails | null>(null)
-  const [showDetailsSheet, setShowDetailsSheet] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
 
   const handleViewDetails = useCallback(async () => {
     if (!nextSession) return
     try {
-      const res = await fetch(`/api/sessions/${nextSession.session_id}`)
-      if (!res.ok) throw new Error('Failed to fetch session details')
-      const data = await res.json()
-      setSelectedSession(data.session)
-      setShowDetailsSheet(true)
+      const session = await fetchSessionById(nextSession.session_id)
+      if (!session) return
+      setSelectedSession(session)
     } catch (err) {
       console.error('Error fetching session details:', err)
     }
@@ -647,16 +645,10 @@ export default function HomePage() {
         <>
           <SessionDetailsSheet
             session={selectedSession}
-            isOpen={showDetailsSheet}
-            onClose={() => {
-              setShowDetailsSheet(false)
-              setSelectedSession(null)
-            }}
+            isOpen={!showCancelModal}
+            onClose={() => setSelectedSession(null)}
             isTrainerView={false}
-            onCancelBooking={() => {
-              setShowDetailsSheet(false)
-              setShowCancelModal(true)
-            }}
+            onCancelBooking={() => setShowCancelModal(true)}
           />
           <CancelBookingModal
             session={selectedSession}
@@ -669,8 +661,7 @@ export default function HomePage() {
             onCancelSuccess={() => {
               setShowCancelModal(false)
               setSelectedSession(null)
-              // Trigger re-fetch by remounting — navigate to same page
-              window.location.reload()
+              refetchHomeData()
             }}
           />
         </>
