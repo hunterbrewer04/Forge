@@ -38,11 +38,14 @@ export async function GET(request: NextRequest) {
       )
 
     // Build per-conversation capability map
-    const capability: Record<string, ['subscribe']> = {
+    const capability: Record<string, string[]> = {
       'unread-messages': ['subscribe'],
     }
     for (const conv of userConvs) {
+      // Raw Ably channel for new message notifications
       capability[`messages:${conv.id}`] = ['subscribe']
+      // Ably Chat SDK room channel (each room creates a channel with ::$chat suffix)
+      capability[`chat:${conv.id}::$chat`] = ['subscribe', 'publish', 'presence', 'history']
     }
 
     const rest = getAblyRest()

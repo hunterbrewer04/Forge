@@ -5,6 +5,7 @@ import { getErrorMessage } from '@/lib/utils/errors'
 
 interface NextSession {
   id: string
+  session_id: string
   title: string
   start_time: string
   trainer_name: string
@@ -91,6 +92,7 @@ export function useHomeData(userId: string | undefined): HomeData {
         const nextSessionData: NextSession | null = nextBooking?.session
           ? {
               id: nextBooking.id,
+              session_id: nextBooking.session.id,
               title: nextBooking.session.title || 'Training Session',
               start_time: nextBooking.session.starts_at,
               trainer_name: nextBooking.session.trainer?.full_name || 'Your Trainer',

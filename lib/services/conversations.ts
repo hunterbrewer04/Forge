@@ -81,6 +81,7 @@ export async function fetchTrainerConversations(
   }
   const data = await res.json()
   // API returns { success, conversations } — map to the shape callers expect
+  // Include last_message and unread_count so callers don't need separate fetches
   return ((data.conversations as unknown[]) ?? []).map((conv: unknown) => {
     const c = conv as {
       id: string
@@ -88,7 +89,7 @@ export async function fetchTrainerConversations(
       trainer_id: string
       created_at: string
       client: { id: string; full_name: string | null; avatar_url: string | null } | null
-      last_message: unknown
+      last_message: { content: string | null; created_at: string; sender_id: string } | null
       unread_count: number
     }
     return {
@@ -99,7 +100,12 @@ export async function fetchTrainerConversations(
       profiles: c.client
         ? { id: c.client.id, full_name: c.client.full_name, avatar_url: c.client.avatar_url }
         : null,
-    } as ConversationWithClientProfile
+      last_message: c.last_message ?? null,
+      unread_count: c.unread_count ?? 0,
+    } as ConversationWithClientProfile & {
+      last_message: { content: string | null; created_at: string; sender_id: string } | null
+      unread_count: number
+    }
   })
 }
 

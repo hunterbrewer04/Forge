@@ -1,13 +1,13 @@
 'use client'
 
 import { useMemo } from 'react'
-import Link from 'next/link'
 import { Clock, MapPin, User, ChevronRight } from '@/components/ui/icons'
 import { useCountdown } from '@/lib/hooks/useCountdown'
 import { formatSessionTime } from '@/lib/utils/date'
 
 interface NextSession {
   id: string
+  session_id: string
   title: string
   start_time: string
   trainer_name: string
@@ -16,9 +16,10 @@ interface NextSession {
 
 interface HomeNextUpCardProps {
   session: NextSession
+  onViewDetails: () => void
 }
 
-export default function HomeNextUpCard({ session }: HomeNextUpCardProps) {
+export default function HomeNextUpCard({ session, onViewDetails }: HomeNextUpCardProps) {
   const { countdown, status } = useCountdown(session.start_time)
   const sessionTime = useMemo(() => formatSessionTime(session.start_time), [session.start_time])
 
@@ -69,13 +70,13 @@ export default function HomeNextUpCard({ session }: HomeNextUpCardProps) {
         </div>
 
         {/* Action */}
-        <Link
-          href="/schedule"
+        <button
+          onClick={onViewDetails}
           className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-bg-secondary border border-border text-text-primary rounded-lg font-medium text-sm hover:bg-bg-secondary/80 transition-colors"
         >
           View Details
           <ChevronRight size={16} />
-        </Link>
+        </button>
       </div>
     </div>
   )
