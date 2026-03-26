@@ -650,20 +650,22 @@ export default function HomePage() {
             isTrainerView={false}
             onCancelBooking={() => setShowCancelModal(true)}
           />
-          <CancelBookingModal
-            session={selectedSession}
-            bookingId={nextSession?.id || ''}
-            isOpen={showCancelModal}
-            onClose={() => {
-              setShowCancelModal(false)
-              setSelectedSession(null)
-            }}
-            onCancelSuccess={() => {
-              setShowCancelModal(false)
-              setSelectedSession(null)
-              refetchHomeData()
-            }}
-          />
+          {selectedSession.user_booking?.id && (
+            <CancelBookingModal
+              session={selectedSession}
+              bookingId={selectedSession.user_booking.id}
+              isOpen={showCancelModal}
+              onClose={() => {
+                setShowCancelModal(false)
+                setSelectedSession(null)
+              }}
+              onCancelSuccess={() => {
+                setShowCancelModal(false)
+                setSelectedSession(null)
+                refetchHomeData()
+              }}
+            />
+          )}
         </>
       )}
     </>
